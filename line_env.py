@@ -7,26 +7,29 @@ class LineEnv(object):
 
     def step(self, action):
         # step(action) -> (next_state,reward,is_terminal,debug_info)
-        # If the agent takes action "A" (0) they progress down the line
-        # with probability 0.9, otherwise they slide back to state 0.
-        # Action "B" (1) takes them back to state 0. At the end of the
-        # line they get a +10 reward and return to state 0.
+        # The agent chooses action A or B. With prob 80%, it does the action it chooses,
+        # 20% it does the other. A brings it towards the end of the chain, whre it can get +10.
+        # B takes it to the beginning at it gets only +2
+        # Action will be 0 for A or 1 for B
         
         reward = 0  # The returned reward
-        prev_state = self.state  # Previous state
         is_terminal = False
-        debug = 0
+        debug = 0  # Debug information, we don't use it, but need to match format
+
+        # Swap action between 0-1 if it "slips"
+        if random.random() < 0.2:
+            action = 1 - action
 
         if action == 1:
             self.state = 0
-        elif action == 0:
+            reward = 2
+        else:
             if self.state == 4:
-                self.state = 0
+                self.state = 4
                 reward = 10
-            elif random.random() < 0.9:
-                self.state += 1
             else:
-                self.state = 0
+                self.state += 1
+                reward = 0
         
         # Return these variables to matches ai gym format
         return self.state, reward, is_terminal, debug
