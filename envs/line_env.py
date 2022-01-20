@@ -34,3 +34,6 @@ class LineEnv(object):
         
         # Return these variables to matches ai gym format
         return self.state, reward, is_terminal, debug
+
+    def get_state(self):
+        return self.state

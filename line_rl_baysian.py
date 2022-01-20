@@ -20,7 +20,7 @@ TRAINING_EPOCHS = int(5E4)  # How long to train for
 
 
 # Starting state of env
-state = 0
+state = env.get_state()
 
 rewards = np.zeros(TRAINING_EPOCHS)
 
