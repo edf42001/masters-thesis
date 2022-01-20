@@ -1,4 +1,4 @@
-from line_env import LineEnv
+from envs.line_env import LineEnv
 
 import numpy as np
 import random

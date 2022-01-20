@@ -1,5 +1,6 @@
 import random
 
+
 # Simulation of the line environment. Provides an "env" interface
 class LineEnv(object):
     def __init__(self):
