@@ -31,18 +31,18 @@ NUM_ACTIONS = 2  # Actions per state (uniform in this case)
 NUM_REWARDS = 11  # Rewards go from 0 to 10
 
 
-TRAINING_EPOCHS = int(5E3)  # How long to train for
+TRAINING_EPOCHS = int(5E2)  # How long to train for
 iterations = 0  # How many steps the agent has taken
 
 # Starting state of env
 state = env.get_state()
 
-# TODO: THis needs to be sparsified
-transition_dirichlet_alphas = np.ones(NUM_STATES * NUM_ACTIONS * NUM_STATES)
-reward_dirichlet_alphas = np.ones(NUM_STATES * NUM_ACTIONS * NUM_REWARDS)
+transition_parameter_table = np.zeros((NUM_STATES, NUM_ACTIONS, NUM_STATES))
+reward_parameter_table = np.zeros((NUM_STATES, NUM_ACTIONS, NUM_REWARDS))
 
-transition_parameter_table = np.zeros(NUM_STATES * NUM_ACTIONS * NUM_STATES)
-reward_parameter_table = np.zeros(NUM_STATES * NUM_ACTIONS * NUM_REWARDS)
+# TODO: THis needs to be sparsified
+transition_dirichlet_alphas = np.ones((NUM_STATES, NUM_ACTIONS, NUM_STATES))
+reward_dirichlet_alphas = np.ones((NUM_STATES, NUM_ACTIONS, NUM_REWARDS))
 
 while iterations < TRAINING_EPOCHS:
 
@@ -55,11 +55,11 @@ while iterations < TRAINING_EPOCHS:
     # print("{}: {}->{}, {}".format(action, state, next_state, reward))
 
     # These currently store the same info, will they be different later?
-    transition_parameter_table[transition_hash(state, action, next_state)] += 1
-    transition_dirichlet_alphas[transition_hash(state, action, next_state)] += 1
+    transition_parameter_table[state, action, next_state] += 1
+    transition_dirichlet_alphas[state, action, next_state] += 1
 
-    reward_parameter_table[reward_hash(state, action, reward)] += 1
-    reward_dirichlet_alphas[transition_hash(state, action, next_state)] += 1
+    reward_parameter_table[state, action, reward] += 1
+    reward_dirichlet_alphas[state, action, next_state] += 1
 
     # Update current state
     state = next_state
@@ -70,9 +70,18 @@ while iterations < TRAINING_EPOCHS:
 # To read this reshaped table, imagine it's a 5x5 (ignore the two rows per row). Across top is first state,
 # then down is second state, the row is the action (0 or 1). Perhaps this should be reordered (action, state, state)?
 # Interesting, not the reshape goes in the opposite direction from the order the multiplication for the hash is done
-print(transition_parameter_table.reshape((NUM_STATES, NUM_ACTIONS, NUM_STATES)))
-print(reward_parameter_table.reshape((NUM_REWARDS, NUM_ACTIONS, NUM_STATES)))
+# print(transition_parameter_table.reshape((NUM_STATES, NUM_ACTIONS, NUM_STATES)))
+# print(reward_parameter_table.reshape((NUM_REWARDS, NUM_ACTIONS, NUM_STATES)))
+print(transition_parameter_table)
+print(reward_parameter_table)
 
-mdp_sample = np.random.dirichlet(transition_dirichlet_alphas)
-print(mdp_sample.reshape((NUM_STATES, NUM_ACTIONS, NUM_STATES)))
-print(sum(mdp_sample))
+# To extract the transition probabilites for a single state/action pair,
+# take the subset of transition_dirichlet_alphas like so:
+mdp_params = transition_dirichlet_alphas[3, 0, :].reshape(-1)
+mdp_sample = np.random.dirichlet(mdp_params)
+
+print(mdp_params)
+print(mdp_sample)
+
+# Could also sample whole thing at once, then normalize?
+# Or is each transition probability supposed to be independent?
