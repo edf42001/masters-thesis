@@ -3,6 +3,8 @@ from envs.line_env import LineEnv
 import numpy as np
 import random
 from value_function_from_transition_reward import q_values_from_transition_reward_iterative
+from q_distribution_from_sampled_mdps import sample_mdp_from_params
+
 import matplotlib.pyplot as plt
 
 # Make it easier to read everything
@@ -27,18 +29,6 @@ def reward_hash(s, a, r):
            a * NUM_STATES + \
            r * NUM_STATES * NUM_ACTIONS
 
-
-# Need to sample mdp from parameters:
-def sample_mdp_from_params(params, num_states, num_actions):
-    # For each transition, need to sample separately
-    mdp_sample = np.zeros_like(params)
-    for i in range(params.shape[0]):
-        for j in range(params.shape[1]):
-            mdp_sample[i, j, :] = np.random.dirichlet(params[i, j, :])
-
-    return mdp_sample
-
-
 env = LineEnv()
 
 NUM_STATES = 5  # States in env
@@ -46,7 +36,7 @@ NUM_ACTIONS = 2  # Actions per state (uniform in this case)
 NUM_REWARDS = 11  # Rewards go from 0 to 10
 
 
-TRAINING_EPOCHS = int(5E4)  # How long to train for
+TRAINING_EPOCHS = int(5E3)  # How long to train for
 iterations = 0  # How many steps the agent has taken
 
 # Starting state of env
@@ -102,10 +92,13 @@ print(reward_parameter_table)
 #     print(mdp_sample)
 
 
-transitions = sample_mdp_from_params(transition_dirichlet_alphas, NUM_STATES, NUM_ACTIONS)
-rewards = sample_mdp_from_params(reward_dirichlet_alphas, NUM_STATES, NUM_ACTIONS)
+transitions = sample_mdp_from_params(transition_dirichlet_alphas)
+rewards = sample_mdp_from_params(reward_dirichlet_alphas)
 np.save('np_save_data/transitions.npy', transitions)
 np.save('np_save_data/rewards.npy', rewards)
+
+np.save('np_save_data/transition_dirichlet_alphas.npy', transition_dirichlet_alphas)
+np.save('np_save_data/reward_dirichlet_alphas.npy', reward_dirichlet_alphas)
 
 discount = 0.9
 print(transitions)

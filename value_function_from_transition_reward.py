@@ -57,11 +57,15 @@ if __name__ == "__main__":
     # Make it easier to read everything
     np.set_printoptions(precision=2, suppress=True)
 
+    # Load test data
     transitions = np.load('np_save_data/transitions.npy')
     rewards = np.load('np_save_data/rewards.npy')
-    print(transitions)
-    print(rewards)
-    print("No op for now")
+    discount = 0.9
+
+    q_table = q_values_from_transition_reward_iterative(transitions, rewards, discount)
+    print('Final Q Table result')
+    print(q_table)
+
     # plt.plot(q_tables)
     # plt.title("Q Table values over iterations")
     # plt.show()
