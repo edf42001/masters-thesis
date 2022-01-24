@@ -2,6 +2,7 @@ from envs.line_env import LineEnv
 
 import numpy as np
 import random
+from value_function_from_transition_reward import q_values_from_transition_reward_iterative
 import matplotlib.pyplot as plt
 
 # Make it easier to read everything
@@ -45,7 +46,7 @@ NUM_ACTIONS = 2  # Actions per state (uniform in this case)
 NUM_REWARDS = 11  # Rewards go from 0 to 10
 
 
-TRAINING_EPOCHS = int(5E2)  # How long to train for
+TRAINING_EPOCHS = int(5E4)  # How long to train for
 iterations = 0  # How many steps the agent has taken
 
 # Starting state of env
@@ -73,7 +74,7 @@ while iterations < TRAINING_EPOCHS:
     transition_dirichlet_alphas[state, action, next_state] += 1
 
     reward_parameter_table[state, action, reward] += 1
-    reward_dirichlet_alphas[state, action, next_state] += 1
+    reward_dirichlet_alphas[state, action, reward] += 1
 
     # Update current state
     state = next_state
@@ -94,13 +95,26 @@ print(reward_parameter_table)
 # take the subset of transition_dirichlet_alphas like so:
 
 # Generate samples:
-print("Sampled mdps:")
-print(transition_dirichlet_alphas)
-for i in range(4):
-    mdp_sample = sample_mdp_from_params(transition_dirichlet_alphas, NUM_STATES, NUM_ACTIONS)
-    print(mdp_sample)
+# print("Sampled mdps:")
+# print(transition_dirichlet_alphas)
+# for i in range(4):
+#     mdp_sample = sample_mdp_from_params(transition_dirichlet_alphas, NUM_STATES, NUM_ACTIONS)
+#     print(mdp_sample)
 
 
+transitions = sample_mdp_from_params(transition_dirichlet_alphas, NUM_STATES, NUM_ACTIONS)
+rewards = sample_mdp_from_params(reward_dirichlet_alphas, NUM_STATES, NUM_ACTIONS)
+np.save('np_save_data/transitions.npy', transitions)
+np.save('np_save_data/rewards.npy', rewards)
+
+discount = 0.9
+print(transitions)
+print(rewards)
+q_values = q_values_from_transition_reward_iterative(transitions, rewards, discount)
+print('Q values')
+print(q_values)
+print('Baseline Q values')
+print(np.load('np_save_data/true_q_values_gamma_0_9.npy'))
 # Could also sample whole thing at once, then normalize?
 # Or is each transition probability supposed to be independent?
 
