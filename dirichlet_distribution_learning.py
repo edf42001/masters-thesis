@@ -120,20 +120,6 @@ print(np.load('np_save_data/true_q_values_gamma_0_9.npy'))
 # Because max action value is always the same, try to maximize
 # E[q(s, a)] + VPI(s, a)
 
-def calc_gain(s, a, new_learned_q):
-    # a1 and a2 are best and second best actions
-    # TODO
-    if a == "BEST ACTION":
-        # and q is less than second best (otherwise best would still be best)
-        gain = "expected q of second value" - new_learned_q
-    elif a != "BEST ACTION":
-        # and new value is better than best action (otherwise it would stay the same)
-        gain = new_learned_q - "expected q of best value"
-    else:
-        gain = 0
-
-    return gain
-
 
 def calc_value_perfect_information(s, a):
     # Sum of gains over all different values the new q values could be (x)
