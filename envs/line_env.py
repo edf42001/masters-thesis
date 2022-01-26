@@ -37,3 +37,10 @@ class LineEnv(object):
 
     def get_state(self):
         return self.state
+
+    def num_states(self):
+        return 5
+
+    def num_actions(self):
+        return 2
+

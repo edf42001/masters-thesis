@@ -47,49 +47,56 @@ def generate_q_tables_from_sampled_mpds(transition_alphas, reward_alphas, discou
     return q_tables
 
 
-def estimate_value_of_perfect_information_from_sampled_q_values(current_q_values, sampled_q_values):
+def estimate_value_of_perfect_information_from_sampled_q_values(sampled_q_values):
+    # Caluclate the mean of the samples. Is this what we assume the "current" q values are?
+    # Or do we get "current" q values from regular q leaning?
     sampled_q_values_mean = sampled_q_values.mean(axis=0)
 
     # Store gains for each sampled mdp
     gains = np.zeros_like(sampled_q_values)
 
-    print("Sampled and current q values")
-    print(sampled_q_values)
-    print(current_q_values)
-    print()
+    # print("Sampled and current q values")
+    # print(sampled_q_values)
+    # print(sampled_q_values_mean)
+    # print()
 
-    for i in range(len(current_q_values)):
+    for i in range(len(sampled_q_values_mean)):
         # TODO: 5 needs to be replaced with NUM_STATES
         state = i % 5
         action = int(i / 5)
-        print("s: {}, a: {}".format(state, action))
+        # print("s: {}, a: {}".format(state, action))
         assumed_q_values = sampled_q_values[:, state+5*action]
-        current_q_value = current_q_values[state+5*action]
+        current_q_value = sampled_q_values_mean[state + 5 * action]
 
-        print("Assumed values", assumed_q_values)
-        print("current q value", current_q_value)
+        # print("Assumed values", assumed_q_values)
+        # print("current q value", current_q_value)
 
         # Q values of actions available in this state
-        q_values_actions = current_q_values.reshape(2, 5)[:, state]
-        print("q_values_actions", q_values_actions)
+        q_values_actions = sampled_q_values_mean.reshape(2, 5)[:, state]
+        # print("q_values_actions", q_values_actions)
 
         # Sort actions to find best ones. (don't need to sort whole array?) (values ordered from least to greatest)
         sorted_actions = np.argsort(q_values_actions)
         best_action = sorted_actions[-1]
         second_best_action = sorted_actions[-2]
-        best_q = current_q_values[state + 5 * best_action]
-        second_best_q = current_q_values[state + 5 * second_best_action]
+        best_q = sampled_q_values_mean[state + 5 * best_action]
+        second_best_q = sampled_q_values_mean[state + 5 * second_best_action]
 
         for k in range(len(assumed_q_values)):
             gain = calculate_information_gain(action, assumed_q_values[k], best_action, best_q, second_best_q)
             gains[k, state + 5*action] = gain
 
-        print("gains", gains[:, state + 5*action])
-        print()
+        # print("gains", gains[:, state + 5*action])
+        # print()
 
-    print("gains")
-    print(gains)
-    return 0
+    # print("gains")
+    # print(gains)
+
+    # Return average expected value of information for each state
+    expected_vpi = gains.mean(axis=0)
+    # print(expected_vpi)
+
+    return expected_vpi
 
 
 def calculate_information_gain(action, assumed_q, best_a, best_q, second_best_q):
@@ -106,9 +113,7 @@ def calculate_information_gain(action, assumed_q, best_a, best_q, second_best_q)
     return gain
 
 
-
 if __name__ == "__main__":
-
     # Make it easier to read everything
     np.set_printoptions(precision=2, suppress=True)
 
@@ -124,7 +129,7 @@ if __name__ == "__main__":
     sampled_q_tables = generate_q_tables_from_sampled_mpds(transition_alphas, reward_alphas, discount, K)
 
     current_q_values = np.array([20, 25, 30, 34, 39, 23, 24, 24, 25, 28])
-    VPI = estimate_value_of_perfect_information_from_sampled_q_values(current_q_values, sampled_q_tables)
+    VPI = estimate_value_of_perfect_information_from_sampled_q_values(sampled_q_tables)
 
     # profiler.disable()
     # stats = pstats.Stats(profiler)
