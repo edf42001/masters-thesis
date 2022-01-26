@@ -21,14 +21,14 @@ def q_values_from_transition_reward_iterative(transitions, rewards, discount):
     NUM_ITERATIONS = 50  # Iterations to do
     iterations = 0
 
-    q_tables = np.zeros((NUM_ITERATIONS, 10))
+    q_tables = np.zeros((NUM_ITERATIONS, NUM_STATES * NUM_ACTIONS))
 
     while iterations < NUM_ITERATIONS:
         # Each iteration, iterate over each action in the q table
         # from front to back. Does order matter?
         for i in range(len(q_table)):
-            s = i % 5
-            a = int(i / 5)
+            s = i % NUM_STATES
+            a = int(i / NUM_STATES)
             # print(s, a)
             # The state/action pair is encoded in i, which can be thought of as already hashed
 

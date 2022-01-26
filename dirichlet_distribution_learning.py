@@ -1,4 +1,5 @@
 from envs.line_env import LineEnv
+from envs.loop_env import LoopEnv
 
 import numpy as np
 import random
@@ -13,7 +14,7 @@ import pstats
 np.set_printoptions(precision=2, suppress=True)
 
 # Create environment
-env = LineEnv()
+env = LoopEnv()
 
 NUM_STATES = env.num_states()  # States in env
 NUM_ACTIONS = env.num_actions()  # Actions per state (uniform in this case)
@@ -41,7 +42,6 @@ q_table = np.zeros(NUM_STATES * NUM_ACTIONS)
 # Store rewards over time
 rewards = np.zeros(TRAINING_EPOCHS)
 
-
 # Do the training
 while iterations < TRAINING_EPOCHS:
     # Create dirilect posteriors from priors (Assume all start at one)
@@ -54,7 +54,7 @@ while iterations < TRAINING_EPOCHS:
 
     # We now have a distribution of q values. From these, calculate
     # the Value of Perfect Information (for all q values? Just for this state? Can they be reused?)
-    VPI = estimate_value_of_perfect_information_from_sampled_q_values(sampled_q_tables)
+    VPI = estimate_value_of_perfect_information_from_sampled_q_values(sampled_q_tables, NUM_STATES)
 
     # TODO: Compare to basic q learning. Make faster. Check if q values are approaching what they should
     # Ask prof ray for advice? Implement loop domain. Check other implementations and compare.
