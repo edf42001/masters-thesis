@@ -44,3 +44,6 @@ class LineEnv(object):
     def num_actions(self):
         return 2
 
+    def num_rewards(self):
+        return 11
+

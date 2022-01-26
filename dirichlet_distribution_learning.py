@@ -2,11 +2,12 @@ from envs.line_env import LineEnv
 
 import numpy as np
 import random
-from value_function_from_transition_reward import q_values_from_transition_reward_iterative
-from q_distribution_from_sampled_mdps import sample_mdp_from_params, q_values_from_transition_reward_iterative,\
-    generate_q_tables_from_sampled_mpds, estimate_value_of_perfect_information_from_sampled_q_values
+from q_distribution_from_sampled_mdps import generate_q_tables_from_sampled_mpds,\
+    estimate_value_of_perfect_information_from_sampled_q_values
 
 import matplotlib.pyplot as plt
+import cProfile
+import pstats
 
 # Make it easier to read everything
 np.set_printoptions(precision=2, suppress=True)
@@ -16,9 +17,9 @@ env = LineEnv()
 
 NUM_STATES = env.num_states()  # States in env
 NUM_ACTIONS = env.num_actions()  # Actions per state (uniform in this case)
-NUM_REWARDS = 11  # Rewards go from 0 to 10
+NUM_REWARDS = env.num_rewards()  # Rewards go from 0 to 10
 
-TRAINING_EPOCHS = int(5E2)  # How long to train for
+TRAINING_EPOCHS = int(4E2)  # How long to train for
 iterations = 0  # How many steps the agent has taken so far
 
 # Number of mdp to sample for naive global sampling
@@ -40,11 +41,12 @@ q_table = np.zeros(NUM_STATES * NUM_ACTIONS)
 # Store rewards over time
 rewards = np.zeros(TRAINING_EPOCHS)
 
+
 # Do the training
 while iterations < TRAINING_EPOCHS:
     # Create dirilect posteriors from priors (Assume all start at one)
-    transition_alphas = transition_table + 1
-    reward_alphas = reward_table + 1
+    transition_alphas = transition_table + 0.1
+    reward_alphas = reward_table + 0.1
 
     # From the alphas, generate K MDPs and from those MDPs, calculate their Q table values
     sampled_q_tables = generate_q_tables_from_sampled_mpds(transition_alphas, reward_alphas, discount, K)
@@ -53,6 +55,9 @@ while iterations < TRAINING_EPOCHS:
     # We now have a distribution of q values. From these, calculate
     # the Value of Perfect Information (for all q values? Just for this state? Can they be reused?)
     VPI = estimate_value_of_perfect_information_from_sampled_q_values(sampled_q_tables)
+
+    # TODO: Compare to basic q learning. Make faster. Check if q values are approaching what they should
+    # Ask prof ray for advice? Implement loop domain. Check other implementations and compare.
 
     # Want to maximize vpi - cost of choosing vpi action =
     # maximize VPI + E[q(s, a)]
@@ -85,6 +90,7 @@ while iterations < TRAINING_EPOCHS:
     iterations += 1
 
 
+print(sum(rewards))
 plt.plot(rewards)
 plt.show()
 
