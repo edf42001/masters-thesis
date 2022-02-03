@@ -132,7 +132,7 @@ class TaxiWorldEnv(object):
         self.taxi_x = np.random.randint(0, 4)
         self.taxi_y = np.random.randint(0, 4)
 
-    def draw_taxi(self):
+    def draw_taxi(self, delay=100):
         GRID_SIZE = 100
         WIDTH = self.WIDTH
         HEIGHT = self.HEIGHT
@@ -184,7 +184,7 @@ class TaxiWorldEnv(object):
                          thickness=3, color=[0, 0, 0])
 
         cv2.imshow("Taxi World", img)
-        cv2.waitKey(2)
+        cv2.waitKey(delay)
 
     def touching_wall(self, direction):
         """Checks if the taxi is touching a wall in a certain direction"""
@@ -200,9 +200,6 @@ class TaxiWorldEnv(object):
             print("Bad direction: {}".format(direction))
             return False
 
-    def get_state(self):
-        return self.state
-
     def num_states(self):
         return 9
 
@@ -212,11 +209,18 @@ class TaxiWorldEnv(object):
     def num_rewards(self):
         return 3
 
+    def get_state(self):
+        stop_letter_to_index = {"R": 0, "G": 1, "B": 2, "Y": 3}
+
+        passenger_loc_index = 4 if self.passenger_in_taxi else stop_letter_to_index[self.current_pickup]
+        destination_loc_index = stop_letter_to_index[self.current_dropoff]
+        """State is a tuple of (taxi.x, taxi.y, pickup, dropoff, passenger.in_taxi"""
+        return self.taxi_x, self.taxi_y, passenger_loc_index, destination_loc_index
+
 
 if __name__ == "__main__":
     env = TaxiWorldEnv()
 
-    # TODO: Way to automate this?
     action_map = [ACTION.NORTH, ACTION.EAST, ACTION.SOUTH, ACTION.WEST, ACTION.PICKUP, ACTION.DROPOFF]
 
     NUM_STEPS = 20
@@ -230,6 +234,6 @@ if __name__ == "__main__":
         print("Reward: {}".format(reward))
         print("pickup: {}, dropoff: {}".format(env.current_pickup, env.current_dropoff))
         print("x: {}, y: {}".format(env.taxi_x, env.taxi_y))
-        print("passneger_in_taxi: {}".format(env.passenger_in_taxi))
+        print("passenger_in_taxi: {}".format(env.passenger_in_taxi))
 
     iterations += 1
