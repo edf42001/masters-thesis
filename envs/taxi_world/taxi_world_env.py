@@ -14,6 +14,13 @@ class ACTION(Enum):
     DROPOFF = 5
 
 
+class Taxi:
+    """Class to store info about the taxi object"""
+    def __init__(self, x=0, y=0):
+        self.x = x
+        self.y = y
+
+
 class TaxiWorldEnv(object):
     """
     Simulation of the (deterministic) taxi world environment. Taxi world is 5x5 and there is a taxi.
@@ -28,8 +35,7 @@ class TaxiWorldEnv(object):
         self.HEIGHT = 5
 
         # Taxi's position
-        self.taxi_x = 0
-        self.taxi_y = 0
+        self.taxi = Taxi()
 
         # Locations of taxi destinations
         self.stops = {"R": [0, 4], "G": [4, 4], "B": [3, 0], "Y": [0, 0]}
@@ -75,36 +81,31 @@ class TaxiWorldEnv(object):
         done = False
 
         # State changes based on action (deterministically)
-        # Using  allows us to use numbers. TODO: use enums?
         if action in [ACTION.NORTH, ACTION.EAST, ACTION.SOUTH, ACTION.WEST] and \
-           self.touching_wall(action):
+           self.touching_wall(self.taxi, action):
             # If the action is trying to move but there is a wall in the way, literally do nothing
             pass
 
         elif action == ACTION.NORTH:
-            self.taxi_y += 1
+            self.taxi.y += 1
 
         elif action == ACTION.EAST:
-            self.taxi_x += 1
+            self.taxi.x += 1
 
         elif action == ACTION.SOUTH:
-            self.taxi_y += -1
+            self.taxi.y += -1
 
         elif action == ACTION.WEST:
-            self.taxi_x += -1
+            self.taxi.x += -1
 
         elif action == ACTION.PICKUP:
-            square = self.stops[self.current_pickup]
-
             # If on the right spot and the passenger is there, pick them up
-            if square[0] == self.taxi_x and square[1] == self.taxi_y and not self.passenger_in_taxi:
+            if self.on_pickup(self.taxi, self.current_pickup) and not self.is_passenger_in_taxi():
                 self.passenger_in_taxi = True
 
         elif action == ACTION.DROPOFF:
-            square = self.stops[self.current_dropoff]
-
             # If on the right spot and the passenger is in taxi, drop them off, +10 reward
-            if square[0] == self.taxi_x and square[1] == self.taxi_y and self.passenger_in_taxi:
+            if self.on_destination(self.taxi, self.current_dropoff) and self.is_passenger_in_taxi:
                 # Episode restarts, randomize values
                 self.passenger_in_taxi = False
                 self.reset_passenger_pickup_dropoff()
@@ -117,7 +118,35 @@ class TaxiWorldEnv(object):
 
         return reward, done
 
-    # TODO: The episode ends when taxis drops off passenger, so this should reset the taxi position as well
+    def touching_wall(self, taxi, direction):
+        """Checks if the taxi is touching a wall in a certain direction"""
+        if direction == ACTION.NORTH:
+            return self.walls_horizontal[taxi.x, taxi.y + 1]
+        elif direction == ACTION.EAST:
+            return self.walls_vertical[taxi.x+1, taxi.y]
+        elif direction == ACTION.SOUTH:
+            return self.walls_horizontal[taxi.x, taxi.y]
+        elif direction == ACTION.WEST:
+            return self.walls_vertical[taxi.x, taxi.y]
+        else:
+            print("Bad direction: {}".format(direction))
+            return False
+
+    def on_destination(self, taxi, destination):
+        """Check if the taxi is on the destination"""
+        square = self.stops[destination]
+        return square[0] == taxi.x and square[1] == taxi.y
+
+    def on_pickup(self, taxi, pickup):
+        """Check if the taxi is on passenger pickup location"""
+        # TODO: and passenger isn't in taxi?
+        square = self.stops[pickup]
+        return square[0] == taxi.x and square[1] == taxi.y
+
+    def is_passenger_in_taxi(self):
+        """Is the passenger in the tax"""
+        return self.passenger_in_taxi
+
     def reset_passenger_pickup_dropoff(self):
         # Pick random pickup location
         choices = list(self.stops.keys())
@@ -129,8 +158,8 @@ class TaxiWorldEnv(object):
             self.current_dropoff = np.random.choice(choices)
 
     def reset_taxi(self):
-        self.taxi_x = np.random.randint(0, 4)
-        self.taxi_y = np.random.randint(0, 4)
+        self.taxi.x = np.random.randint(0, 4)
+        self.taxi.y = np.random.randint(0, 4)
 
     def draw_taxi(self, delay=100):
         GRID_SIZE = 100
@@ -156,13 +185,13 @@ class TaxiWorldEnv(object):
                    thickness=-1, color=[0, 0, 0])
 
         # Draw taxi
-        cv2.circle(img, (int((self.taxi_x + 0.5) * GRID_SIZE), int((HEIGHT - (self.taxi_y + 0.5)) * GRID_SIZE)), int(GRID_SIZE * 0.3),
+        cv2.circle(img, (int((self.taxi.x + 0.5) * GRID_SIZE), int((HEIGHT - (self.taxi.y + 0.5)) * GRID_SIZE)), int(GRID_SIZE * 0.3),
                    thickness=-1, color=[0, 0, 0])
 
         # Draw passenger
         if self.passenger_in_taxi:
-            pass_x = self.taxi_x
-            pass_y = self.taxi_y
+            pass_x = self.taxi.x
+            pass_y = self.taxi.y
         else:
             pass_x = self.stops[self.current_pickup][0]
             pass_y = self.stops[self.current_pickup][1]
@@ -186,20 +215,6 @@ class TaxiWorldEnv(object):
         cv2.imshow("Taxi World", img)
         cv2.waitKey(delay)
 
-    def touching_wall(self, direction):
-        """Checks if the taxi is touching a wall in a certain direction"""
-        if direction == ACTION.NORTH:
-            return self.walls_horizontal[self.taxi_x, self.taxi_y + 1]
-        elif direction == ACTION.EAST:
-            return self.walls_vertical[self.taxi_x+1, self.taxi_y]
-        elif direction == ACTION.SOUTH:
-            return self.walls_horizontal[self.taxi_x, self.taxi_y]
-        elif direction == ACTION.WEST:
-            return self.walls_vertical[self.taxi_x, self.taxi_y]
-        else:
-            print("Bad direction: {}".format(direction))
-            return False
-
     def num_states(self):
         return 9
 
@@ -210,18 +225,20 @@ class TaxiWorldEnv(object):
         return 3
 
     def get_state(self):
+        """State is a tuple of (taxi.x, taxi.y, pickup, dropoff, passenger.in_taxi"""
+
         stop_letter_to_index = {"R": 0, "G": 1, "B": 2, "Y": 3}
 
-        passenger_loc_index = 4 if self.passenger_in_taxi else stop_letter_to_index[self.current_pickup]
+        passenger_loc_index = stop_letter_to_index[self.current_pickup]
         destination_loc_index = stop_letter_to_index[self.current_dropoff]
-        """State is a tuple of (taxi.x, taxi.y, pickup, dropoff, passenger.in_taxi"""
-        return self.taxi_x, self.taxi_y, passenger_loc_index, destination_loc_index
+
+        return self.taxi.x, self.taxi.y, passenger_loc_index, destination_loc_index, self.passenger_in_taxi
 
 
 if __name__ == "__main__":
     env = TaxiWorldEnv()
 
-    action_map = [ACTION.NORTH, ACTION.EAST, ACTION.SOUTH, ACTION.WEST, ACTION.PICKUP, ACTION.DROPOFF]
+    action_map = list(ACTION)
 
     NUM_STEPS = 20
     iterations = 0
@@ -233,7 +250,7 @@ if __name__ == "__main__":
 
         print("Reward: {}".format(reward))
         print("pickup: {}, dropoff: {}".format(env.current_pickup, env.current_dropoff))
-        print("x: {}, y: {}".format(env.taxi_x, env.taxi_y))
+        print("x: {}, y: {}".format(env.taxi.x, env.taxi.y))
         print("passenger_in_taxi: {}".format(env.passenger_in_taxi))
 
     iterations += 1

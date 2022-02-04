@@ -16,9 +16,14 @@ def select_action(q_table, state, epsilon):
 
 def state_hash(state):
     # 5 for taxi x, 5 for taxi y, 5 for current passenger, 4 for destination
+    # Need to combine pickup location (index 2) with passenger in taxi (index 4) to make 5 states instead of 8
+
+    # Set this to 4 if passenger is in taxi otherwise 0-3 for the pickup index
+    passenger_loc_index = 4 if state[4] else state[2]
+
     return state[0] + \
            5 * state[1] + \
-           25 * state[2] + \
+           25 * passenger_loc_index + \
            125 * state[3]
 
 
@@ -28,7 +33,8 @@ env = TaxiWorldEnv()
 NUM_STATES = 500  # 25 places taxi can be in, 5 places for passenger (4 pickup, 1 in taxi), 4 places for destination
 NUM_ACTIONS = len(list(ACTION))
 
-if False:
+load = True
+if not load:
     q_table = np.zeros((NUM_STATES, NUM_ACTIONS))
 else:
     q_table = np.load("../../np_save_data/taxi_world_sarsa_q_values.npy")
@@ -39,7 +45,11 @@ NUM_ITERATIONS = 10000
 iterations = 0
 
 # Q learning parameters
-epsilon = 0.1
+if not load:
+    epsilon = 0.1
+else:
+    epsilon = 0
+
 learning_rate = 0.2
 discount_rate = 0.6
 
