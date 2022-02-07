@@ -21,6 +21,11 @@ class Taxi:
         self.y = y
 
 
+class Passenger:
+    def __init__(self, in_taxi=False):
+        self.in_taxi = in_taxi
+
+
 class TaxiWorldEnv(object):
     """
     Simulation of the (deterministic) taxi world environment. Taxi world is 5x5 and there is a taxi.
@@ -34,8 +39,11 @@ class TaxiWorldEnv(object):
         self.WIDTH = 5
         self.HEIGHT = 5
 
-        # Taxi's position
+        # Taxi's object
         self.taxi = Taxi()
+
+        # Passenger object
+        self.passenger = Passenger()
 
         # Locations of taxi destinations
         self.stops = {"R": [0, 4], "G": [4, 4], "B": [3, 0], "Y": [0, 0]}
@@ -43,9 +51,6 @@ class TaxiWorldEnv(object):
         # Current pickup and stoplocation
         self.current_pickup = "R"
         self.current_dropoff = "G"
-
-        # Has the taxi picked up the passenger
-        self.passenger_in_taxi = False
 
         # Location of walls
         self.walls_vertical = np.zeros((6, 6), dtype=bool)
@@ -100,14 +105,14 @@ class TaxiWorldEnv(object):
 
         elif action == ACTION.PICKUP:
             # If on the right spot and the passenger is there, pick them up
-            if self.on_pickup(self.taxi, self.current_pickup) and not self.is_passenger_in_taxi():
-                self.passenger_in_taxi = True
+            if self.on_pickup(self.taxi, self.current_pickup) and not self.passenger_in_taxi():
+                self.passenger.in_taxi = True
 
         elif action == ACTION.DROPOFF:
             # If on the right spot and the passenger is in taxi, drop them off, +10 reward
-            if self.on_destination(self.taxi, self.current_dropoff) and self.is_passenger_in_taxi:
+            if self.on_destination(self.taxi, self.current_dropoff) and self.passenger_in_taxi():
                 # Episode restarts, randomize values
-                self.passenger_in_taxi = False
+                self.passenger.in_taxi = False
                 self.reset_passenger_pickup_dropoff()
                 self.reset_taxi()
 
@@ -143,9 +148,9 @@ class TaxiWorldEnv(object):
         square = self.stops[pickup]
         return square[0] == taxi.x and square[1] == taxi.y
 
-    def is_passenger_in_taxi(self):
+    def passenger_in_taxi(self):
         """Is the passenger in the tax"""
-        return self.passenger_in_taxi
+        return self.passenger.in_taxi
 
     def reset_passenger_pickup_dropoff(self):
         # Pick random pickup location
@@ -189,7 +194,7 @@ class TaxiWorldEnv(object):
                    thickness=-1, color=[0, 0, 0])
 
         # Draw passenger
-        if self.passenger_in_taxi:
+        if self.passenger_in_taxi():
             pass_x = self.taxi.x
             pass_y = self.taxi.y
         else:
@@ -232,7 +237,7 @@ class TaxiWorldEnv(object):
         passenger_loc_index = stop_letter_to_index[self.current_pickup]
         destination_loc_index = stop_letter_to_index[self.current_dropoff]
 
-        return self.taxi.x, self.taxi.y, passenger_loc_index, destination_loc_index, self.passenger_in_taxi
+        return self.taxi.x, self.taxi.y, passenger_loc_index, destination_loc_index, self.passenger_in_taxi()
 
 
 if __name__ == "__main__":
@@ -251,6 +256,6 @@ if __name__ == "__main__":
         print("Reward: {}".format(reward))
         print("pickup: {}, dropoff: {}".format(env.current_pickup, env.current_dropoff))
         print("x: {}, y: {}".format(env.taxi.x, env.taxi.y))
-        print("passenger_in_taxi: {}".format(env.passenger_in_taxi))
+        print("passenger_in_taxi: {}".format(env.passenger_in_taxi()))
 
     iterations += 1

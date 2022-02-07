@@ -1,6 +1,6 @@
 def boolean_arr_to_string(arr):
     """Array of booleans to 0 or 1 string"""
-    return ["1" if value else "0" for value in arr]
+    return "".join(["1" if value else "0" for value in arr])
 
 
 def condition_matches(c1, c2):
