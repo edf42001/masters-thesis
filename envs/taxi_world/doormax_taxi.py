@@ -9,6 +9,9 @@ from envs.taxi_world.prediction import Prediction
 ALL_ATTRIBUTES = ["taxi.x", "taxi.y", "passenger.in_taxi"]
 ALL_EFFECTS = [Increment, SetToNumber, SetToBoolean, NoChange]
 
+# TODO: FOR TESTING ONLY
+np.random.seed(1)
+
 
 class DoormaxTaxi:
     """Implements deterministic object oriented r max RL for deterministic taxi world"""
@@ -47,8 +50,8 @@ class DoormaxTaxi:
     def select_action(self):
         # For now, pick a random action from the list
         # Just return south, for testing
-        return ACTION.SOUTH
-        # return np.random.choice(list(ACTION))
+        # return ACTION.SOUTH
+        return np.random.choice(list(ACTION))
 
     def predict_transition(self, state, action):
         """
@@ -99,6 +102,18 @@ class DoormaxTaxi:
 
         return None
 
+    def check_conditions_overlap(self, current_predictions, matched_pred):
+        """
+        Check if there exists some condition (but don't compare matched prediction to itself!)
+        where the conditions overlap. This is a contradiction? For some reason?
+        """
+        for pred in current_predictions:
+            if pred != matched_pred and condition_matches(matched_pred.model, pred.model):
+                print("Found overlapping condition: {}, {}".format(matched_pred, pred))
+                return True
+
+        return False
+
     def add_experience(self, state, action, next_state, k):
         """Records experience of state action transition"""
 
@@ -112,9 +127,9 @@ class DoormaxTaxi:
 
             # TODO: remove all matches conditions (to prevent duplicates? why?)
             # Print thrice, to check for change
-            print(self.failure_conditions[action])
+            # print(self.failure_conditions[action])
             self.failure_conditions[action] = [c for c in self.failure_conditions[action] if not condition_matches(condition_s, c)]
-            print(self.failure_conditions[action])
+            # print(self.failure_conditions[action])
             self.failure_conditions[action].append(condition_s)
             print(self.failure_conditions[action])
         else:
@@ -128,6 +143,11 @@ class DoormaxTaxi:
                     # Look through predictions for current action, attribute, and e type
                     # to find a matching effect
                     current_predictions = self.predictions[action][attribute][effect.type()]
+
+                    # If ever set to None, this means this is the wrong effect type for this pair
+                    if current_predictions is None:
+                        continue
+
                     print("Current predictions: {}".format(current_predictions))
 
                     matched_prediction = self.find_matching_prediction(current_predictions, effect)
@@ -136,10 +156,17 @@ class DoormaxTaxi:
                     if matched_prediction is not None:
                         # We already have a prediction for what will happen to this attribute when
                         # this action is taken. Lets update it to make the condition more accurate
-                        print("Found matching prediction: {}".format(matched_prediction))
+                        print("Found matching prediction")
 
                         matched_prediction.model = commute_condition_strings(matched_prediction.model, condition_s)
                         print("Updated prediction: {}".format(matched_prediction))
+
+                        # Check for overlapping conditions, this would be a contradiction and we remove this Type
+                        if self.check_conditions_overlap(current_predictions, matched_prediction):
+                            self.predictions[action][attribute][effect.type()] = None
+                        else:
+                            print("No overlap")
+
                     else:
                         # A new effect has been observed.
                         # If the condition does not overlap and existing condition, add the new prediction (TODO: why?)
@@ -152,7 +179,7 @@ class DoormaxTaxi:
                         overlap = False
                         for c in models:
                             if condition_matches(condition_s, c) or condition_matches(c, condition_s):
-                                print("Found overlap: {}, {}".format(condition_s, c))
+                                print("Found overlap, removing: {}, {}".format(condition_s, c))
                                 overlap = True
                                 break
 
@@ -175,13 +202,29 @@ class DoormaxTaxi:
                             #     print("Too many effects, removing")
                             #     self.predictions[action][attribute][effect.type()] = None
 
+    def print_predictions(self, predictions):
+        """Prints predictions in an easy to read format"""
+        for action in list(ACTION):
+            print(action)
+            for attribute in ALL_ATTRIBUTES:
+                non_empty_effects = []
+                for effect in ALL_EFFECTS:
+                    effects = predictions[action][attribute][effect]
+                    if effects is not None and len(effects) != 0:
+                        non_empty_effects.append(effects)
+
+                # Only print attribute and effects if there is something to see
+                if len(non_empty_effects) != 0:
+                    print("{}: {}".format(attribute, non_empty_effects))
+            print()
+
 
 # Create the env
 env = TaxiWorldEnv()
 doormax = DoormaxTaxi(env)
 
 # How many iterations to iterate for, and iteration counter
-NUM_ITERATIONS = 2
+NUM_ITERATIONS = 3000
 iterations = 0
 
 # Main learning loop
@@ -208,8 +251,12 @@ while iterations < NUM_ITERATIONS:
     doormax.add_experience(state, action, new_state, k=1)
 
     # Newline
+    print(iterations)
     print()
     print()
     print()
 
     iterations += 1
+
+print("RESULTS:")
+doormax.print_predictions(doormax.predictions)

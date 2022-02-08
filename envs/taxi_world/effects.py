@@ -73,17 +73,17 @@ def get_effects(state, next_state, attribute):
 
     if attribute == "taxi.x":
         if taxi_x_next == taxi_x:
-            return [NoChange()]
+            return []  # Could return NoChange()?
         else:
             return [Increment(taxi_x_next - taxi_x), SetToNumber(taxi_x_next)]
     elif attribute == "taxi.y":
         if taxi_y_next == taxi_y:
-            return [NoChange()]
+            return []
         else:
             return [Increment(taxi_y_next - taxi_y), SetToNumber(taxi_y_next)]
     elif attribute == "passenger.in_taxi":
         if passenger_in_taxi_next == passenger_in_taxi:
-            return [NoChange()]
+            return []
         else:
             # Could also have an (invert) here
             return [SetToBoolean(passenger_in_taxi_next)]

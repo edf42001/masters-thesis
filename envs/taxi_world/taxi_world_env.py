@@ -61,6 +61,12 @@ class TaxiWorldEnv(object):
         self.reset_passenger_pickup_dropoff()
         self.reset_taxi()
 
+        # TODO: FOR TESTING PURPOSES ONLY
+        self.taxi.x = 0
+        self.taxi.y = 2
+        self.current_pickup = "Y"
+        self.current_dropoff = "G"
+
     def setup_walls(self):
         # Walls are indexed by their bottom left corner. A horizontal wall and veritcal wall extend right and up from
         # that point if they are marked as existing. This means there are (Width+1)*(Height+1) points, but the rightmost
