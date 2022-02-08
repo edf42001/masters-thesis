@@ -13,11 +13,18 @@ class Effect(object):
         """Returns the type of the object (currently the class type)"""
         return self.__class__
 
+    def apply(self, initial_value):
+        """Applies this effect to a value"""
+        return initial_value
+
 
 class Increment(Effect):
     def __init__(self, amount):
         super().__init__()
         self.amount = amount
+
+    def apply(self, initial_value):
+        return initial_value + self.amount
 
     def __str__(self):
         return "Increment({})".format(self.amount)
@@ -31,6 +38,9 @@ class SetToNumber(Effect):
         super().__init__()
         self.value = value
 
+    def apply(self, initial_value):
+        return self.value
+
     def __str__(self):
         return "SetToNumber({})".format(self.value)
 
@@ -43,6 +53,9 @@ class SetToBoolean(Effect):
         super().__init__()
         self.value = value
 
+    def apply(self, initial_value):
+        return self.value
+
     def __str__(self):
         return "SetToBoolean({})".format(self.value)
 
@@ -53,6 +66,9 @@ class SetToBoolean(Effect):
 class NoChange(Effect):
     def __init__(self):
         super().__init__()
+
+    def apply(self, initial_value):
+        return initial_value
 
     def __str__(self):
         return "NoChange()"
@@ -89,3 +105,22 @@ def get_effects(state, next_state, attribute):
             return [SetToBoolean(passenger_in_taxi_next)]
     else:
         print("Bad Attribute: {}".format(attribute))
+
+
+def apply_effect(state, attribute, effect):
+    # TODO: This should act on objects and get effects from dictionaries. Instead of these if elses
+    taxi_x = state[0]
+    taxi_y = state[1]
+    passenger_in_taxi = state[4]
+
+    if attribute == "taxi.x":
+        taxi_x = effect.apply(taxi_x)
+    elif attribute == "taxi.y":
+        taxi_y = effect.apply(taxi_y)
+    elif attribute == "passenger.in_taxi":
+        passenger_in_taxi = effect.apply(passenger_in_taxi)
+    else:
+        print("Bad Attribute: {}".format(attribute))
+
+    # Return the new state with modified values
+    return taxi_x, taxi_y, state[2], state[3], passenger_in_taxi

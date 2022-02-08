@@ -53,21 +53,6 @@ class DoormaxTaxi:
         # return ACTION.SOUTH
         return np.random.choice(list(ACTION))
 
-    def predict_transition(self, state, action):
-        """
-        Predicts the next state from current state and action,
-        or returns unknown (max reward) if it doesn't know
-        """
-
-        condition = self.conditions(state)
-
-        for failure_condition in self.failure_conditions[action]:
-            if condition_matches(failure_condition, condition):
-                # The current condition is a failure condition. No change
-                return state
-
-        # Otherwise, check all effect types?
-
     def conditions(self, state):
         """
         Returns the conditions that are true for a given state
@@ -146,6 +131,7 @@ class DoormaxTaxi:
 
                     # If ever set to None, this means this is the wrong effect type for this pair
                     if current_predictions is None:
+                        print("This condition is known to be wrong")
                         continue
 
                     print("Current predictions: {}".format(current_predictions))
@@ -176,6 +162,7 @@ class DoormaxTaxi:
                         print("Models: {}".format(models))
 
                         # Search for overlapping conditions
+                        # TODO: why does this one compare cond/c, and c/cond, while the other only does one
                         overlap = False
                         for c in models:
                             if condition_matches(condition_s, c) or condition_matches(c, condition_s):
@@ -184,8 +171,7 @@ class DoormaxTaxi:
                                 break
 
                         if overlap:
-                            # TODO: remove pred from P
-                            pass
+                            self.predictions[action][attribute][effect.type()] = None
                         else:
                             # Now we can add the new prediction to the list
                             print("No overlap")
@@ -198,9 +184,69 @@ class DoormaxTaxi:
                             # Check if there are more than k predictions for this action/attribute/type
                             # If there are, that's not the real effect type, so remove it from the running
                             # TODO: figure this out. Is k = 1? Or is it a bigger fudge factor?
-                            # if len(self.predictions[action][attribute][effect.type()]) > k:
-                            #     print("Too many effects, removing")
-                            #     self.predictions[action][attribute][effect.type()] = None
+                            if len(self.predictions[action][attribute][effect.type()]) > k:
+                                print("Too many effects, removing")
+                                self.predictions[action][attribute][effect.type()] = None
+
+    def predict_transition(self, state, action):
+        """
+        Predicts the next state from current state and action,
+        or returns unknown (max reward) if it doesn't know
+        """
+
+        condition_s = self.conditions(state)
+        print("Action: {}".format(action))
+        print("Condition: {}".format(condition_s))
+        print("State: {}".format(state))
+
+        for failure_condition in self.failure_conditions[action]:
+            if condition_matches(failure_condition, condition_s):
+                # The current condition is a failure condition. No change
+                print("Failure condition")
+                return state
+
+        # Otherwise, check all effects and attributes
+        # TODO: Is this wrong? Should applied effects be higher up??
+        applied_effects = []
+
+        for attribute in ALL_ATTRIBUTES:
+            print(attribute)
+            for effect_type in ALL_EFFECTS:
+                print(effect_type)
+                # If we have predictions that match the state we are currently in,
+                # then we know those effects will happen
+                current_predictions = self.predictions[action][attribute][effect_type]
+                print("Current_predictions: {}".format(current_predictions))
+
+                # If none, not a real effect, continue
+                if current_predictions is None:
+                    continue
+
+                for pred in self.predictions[action][attribute][effect_type]:
+                    if condition_matches(pred.model, condition_s):
+                        print("Matching condition: {}, {}".format(pred.model, condition_s))
+                        applied_effects.append(pred.effect)
+
+        # If e is empty or there are incompatible effects, we don't know what will happen, return max_reward
+        # TODO: check for incompatible effects
+        if len(applied_effects) == 0:
+            print("No effects found")
+            return None  # None represents max reward
+        else:
+            print("Effects for this state: {}".format(applied_effects))
+            for effect in applied_effects:
+                # TODO NEED ATTRIBUTE? (Only one attribute changes at a time so it doesn't matter??)
+            return state
+
+    def predict_next_states(self, state):
+        print("PREDICTING ACTIONS NOW")
+        next_states = dict()
+        for action in list(ACTION):
+            next_states[action] = self.predict_transition(state, action)
+            print()
+
+        print(next_states)
+        return next_states
 
     def print_predictions(self, predictions):
         """Prints predictions in an easy to read format"""
@@ -224,7 +270,7 @@ env = TaxiWorldEnv()
 doormax = DoormaxTaxi(env)
 
 # How many iterations to iterate for, and iteration counter
-NUM_ITERATIONS = 3000
+NUM_ITERATIONS = 1000
 iterations = 0
 
 # Main learning loop
@@ -235,7 +281,9 @@ while iterations < NUM_ITERATIONS:
     # Step 2: Choose action a according to exploration policy, based on prediction of T(s' | s, a)
     # returned by predictTransition(s, a)
     action = doormax.select_action()
-    # print(action)
+
+    # Figure out which action is best to pick
+    next_states = doormax.predict_next_states(state)
 
     # Step env
     # env.draw_taxi(delay=1)
@@ -244,6 +292,8 @@ while iterations < NUM_ITERATIONS:
     # Step 3: observe new state s'
     new_state = env.get_state()
     print(action, reward, done, state, new_state)
+    # TODO. If done, don't add experience? (or at least, the increments get messed up because the taxi moves randomly)
+    # TODO: They don't get messed up if k is set to 1 but that's probaly just a hack.
 
     # Step 4: Update model with addExperience(s, a, s', k)
     # Because this world is discrete, there is only one effect per action, attribute, and type
