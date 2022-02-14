@@ -74,7 +74,7 @@ class NoChange(Effect):
         return "NoChange()"
 
     def __eq__(self, obj):
-        return isinstance(obj, SetToBoolean)
+        return isinstance(obj, NoChange)
 
 
 def get_effects(state, next_state, attribute):
@@ -89,17 +89,19 @@ def get_effects(state, next_state, attribute):
 
     if attribute == "taxi.x":
         if taxi_x_next == taxi_x:
-            return []  # Could return NoChange()?
+            # Could return NoChange()? Sadly I think it needs to return NoChange, so we can tell the differences
+            # between actions whose effects we don't know and actions whose effects lead to no change
+            return [NoChange()]
         else:
             return [Increment(taxi_x_next - taxi_x), SetToNumber(taxi_x_next)]
     elif attribute == "taxi.y":
         if taxi_y_next == taxi_y:
-            return []
+            return [NoChange()]
         else:
             return [Increment(taxi_y_next - taxi_y), SetToNumber(taxi_y_next)]
     elif attribute == "passenger.in_taxi":
         if passenger_in_taxi_next == passenger_in_taxi:
-            return []
+            return [NoChange()]
         else:
             # Could also have an (invert) here
             return [SetToBoolean(passenger_in_taxi_next)]

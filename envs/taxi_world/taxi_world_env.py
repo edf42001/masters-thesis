@@ -227,10 +227,11 @@ class TaxiWorldEnv(object):
         cv2.waitKey(delay)
 
     def num_states(self):
-        return 9
+        # One state for taxi.x, taxi.y, 1 for every passenger location (pickups +1 for in taxi), one for every dropoff
+        return self.WIDTH * self.HEIGHT * (len(self.stops) + 1) * len(self.stops)
 
     def num_actions(self):
-        return 2
+        return len(list(ACTION))
 
     def num_rewards(self):
         return 3
@@ -244,6 +245,33 @@ class TaxiWorldEnv(object):
         destination_loc_index = stop_letter_to_index[self.current_dropoff]
 
         return self.taxi.x, self.taxi.y, passenger_loc_index, destination_loc_index, self.passenger_in_taxi()
+
+    def state_hash(self, state):
+        """Converts a state (tuple) into unique hash (number) for indexing"""
+        # 5 for taxi x, 5 for taxi y, 5 for current passenger, 4 for destination
+        # Need to combine pickup location (index 2) with passenger in taxi (index 4) to make 5 states instead of 8
+
+        # Set this to 4 if passenger is in taxi otherwise 0-3 for the pickup index
+        passenger_loc_index = 4 if state[4] else state[2]
+
+        return state[0] + \
+               5 * state[1] + \
+               25 * passenger_loc_index + \
+               125 * state[3]
+
+    def reverse_state_hash(self, state_hash, pickup):
+        """Converts a state hash (number) into a state (tuple)"""
+        x = state_hash % 5
+        y = int(state_hash / 5) % 5
+        passenger_loc = int(state_hash / 25) % 5
+        destination_loc = int(state_hash / 125)
+
+        # Hack to fix the fact that passenger in taxi passenger location are weird together, leading to bugs
+        # where it is set to 0 but this messes with the conditions
+        passenger_in_taxi = (passenger_loc == 4)
+        pickup = passenger_loc if not passenger_in_taxi else pickup  # It doesn't matter, the taxi doesn't need to go to pickup if the passenger is in the taxi already (THIS IS A FALSE STATEMENT)
+
+        return x, y, pickup, destination_loc, passenger_in_taxi
 
 
 if __name__ == "__main__":
