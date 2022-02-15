@@ -23,9 +23,9 @@ def solve_mdp_value_iteration(curr_state, doormax, discount_rate):
     values = np.zeros(NUM_STATES)
 
     # Do iteration until max change is small
-    epsilon = 0.5
+    epsilon = 0.1
     iterations = 0  # Iterations counter
-    max_change = 1
+    max_change = 100
     print("Value iteration current state: {}".format(curr_state))
     while max_change > epsilon:
         max_change = 0
@@ -42,11 +42,10 @@ def solve_mdp_value_iteration(curr_state, doormax, discount_rate):
             # if state[4]:
             #     state[2] = curr_state[2]
 
-            # Hacky way to check: Is this a state where the current goal is different?
+            # Hacky way to check: Is this a state where the current goal / pickup is different?
             # in which case we don't care and don't have to propogate the values because transition prob to these states
             # is 0
-
-            if state[3] != curr_state[3]:
+            if state[3] != curr_state[3] or state[2] != curr_state[2]:
                 # print(state)
                 continue
 
@@ -54,7 +53,7 @@ def solve_mdp_value_iteration(curr_state, doormax, discount_rate):
             next_states = doormax.predict_next_states(state)
 
             # if s == curr_state_hash:
-            #     print("At current state {}, {}! Next states: {}".format(state, curr_state, next_states))
+                # print("At current state {}, {}! Next states: {}".format(state, curr_state, next_states))
 
             next_values = np.zeros(NUM_ACTIONS)
             for action in list(ACTION):
@@ -63,19 +62,42 @@ def solve_mdp_value_iteration(curr_state, doormax, discount_rate):
                 # We can't predict the transition, assume max reward (optimism in face of uncertainty)
                 if next_state is None:
                     next_values[action.value] = discount_rate * 15
+                    # print("State was none! {}: {}->{}".format(action, state, next_state))
                     continue
 
-                # Otherwise, what is the reward for this transition + discounted value of next state
-                next_values[action.value] = doormax.rewards[s, action.value] + discount_rate * values[doormax.env.state_hash(next_state)]
+                # # HACK AGAIN BECAUSE NOW HE's looping around on himself (the run ends when you deliver)
+                if action == ACTION.DROPOFF and state[4] and not next_state[4]:
+                    # TODO? WHich?
+                    # next_values[action.value] = discount_rate * doormax.rewards[s, action.value]
+                    next_values[action.value] = doormax.rewards[s, action.value]
+                else:
+                    # Otherwise, what is the reward for this transition + discounted value of next state
+                    next_values[action.value] = doormax.rewards[s, action.value] + discount_rate * values[doormax.env.state_hash(next_state)]
 
-            # print(next_values)
+                # if s == doormax.env.state_hash((0, 0, curr_state[2], curr_state[3], False)):
+                    # print("a, r, v, s: {}, {}, {}, {}".format(action, doormax.rewards[s, action.value], values[doormax.env.state_hash(next_state)], next_state))
+
+            # if s == curr_state_hash:
+            # print("Current, Next values: {}, {}".format(current_value, next_values))
             optimal_value = np.max(next_values)
             values[s] = optimal_value
 
             change = abs(optimal_value - current_value)
             if change > max_change:
+                # print("Change is big: {}, {}, {}: {}".format(next_values, optimal_value, current_value, state))
                 max_change = change
 
+        # debug_values_false = np.zeros((5, 5))
+        # debug_values_true = np.zeros((5, 5))
+        # for i in range(0, 5):
+        #     for j in range(0, 5):
+        #         state = (i, j, curr_state[2], curr_state[3], False)
+        #         debug_values_false[4-j, i] = values[doormax.env.state_hash(state)]
+        #         state = (i, j, curr_state[2], curr_state[3], True)
+        #         debug_values_true[4-j, i] = values[doormax.env.state_hash(state)]
+        #
+        # print(debug_values_false)
+        # print(debug_values_true)
         # print(max_change)
         iterations += 1
 

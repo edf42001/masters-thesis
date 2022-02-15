@@ -86,7 +86,7 @@ class TaxiWorldEnv(object):
 
     def step(self, action):
         # Negative reward by default
-        reward = -1
+        reward = -0.5 # TODO? Should this be 1? does that affect anything?
 
         # Epoch has finished when taxi drops off passenger
         done = False

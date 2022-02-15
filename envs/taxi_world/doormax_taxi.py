@@ -32,7 +32,8 @@ class DoormaxTaxi:
         self.predictions = dict()
 
         # Rewards for each state, action, used when solving the mdp with value iteration
-        self.rewards = np.zeros((env.num_states(), env.num_actions()))
+        # TODO: Use -2 so it doesn't prefer these just because it hasn't tried them?? (compared with -1 step reward)
+        self.rewards = 0 * np.ones((env.num_states(), env.num_actions()))
 
         # Sets up the above data structures
         self.init_data_structures()
@@ -303,7 +304,18 @@ class DoormaxTaxi:
             if next_state is None:
                 value = 15
             else:
+                # This used to be just pick the max next value, but that caused problems in the edge case of the
+                # epoch ending, because it thought it would stay where it was and loose the passenger, but instead
+                # it actually gets the +10 reward TODO: Is this correct? I thought you could just use values.
+                # maybe in this case because there _is_ no next state?
+                # value = self.rewards[env.state_hash(state), action.value] + discount_rate * values[doormax.env.state_hash(next_state)]
                 value = values[doormax.env.state_hash(next_state)]
+
+                # Hack for end of epsiode? Hardcoded information? How to deal??
+                # If they are dropping off and the dropoff works in dropiing off give them the reward
+                if action == ACTION.DROPOFF and state[4] and not next_state[4]:
+                    value = self.rewards[env.state_hash(state), action.value]
+
 
             if value > best_value:
                 best_value = value
@@ -341,7 +353,7 @@ if __name__ == "__main__":
     env = TaxiWorldEnv()
     doormax = DoormaxTaxi(env)
 
-    # # Load from pickle for testing
+    # Load from pickle for testing
     # with open("doormax.pkl", "rb") as f:
     #     doormax = pickle.load(f)
     #     env = doormax.env
@@ -357,13 +369,17 @@ if __name__ == "__main__":
 
         # Step 2: Choose action a according to exploration policy, based on prediction of T(s' | s, a)
         # returned by predictTransition(s, a)
-        action = doormax.select_action(state, discount_rate=0.8)
+
+        # The reason it wasn't working is that the discount rate wasn't big enough to propagate the unkwon state
+        # reward all the way back to where the taxi was by overcoming the bad reward of -1!! Can also just make max reward
+        # HUGE (instead of 15) to fix this problem.
+        action = doormax.select_action(state, discount_rate=0.987)
 
         # Figure out which action is best to pick
         next_states = doormax.predict_next_states(state)
 
         # Step env
-        env.draw_taxi(delay=50)
+        env.draw_taxi(delay=1)
         reward, done = env.step(action)
 
         # Step 3: observe new state s'
@@ -386,10 +402,10 @@ if __name__ == "__main__":
         print()
         print()
 
-        # if iterations > 85:
+        # if iterations > 538:
         #     with open("doormax.pkl", 'wb') as f:
         #         pickle.dump(doormax, f)
-        # a = input("paused: ")
+        #     a = input("paused: ")
 
         iterations += 1
 
