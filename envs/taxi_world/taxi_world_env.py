@@ -34,7 +34,11 @@ class TaxiWorldEnv(object):
     The taxi gets +10 for dropping off the passenger correctly and -1 for every other step
     """
 
-    def __init__(self):
+    def __init__(self, stochastic=False):
+        # Whether or not actions randomly move taxi sideways
+        self.stochastic = stochastic
+        self.stochastic_move_prob = 0.15
+
         # Width and height in grid cells
         self.WIDTH = 5
         self.HEIGHT = 5
@@ -84,12 +88,22 @@ class TaxiWorldEnv(object):
             y = int(wall / (self.WIDTH + 1))
             self.walls_horizontal[x, y] = True
 
-    def step(self, action):
+    def step(self, action: ACTION):
         # Negative reward by default
-        reward = -0.5 # TODO? Should this be 1? does that affect anything?
+        reward = -0.5  # TODO? Should this be 1? does that affect anything?
 
         # Epoch has finished when taxi drops off passenger
         done = False
+
+        # If stochastic, randomly sample a different movement action (left or right of original direction)
+        # Use values of movement actions 03, with mod 4 to easily do this
+        if self.stochastic and action.value < 4:
+            r = np.random.rand()
+            if r < 2 * self.stochastic_move_prob:
+                if r < self.stochastic_move_prob:
+                    action = ACTION((action.value - 1) % 4)
+                else:
+                    action = ACTION((action.value + 1) % 4)
 
         # State changes based on action (deterministically)
         if action in [ACTION.NORTH, ACTION.EAST, ACTION.SOUTH, ACTION.WEST] and \
@@ -275,7 +289,7 @@ class TaxiWorldEnv(object):
 
 
 if __name__ == "__main__":
-    env = TaxiWorldEnv()
+    env = TaxiWorldEnv(stochastic=True)
 
     action_map = list(ACTION)
 
@@ -292,4 +306,4 @@ if __name__ == "__main__":
         print("x: {}, y: {}".format(env.taxi.x, env.taxi.y))
         print("passenger_in_taxi: {}".format(env.passenger_in_taxi()))
 
-    iterations += 1
+        iterations += 1
