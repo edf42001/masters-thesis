@@ -31,7 +31,7 @@ class TaxiWorld(Environment):
     S_PASS = 2
     S_DEST = 3
     NUM_ATT = 4
-    S_ARITIES = [SIZE_X, SIZE_Y, NUM_LOCATIONS + 2, NUM_LOCATIONS]
+    STATE_ARITIES = [SIZE_X, SIZE_Y, NUM_LOCATIONS + 2, NUM_LOCATIONS]
 
     # Stochastic modification to actions
     MOD = [-1, 0, 1]
@@ -94,7 +94,7 @@ class TaxiWorld(Environment):
         self.last_reward: float = None
         self.restart()
 
-    def EOE(self, state: int = None) -> bool:
+    def end_of_episode(self, state: int = None) -> bool:
         """Check if the episode has ended"""
         state = self.get_factored_state(state) if state else self.curr_state
         return state[self.S_PASS] == self.NUM_LOCATIONS + 1
@@ -135,7 +135,7 @@ class TaxiWorld(Environment):
 
         return conditions
 
-    def perform_action(self, action: int) -> Union[List[JointEffect], List[int]]:
+    def step(self, action: int) -> Union[List[JointEffect], List[int]]:
         """Stochastically apply action to environment"""
         x, y, passenger, destination = self.curr_state
         next_x, next_y, next_passenger = x, y, passenger

@@ -43,8 +43,8 @@ class Runner:
             with open(f'training_{self.name}_{self.pkl_name}_{self.exp_num}.pkl', 'wb') as f:
                 pickle.dump((rewards, steps), f)
 
-    def run_episode(self, is_learning: bool, max_steps: int = None, init_state: List[int] = None):
-        self.env.restart(init_state=init_state)
+    def run_episode(self, is_learning: bool, max_steps: int = None):
+        self.env.restart()
         max_steps = max_steps or self.max_steps
 
         start_time = time.time()
@@ -56,6 +56,6 @@ class Runner:
 
         if is_learning:
             print(f'Steps:            {steps}')
-            print(f'Seconds per step: {(end_time - start_time) / steps}')
+            print('Steps per second: {:.2f}'.format(steps / (end_time - start_time)))
 
         return steps, reward

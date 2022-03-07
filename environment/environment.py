@@ -19,7 +19,7 @@ class Environment:
     NUM_ATT = None
     NUM_COND = None
     R_SUCCESS = None
-    S_ARITIES = None
+    STATE_ARITIES = None
     O_NO_CHANGE = None
     OB_ARITIES = None
     OB_COUNT = None
@@ -38,7 +38,7 @@ class Environment:
     last_outcome: int = None
     last_reward: float = None
 
-    def EOE(self, state: int = None) -> bool:
+    def end_of_episode(self, state: int = None) -> bool:
         raise NotImplementedError()
 
     def restart(self):
@@ -47,7 +47,7 @@ class Environment:
     def get_condition(self, state: Union[int, List[int]]) -> List[bool]:
         raise NotImplementedError()
 
-    def perform_action(self, action: int) -> Union[List[JointEffect], List[int]]:
+    def step(self, action: int) -> Union[List[JointEffect], List[int]]:
         raise NotImplementedError()
 
     def get_reward(self, state: int, next_state: int, action: int) -> float:
@@ -63,10 +63,10 @@ class Environment:
         return self.eval_states
 
     def get_factored_state(self, flat_state: int) -> List[Union[int, float]]:
-        return list(np.unravel_index(flat_state, shape=self.S_ARITIES))
+        return list(np.unravel_index(flat_state, shape=self.STATE_ARITIES))
 
     def get_flat_state(self, factored_state: List[Union[int, float]]) -> int:
-        return np.ravel_multi_index(factored_state, self.S_ARITIES)
+        return np.ravel_multi_index(factored_state, self.STATE_ARITIES)
 
     def get_last_reward(self) -> float:
         return self.last_reward
@@ -85,14 +85,14 @@ class Environment:
             # Effect returned illegal state
             return state
 
-    def get_num_actions(self) -> int:
+    def num_actions(self) -> int:
         return self.NUM_ACTIONS
 
     def get_num_attributes(self) -> int:
         return self.NUM_ATT
 
     def get_attribute_arities(self) -> List[int]:
-        return self.S_ARITIES
+        return self.STATE_ARITIES
 
     def get_condition_size(self) -> int:
         return self.NUM_COND
@@ -100,8 +100,8 @@ class Environment:
     def get_rmax(self) -> float:
         return self.R_SUCCESS
 
-    def get_num_states(self) -> int:
-        return int(np.prod(self.S_ARITIES))
+    def num_states(self) -> int:
+        return int(np.prod(self.STATE_ARITIES))
 
     def get_max_parents(self) -> int:
         return self.MAX_PARENTS

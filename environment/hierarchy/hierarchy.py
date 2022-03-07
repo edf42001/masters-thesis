@@ -23,7 +23,7 @@ class Hierarchy:
         # Number of possible assignments to each state variable per subtask
         self.state_arities = {}
         for action, s_vars in self.state_vars.items():
-            self.state_arities[action] = [self.env.S_ARITIES[s_var] for s_var in s_vars]
+            self.state_arities[action] = [self.env.STATE_ARITIES[s_var] for s_var in s_vars]
 
     def get_factored_state(self, state: int) -> List[int]:
         return self.env.get_factored_state(state)
