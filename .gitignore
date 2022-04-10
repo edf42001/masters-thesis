@@ -1,2 +1,8 @@
 *.pyc
 .idea/
+data
+*.prof
+*.png
+*.csv
+*.pdf
+*.gv
