@@ -7,10 +7,16 @@ class Node(object):
     for each assignment of parents values
     """
 
-    def __init__(self, idx):
+    def __init__(self, idx, arity=2, name=""):
         self.idx = idx
         self.parent_idxs = []  # Indices of parents
         self.parent_arities = []  # State variable arities of parents
+
+        # How many values does this node take?
+        self.arity = arity
+
+        # Node name, for debugging
+        self.name = name
 
         # Create a conditional probability table. Arities are "how many values does a variable take"
         # i.e., if two parents each have a single boolean variable (arity 2), then we need a two by two table
@@ -20,8 +26,8 @@ class Node(object):
     def arities(self):
         """Returns the arities for this node"""
         # All our nodes are boolean variables with arity two. It is a list, because in general could have
-        # more than one state variable
-        return [2]
+        # more than one state variable (Wait, can they?)
+        return [self.arity]
 
     def add_parent(self, node):
         self.parent_idxs.append(node.idx)

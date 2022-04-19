@@ -2,14 +2,16 @@ import numpy as np
 from helpers.utils import flip_connection
 
 from bayes_networks.node import Node
-from graph_vizualization import make_graph_plot
 
 
-class BayesNetwork(object):
-    def __init__(self, adj_matrix):
+class BayesNetworkCondEffect(object):
+    def __init__(self, adj_matrix, arities=None, names=None):
         """
         A bayes network is initialized from an adjacency matrix
         For now, assume all variables are booleans
+
+        TODO: This one is designed for specifically conditions and effects. There must be some way to merge the
+        two into one unified bayesian network framework
         """
 
         # Store adj matrix and number of variables
@@ -19,26 +21,39 @@ class BayesNetwork(object):
         # Store our nodes in a list for access
         self.nodes = []
 
-        self.create_nodes_and_edge()
+        self.create_nodes_and_edge(arities=arities, names=names)
         self.bake()
 
-    def create_nodes_and_edge(self):
+    def create_nodes_and_edge(self, arities=None, names=None):
         """Initializes nodes with their parents"""
 
         # Create the node objects
         for i in range(self.n):
-            self.nodes.append(Node(i))
+            # Default arity and name, use passed values if given
+            arity = 2
+            name = str(i)
+            if arities is not None:
+                arity = arities[i]
+            if names is not None:
+                name = names[i]
 
-        # Go through adjacency matrix and add edges (in this case all edges are symmetric)
+            self.nodes.append(Node(i, arity=arity, name=name))
+
+        # Go through adjacency matrix and add edges (in this case all edges are NOT symmetric)
+        # THe order is [i, j] = [parent, child]
         for i in range(self.n):
             for j in range(self.n):
                 if self.adj_matrix[i, j]:
-                    node1 = self.nodes[i]
-                    node2 = self.nodes[j]
+                    parent = self.nodes[i]
+                    child = self.nodes[j]
 
-                    node1.add_parent(node2)
+                    child.add_parent(parent)
 
     def bake(self):
+        """
+        Once we are done adding nodes, we know how big each one will be,
+        so we can set the size of the cpt and start filling in data
+        """
         for i in range(self.n):
             self.nodes[i].bake()
 
@@ -57,13 +72,19 @@ class BayesNetwork(object):
         for i, node in enumerate(self.nodes):
             parents = self.get_parents(i)
 
+            # If no parents, nothing to do here (this is an input node (or just not affected by anything))
+            if len(parents) == 0:
+                continue
+
             # TODO: do this effeciently with numpy slicing
             for row in data:
                 # First extract prev state, then extract the parent node values
-                parent_node_values = row[0][parents]
+                # The difference from the other one is that the other one had a tuple
+                # representing the state, so this says row[parents] and the other was row[0][parents]
+                parent_node_values = row[parents]
 
                 # Extract the next state, then the resulting node value
-                result_node_value = row[2][i]
+                result_node_value = row[i]
 
                 cpt_index = np.hstack((parent_node_values, result_node_value))
 
@@ -76,14 +97,4 @@ class BayesNetwork(object):
 
 
 if __name__ == "__main__":
-    n = 3
-    adj_matrix = np.eye(n)
-    flip_connection(adj_matrix, 0, 1)
-
-    network = BayesNetwork(adj_matrix)
-
-    print("CPT for each node")
-    print(network.get_node(0).cpt)
-    print(network.get_node(1).cpt)
-    print(network.get_node(2).cpt)
-
+    pass

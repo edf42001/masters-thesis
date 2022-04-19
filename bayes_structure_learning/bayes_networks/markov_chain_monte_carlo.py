@@ -6,6 +6,7 @@ import math
 from helpers.utils import flip_connection, random_connection
 from process_training_data import process_sas_tuples
 from bayes_networks.bayes_network import BayesNetwork
+from bayes_networks.bayes_network_conditions_effects import BayesNetworkCondEffect
 
 import cProfile
 import pstats
@@ -92,7 +93,7 @@ def extract_gamma_equation_params_from_cpts(cpt_tables) -> float:
 def calculated_p_data_given_graph(adj_matrix: np.ndarray, data) -> float:
     # Create the structure and the parameters for this bayesian network
     # We will use this in our calculations
-    network = BayesNetwork(adj_matrix)
+    network = BayesNetworkCondEffect(adj_matrix)
     network.update_node_counts(data)
 
     n = adj_matrix.shape[0]  # Number of "variables" (nodes) in this network

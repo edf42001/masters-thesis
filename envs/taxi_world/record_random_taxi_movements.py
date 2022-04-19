@@ -12,7 +12,7 @@ if __name__ == "__main__":
     NUM_STEPS = 10000
     iterations = 0
 
-    movement_data = np.empty((NUM_STEPS, 9))
+    movement_data = np.empty((NUM_STEPS, 11))
 
     while iterations < NUM_STEPS:
 
@@ -41,7 +41,11 @@ if __name__ == "__main__":
         # Save conditions, action, and effect
         movement_data[iterations, 0] = action.value
         movement_data[iterations, 1:8] = [1 if letter == "1" else 0 for letter in doormax.conditions(state)]
-        movement_data[iterations, 8] = effect
+
+        # Record dx, dy, and a 0-4 indexed direction effect for fun
+        movement_data[iterations, 8] = dx
+        movement_data[iterations, 9] = dy
+        movement_data[iterations, 10] = effect
 
         print("Reward: {}".format(reward))
         print("pickup: {}, dropoff: {}".format(env.current_pickup, env.current_dropoff))

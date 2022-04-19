@@ -1,8 +1,12 @@
 *.pyc
 .idea/
-data
 *.prof
 *.png
 *.csv
 *.pdf
 *.gv
+*.pkl
+
+# Stored data
+data
+np_save_data
