@@ -5,7 +5,7 @@ from bayes_networks.node import Node
 
 
 class BayesNetworkCondEffect(object):
-    def __init__(self, adj_matrix, arities=None, names=None):
+    def __init__(self, adj_matrix, arities=None, names=None, ins_or_outs=None):
         """
         A bayes network is initialized from an adjacency matrix
         For now, assume all variables are booleans
@@ -20,6 +20,11 @@ class BayesNetworkCondEffect(object):
 
         # Store our nodes in a list for access
         self.nodes = []
+
+        # To determine which nodes are inputs and which are outputs
+        # What is a better way of organizing this?
+        # Ins are true
+        self.ins_or_outs = ins_or_outs
 
         self.create_nodes_and_edge(arities=arities, names=names)
         self.bake()
@@ -72,8 +77,8 @@ class BayesNetworkCondEffect(object):
         for i, node in enumerate(self.nodes):
             parents = self.get_parents(i)
 
-            # If no parents, nothing to do here (this is an input node (or just not affected by anything))
-            if len(parents) == 0:
+            # If this is an input node, skip it. Otherwise, deal with it
+            if self.ins_or_outs and self.ins_or_outs[i]:
                 continue
 
             # TODO: do this effeciently with numpy slicing

@@ -93,7 +93,15 @@ def extract_gamma_equation_params_from_cpts(cpt_tables) -> float:
 def calculated_p_data_given_graph(adj_matrix: np.ndarray, data) -> float:
     # Create the structure and the parameters for this bayesian network
     # We will use this in our calculations
-    network = BayesNetworkCondEffect(adj_matrix)
+
+    # TODO: We need these here: or, can we pass like a bayseian network as a template?
+    # or better yet, this become a method in the bayesian network? Don't know why it isn't like that
+
+    headers = ["touch_n", "touch_e", "touch_s", "touch_w", "dx"]
+    arities = [2, 2, 2, 2, 3]
+    ins_or_outs = [True, True, True, True, False]  # False represents an output node
+
+    network = BayesNetworkCondEffect(adj_matrix, ins_or_outs=ins_or_outs, arities=arities, names=headers)
     network.update_node_counts(data)
 
     n = adj_matrix.shape[0]  # Number of "variables" (nodes) in this network
@@ -160,7 +168,7 @@ if __name__ == "__main__":
     # Iterations to sample for
     n_iterations = 300
 
-    # Can use dict for high dimensions, hash table for low
+    # Can use dict for high dimensions, hash table for low (wait, did I mean the opposite?)
     graph_counts = dict()
     # TODO <- is this equation correct for counting unique graphs? I think it may need to be 2^(n*(n-1)/2)
     graph_counts_history = np.zeros((n_iterations, 2 ** 3))
