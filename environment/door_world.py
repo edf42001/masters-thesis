@@ -24,7 +24,7 @@ class DoorWorld(Environment):
     # State variables
     S_X1 = 0  # Taxi1 x
     S_X2 = 1  # Taxi2 x
-    S_DOOR = 2 # Door open or close
+    S_DOOR_OPEN = 2  # Door open or close
     NUM_ATT = 3  # TODO: why is this named this
 
     # Each taxi can be anywhere along the line
@@ -101,28 +101,30 @@ class DoorWorld(Environment):
             self.curr_state = [3, 6, 0]
 
     def get_condition(self, state) -> List[bool]:
-        """Convert state vars to O-O conditions"""
+        """Convert state vars to OO conditions"""
         # Convert flat state to factored state
         if isinstance(state, (int, np.integer)):
             state = self.get_factored_state(state)
 
+        # How to deal with parameterized actions?
+        # (I.E., the fact we have two taxis?)
+
         conditions = [False] * self.NUM_COND
-        pos = (state[self.S_X], state[self.S_Y])
+        x1 = state[self.S_X1]
+        x2 = state[self.S_X2]
+        door_open = state[self.S_DOOR_OPEN]
 
-        # Check if taxi is at passenger location but passenger is not picked up
-        if state[self.S_PASS] < self.NUM_LOCATIONS:
-            at_pass = pos == self.locations[state[self.S_PASS]]
-        else:
-            at_pass = False
-
-        # Touch_N/E/S/W, on(Agent,Pass), in(Agent,Pass), on(Agent,Dest)
-        conditions[0] = pos in self.walls['N']
-        conditions[1] = pos in self.walls['E']
-        conditions[2] = pos in self.walls['S']
-        conditions[3] = pos in self.walls['W']
-        conditions[4] = at_pass
-        conditions[5] = state[self.S_PASS] == self.NUM_LOCATIONS
-        conditions[6] = pos == self.locations[state[self.S_DEST]]
+        # touch(L/R wall), touch(L/R door), touch(L/R goal), touch(L/R switch), open(door)
+        # conditions[0] = pos in self.walls['N']
+        conditions[0] = x1 in self.walls
+        conditions[1] = (x1 + 1) in self.walls
+        conditions[2] = (x1 - 1) == self.door
+        conditions[3] = (x1 + 1) == self.door
+        conditions[4] = (x1 - 1) == self.goal
+        conditions[5] = (x1 + 1) == self.goal
+        conditions[6] = (x1 - 1) == self.switch
+        conditions[7] = (x1 + 1) == self.switch
+        conditions[8] = bool(door_open)
 
         return conditions
 
@@ -133,73 +135,74 @@ class DoorWorld(Environment):
 
         self.last_action = action
 
+        # TODO: how to come up with a cooler system for parameterized actions?
+
         # Left action
         if action == 0:
-            if self.stochastic:
-                # Randomly change action according to stochastic property of env
-                modification = np.random.choice(self.MOD, p=self.P_PROB)
-                action = (action + modification) % 4
-            next_x, next_y = self.compute_next_loc(x, y, action)
-        # Pickup action
-        elif action == 4:
-            pos = (x, y)
-            # Check if taxi already holds passenger
-            if passenger == self.NUM_LOCATIONS:
-                next_passenger = self.NUM_LOCATIONS
-            # Check if taxi is on correct pickup location
-            elif passenger < self.NUM_LOCATIONS and pos == self.locations[passenger]:
-                next_passenger = self.NUM_LOCATIONS
-        # Dropoff action
+            if target == 0:
+                next_x1 = self.compute_next_loc(x1, action)
+            else:
+                next_x2 = self.compute_next_loc(x2, action)
+        # Right action
+        elif action == 1:
+            if target == 0:
+                next_x1 = self.compute_next_loc(x1, action)
+            else:
+                next_x2 = self.compute_next_loc(x2, action)
         else:
-            pos = (x, y)
-            # Check if passenger is in taxi and taxi is on the destination
-            if passenger == self.NUM_LOCATIONS and pos == self.locations[destination]:
-                next_passenger = self.NUM_LOCATIONS + 1
+            logging.error("Unknown action {}".format(action))
+
+        # Check if any taxi has pressed the switch
+        if next_x1 == self.switch or next_x2 == self.switch:
+            next_door_open = True
 
         # Make updates to state
-        # Destination status does not change
-        next_state = [next_x, next_y, next_passenger, destination]
+        next_state = [next_x1, next_x2, next_door_open]
 
-        # Assign reward
-        if next_passenger == self.NUM_LOCATIONS + 1:
+        # TODO: This is duplicate code from get_reward(). Make that function able to take in factored or int state
+        # Assign reward if any taxi made it to the goal state
+        if next_state[self.S_X1] == self.goal or next_state[self.S_X2] == self.goal:
             self.last_reward = self.R_SUCCESS
         else:
             self.last_reward = self.R_DEFAULT
 
-        # Calculate outcome or effect
-        if self.use_outcomes:
-            observation = [self.O_NO_CHANGE] * self.NUM_ATT
-            # Only one attribute changes at a time in this environment
-            if x != next_x:
-                observation[self.S_X] = self.A_WEST if next_x < x else self.A_EAST
-            elif y != next_y:
-                observation[self.S_Y] = self.A_NORTH if next_y < y else self.A_SOUTH
-            elif passenger != next_passenger:
-                observation[self.S_PASS] = self.A_DROPOFF if passenger == self.NUM_LOCATIONS else self.A_PICKUP
-            observation = tuple(observation)
-        else:
-            # Get all possible JointEffects that could have transformed the current state into the next state
-            observation = eff_joint(self.curr_state, next_state)
+        # # Calculate outcome or effect
+        # if self.use_outcomes:
+        #     observation = [self.O_NO_CHANGE] * self.NUM_ATT
+        #     # Only one attribute changes at a time in this environment
+        #     if x != next_x:
+        #         observation[self.S_X] = self.A_WEST if next_x < x else self.A_EAST
+        #     elif y != next_y:
+        #         observation[self.S_Y] = self.A_NORTH if next_y < y else self.A_SOUTH
+        #     elif passenger != next_passenger:
+        #         observation[self.S_PASS] = self.A_DROPOFF if passenger == self.NUM_LOCATIONS else self.A_PICKUP
+        #     observation = tuple(observation)
+        # else:
+        #     # Get all possible JointEffects that could have transformed the current state into the next state
+        #     observation = eff_joint(self.curr_state, next_state)
 
         # Update current state
         self.curr_state = next_state
 
+        observation = None
         return observation
 
     def compute_next_loc(self, x: int, action: int) -> int:
-        """Deterministically return the result of mving, given that there are walls"""
+        """Deterministically return the result of moving, given that there are walls and doors"""
         if action == self.A_LEFT:
-            if x in self.walls:
+            # If bump wall or door, don't move
+            if x in self.walls or ((x - 1) == self.door and not self.curr_state[self.S_DOOR_OPEN]):
                 return x
             else:
                 return x - 1
         elif action == self.A_RIGHT:
-            if (x + 1) in self.walls:
+            # If bump wall or door, don't move
+            if (x + 1) in self.walls or ((x + 1) == self.door and not self.curr_state[self.S_DOOR_OPEN]):
                 return x
             else:
                 return x + 1
         else:
-            logging.error("Unknown action {}".format(action))  # TODO: logging.logerror()
+            logging.error("Unknown action {}".format(action))
             return x
 
     def get_reward(self, state: int, next_state: int, action: int) -> float:
@@ -244,7 +247,8 @@ class DoorWorld(Environment):
 
     def visualize_state(self, curr_state):
         x1, x2, door_open = curr_state
-        print(x1, x2, door_open)
+
+        # Incrementally draw - for empty, d for closed door, o open, x for switch and g for goal
         drawing = ""
         for i in range(self.SIZE_X):
             if i in self.walls:
@@ -264,5 +268,5 @@ class DoorWorld(Environment):
             else:
                 drawing += "-"
 
-        drawing += "|"
+        drawing += "|"  # Wall at end
         print(drawing)
