@@ -11,10 +11,11 @@ from environment.environment import Environment
 class DoorWorld(Environment):
     """
     A one dimensional world with a switch and a door that needs to be opened to let a taxi through
+    |-x-t-d-g|
     """
 
     # Environment constants
-    SIZE_X = 11
+    SIZE_X = 8
 
     # Actions of agent (parameterized for taxi)
     A_LEFT = 0
@@ -23,13 +24,12 @@ class DoorWorld(Environment):
 
     # State variables
     S_X1 = 0  # Taxi1 x
-    S_X2 = 1  # Taxi2 x
-    S_DOOR_OPEN = 2  # Door open or close
-    NUM_ATT = 3  # TODO: why is this named this
+    S_DOOR_OPEN = 1  # Door open or close
+    NUM_ATT = 2  # TODO: why is this named this
 
-    # Each taxi can be anywhere along the line
+    # The taxi can be anywhere along the line
     # The door can be open or closed
-    STATE_ARITIES = [SIZE_X, SIZE_X, 2]
+    STATE_ARITIES = [SIZE_X, 2]
 
     # # Stochastic modification to actions
     # MOD = [-1, 0, 1]
@@ -41,11 +41,11 @@ class DoorWorld(Environment):
 
     # Object descriptions
     OB_TAXI = 0
-    OB_PASS = 1
+    OB_DOOR = 1
     OB_DEST = 2
     OB_COUNT = [1, 1, 1]
-    OB_ARITIES = [2, 1, 1]
-
+    # OB_ARITIES = [2, 1, 1]
+    #
     # Conditions
     NUM_COND = 9  # touch(L/R wall), touch(L/R door), touch(L/R goal), touch(L/R switch), open(door)
     MAX_PARENTS = 4  # This doesn't do anything but I think this number is accurate
@@ -64,16 +64,16 @@ class DoorWorld(Environment):
 
         # Add walls to the map
         # Stores x location of wall, 0 indexed, to the left of the cell
-        self.walls = [0, 5, 11]
+        self.walls = [0, 8]
 
         # Location of switch
         self.switch = 1
 
         # Location of door
-        self.door = 8
+        self.door = 5
 
         # Location of goal
-        self.goal = 10
+        self.goal = 7
 
         # Object instance in state information
         # self.generate_object_maps() TODO
@@ -97,8 +97,8 @@ class DoorWorld(Environment):
         if init_state:
             self.curr_state = init_state
         else:
-            # Taxis start at 3 and 6, door is closed
-            self.curr_state = [3, 6, 0]
+            # Taxi starts at 3, door is closed
+            self.curr_state = [3, 0]
 
     def get_condition(self, state) -> List[bool]:
         """Convert state vars to OO conditions"""
@@ -111,7 +111,6 @@ class DoorWorld(Environment):
 
         conditions = [False] * self.NUM_COND
         x1 = state[self.S_X1]
-        x2 = state[self.S_X2]
         door_open = state[self.S_DOOR_OPEN]
 
         # touch(L/R wall), touch(L/R door), touch(L/R goal), touch(L/R switch), open(door)
@@ -128,10 +127,10 @@ class DoorWorld(Environment):
 
         return conditions
 
-    def step(self, action: int, target=None) -> Union[List[JointEffect], List[int]]:
+    def step(self, action: int) -> Union[List[JointEffect], List[int]]:
         """Stochastically apply action to environment"""
-        x1, x2, door_open = self.curr_state
-        next_x1, next_x2, next_door_open = x1, x2, door_open
+        x1, door_open = self.curr_state
+        next_x1, next_door_open = x1, door_open
 
         self.last_action = action
 
@@ -139,29 +138,23 @@ class DoorWorld(Environment):
 
         # Left action
         if action == 0:
-            if target == 0:
-                next_x1 = self.compute_next_loc(x1, action)
-            else:
-                next_x2 = self.compute_next_loc(x2, action)
+            next_x1 = self.compute_next_loc(x1, action)
         # Right action
         elif action == 1:
-            if target == 0:
-                next_x1 = self.compute_next_loc(x1, action)
-            else:
-                next_x2 = self.compute_next_loc(x2, action)
+            next_x1 = self.compute_next_loc(x1, action)
         else:
             logging.error("Unknown action {}".format(action))
 
         # Check if any taxi has pressed the switch
-        if next_x1 == self.switch or next_x2 == self.switch:
+        if next_x1 == self.switch:
             next_door_open = True
 
         # Make updates to state
-        next_state = [next_x1, next_x2, next_door_open]
+        next_state = [next_x1, next_door_open]
 
         # TODO: This is duplicate code from get_reward(). Make that function able to take in factored or int state
         # Assign reward if any taxi made it to the goal state
-        if next_state[self.S_X1] == self.goal or next_state[self.S_X2] == self.goal:
+        if next_state[self.S_X1] == self.goal:
             self.last_reward = self.R_SUCCESS
         else:
             self.last_reward = self.R_DEFAULT
@@ -210,7 +203,7 @@ class DoorWorld(Environment):
         factored_ns = self.get_factored_state(next_state)
 
         # Assign reward if any taxi made it to the goal state
-        if factored_ns[self.S_X1] == self.goal or factored_ns[self.S_X2] == self.goal:
+        if factored_ns[self.S_X1] == self.goal:
             return self.R_SUCCESS
         else:
             return self.R_DEFAULT
@@ -242,11 +235,11 @@ class DoorWorld(Environment):
             # Outcome returned illegal state
             return state
 
-    def visualize(self):
-        self.visualize_state(self.curr_state)
+    def visualize(self) -> str:
+        return self.visualize_state(self.curr_state)
 
-    def visualize_state(self, curr_state):
-        x1, x2, door_open = curr_state
+    def visualize_state(self, curr_state) -> str:
+        x1, door_open = curr_state
 
         # Incrementally draw - for empty, d for closed door, o open, x for switch and g for goal
         drawing = ""
@@ -254,7 +247,7 @@ class DoorWorld(Environment):
             if i in self.walls:
                 drawing += "|"
 
-            if i == x1 or i == x2:
+            if i == x1:
                 drawing += "t"
             elif i == self.door:
                 if door_open:
@@ -269,4 +262,4 @@ class DoorWorld(Environment):
                 drawing += "-"
 
         drawing += "|"  # Wall at end
-        print(drawing)
+        return drawing
