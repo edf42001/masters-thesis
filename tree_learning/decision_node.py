@@ -40,6 +40,9 @@ class DecisionNode(object):
             self.leaf_value = data[0, -1]  # They are all the same, so pick any value to represent
             return
 
+        # Otherwise, mark this as not a leaf node, because when we call more than once on a tree it remembers
+        self.is_leaf = False
+
         # Step 1: Find the best starting split
         self.split_idx = self.find_best_split(data)
 
@@ -132,3 +135,35 @@ class DecisionNode(object):
 
         if self.right_node:
             self.right_node.print()
+
+    def predict(self, condition):
+        """Given a condition, predict the effect"""
+
+        # If leaf, return the value
+        if self.is_leaf:
+            return self.leaf_value
+
+        # If true, go down the left branch, otherwise right
+        if condition[self.split_idx]:
+            return self.left_node.predict(condition)
+        else:
+            return self.right_node.predict(condition)
+
+    def to_string(self) -> str:
+        ret = ""
+
+        if self.is_leaf:
+            ret += "({})".format(self.leaf_value)
+        else:
+            ret += str(self.split_idx)
+
+        if self.left_node:
+            ret += self.left_node.to_string()
+
+        if self.right_node:
+            ret += self.right_node.to_string()
+
+        return ret
+
+    def __repr__(self):
+        return self.to_string()

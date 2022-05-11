@@ -55,3 +55,4 @@ if __name__ == "__main__":
     # At each leaf of tree, we can have teh agent test it's assumptions by trying every combination
     # i.e., ram it's head into everything
     # Is this exactly the same as doormax?
+    print(node)

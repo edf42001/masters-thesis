@@ -10,3 +10,6 @@
 # Stored data
 data
 np_save_data
+
+# Log files
+*.log
