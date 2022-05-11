@@ -8,8 +8,13 @@ class DecisionNode(object):
     Nodes will have functions to help create the tree and to process incomming data
     """
 
-    def __init__(self):
+    def __init__(self, depth=0):
         self.is_leaf = False  # Is this node a leaf node
+        self.leaf_value = 0  # The value of this leaf (true, false, no change, +1, -1, etc)
+
+        # How far down this is in the tree. Starts at the top at 0
+        self.depth = depth
+
         self.split_idx = 0  # What condition index does this node split on?
 
         # Children decision nodes
@@ -21,6 +26,33 @@ class DecisionNode(object):
         self.left_counts = [0, 0]
         self.right_total = 0
         self.right_counts = [0, 0]
+
+    def recursively_split(self, data):
+        """
+        Build the decision tree by splitting the data until the entropy is 0
+        i.e., every effect is explained
+        """
+
+        # If there is nothing left to split, this node is a leaf node
+        left_trues = np.count_nonzero(data[:, -1])
+        if left_trues == 0 or left_trues == len(data):
+            self.is_leaf = True
+            self.leaf_value = data[0, -1]  # They are all the same, so pick any value to represent
+            return
+
+        # Step 1: Find the best starting split
+        self.split_idx = self.find_best_split(data)
+
+        # Split the data there
+        data_left, data_right = self.split_data(data, self.split_idx)
+
+        # Recursively keep splitting
+        depth = self.depth + 1
+        self.left_node = DecisionNode(depth=depth)
+        self.right_node = DecisionNode(depth=depth)
+
+        self.left_node.recursively_split(data_left)
+        self.right_node.recursively_split(data_right)
 
     def split_data(self, data, condition_idx) -> Tuple[np.ndarray, np.ndarray]:
         """
@@ -88,3 +120,15 @@ class DecisionNode(object):
                 best_idx = condition_idx
 
         return best_idx
+
+    def print(self):
+        if self.is_leaf:
+            print("Leaf: +{}".format(self.leaf_value))
+        else:
+            print("Split: {}".format(self.split_idx))
+
+        if self.left_node:
+            self.left_node.print()
+
+        if self.right_node:
+            self.right_node.print()
