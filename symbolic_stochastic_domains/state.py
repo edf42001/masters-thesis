@@ -24,8 +24,15 @@ class State:
     def __repr__(self):
         return str(self.terms)
 
-    def __getitem__(self, item):
-        return self.term_dict[item]
+    def __getitem__(self, item) -> Term:
+        # If accessing with int, return in order, otherwise, do a lookup in the dictionary
+        if isinstance(item, int):
+            return self.terms[item]
+        else:
+            return self.term_dict[item]
+
+    def __contains__(self, item):
+        return item in self.term_dict
 
     @staticmethod
     def get_changed_terms(s1, s2):

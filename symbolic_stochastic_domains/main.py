@@ -2,7 +2,7 @@ from symbolic_stochastic_domains.rule import Rule
 from symbolic_stochastic_domains.term import Term
 from symbolic_stochastic_domains.coin_world import CoinWorld
 from symbolic_stochastic_domains.state import State
-from symbolic_stochastic_domains.learn_outcomes import learn_outcomes
+from symbolic_stochastic_domains.learn_outcomes import learn_outcomes, test_covers, test_redundant
 
 
 def world_state_to_term_state(objects, term_names, state):
@@ -66,5 +66,12 @@ if __name__ == "__main__":
 
     result = learn_outcomes(examples, outcomes)
     print(result)
+    print()
 
+    print("Covers test:")
+    test_covers(examples, outcomes)
+    print()
 
+    print("Redundant test:")
+    test_redundant(examples, outcomes)
+    print()

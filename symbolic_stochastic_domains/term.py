@@ -13,6 +13,9 @@ class Term:
     def get_negated(self) -> bool:
         return self.negated
 
+    def true(self) -> bool:
+        return not self.negated
+
     def get_unique_id(self) -> str:
         """
         Returns a string representation of this term which will
