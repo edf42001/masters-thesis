@@ -1,48 +1,7 @@
-from typing import Tuple, List
-from symbolic_stochastic_domains.state import State
+from typing import List
+from symbolic_stochastic_domains.utils import covers
 
-
-def covers(outcome: dict, example: Tuple[State, State]) -> bool:
-    """
-    Returns true if the outcome covers the example
-    Meaning, when you apply the outcome to the initial state of the example,
-    does the end state equal the final state?
-    """
-    s1 = example[0]
-    s2 = example[1]
-
-    # Go through every state variable. If they differ, see if the outcome would fix that
-    # Otherwise, this outcome does not cover this
-    for term1, term2 in zip(s1, s2):
-        if term1.get_negated() != term2.get_negated():  # If conflict
-            name = term2.get_unique_id()
-            if name not in outcome or outcome[name] != term2.true():  # Does an outcome not cover this?
-                return False
-
-    # Also, need to check the outcome doesn't undo anything
-    # Some redundant checks in here
-    for term, truth in outcome.items():
-        if term in s2 and s2[term] != truth:
-            return False
-
-    return True
-
-
-def remove(examples, outcomes) -> bool:
-    """
-    Searches for an outcome it can remove from the set
-    returns true if it found one to remove
-
-    Removes in place
-    """
-
-    removed = False
-    for i in range(len(outcomes)-1, -1, -1):
-        if redundant(examples, outcomes, outcomes[i]):
-            del outcomes[i]
-            removed = True
-
-    return removed
+from symbolic_stochastic_domains.learn_parameters import learn_params
 
 
 def redundant(examples, outcomes, outcome) -> bool:
@@ -78,12 +37,15 @@ def contradictory(outcome1, outcome2):
     return False
 
 
-def add(outcomes: List[dict]) -> bool:
+def add(outcomes: List[dict]) -> List[List[dict]]:
     """
     Creates a new outcome by merging two non-contradictory outcomes
     Returns True if it found a pair to merge
     Modifies outcomes in-place
     """
+
+    # Returns a list of list of outcomes. Basically, generates all new outcomes that can be made by merging
+    new_outcomes = []
 
     for outcome in outcomes:
         # Look for a non-contradictory outcome
@@ -97,14 +59,48 @@ def add(outcomes: List[dict]) -> bool:
                 for term, truth in outcome2.items():
                     addition[term] = truth
 
-                outcomes.append(addition)
+                # Make sure it isn't a duplicate. Such as adding H(c1) to H(c1), H(c2)
+                # TODO: it still does duplicates like (H(c1), H(c2)) and (H(c2), H(c1))
+                if addition != outcome and addition != outcome2:
+                    new_set = outcomes.copy()
+                    new_set.append(addition)
 
-                return True
+                    new_outcomes.append(new_set)
 
-    return False
+    return new_outcomes
 
 
-def learn_outcomes(examples, outcomes):
+def remove(examples, outcomes) -> List[List[dict]]:
+    """
+    Searches for an outcome it can remove from the set
+    returns true if it found one to remove
+
+    Removes in place
+    """
+
+    new_outcomes = []
+    for i in range(len(outcomes)-1, -1, -1):
+        if redundant(examples, outcomes, outcomes[i]):
+            new_outcome = outcomes.copy()
+            del new_outcome[i]
+            new_outcomes.append(new_outcome)
+
+    return new_outcomes
+
+
+def outcomes_equal(outcomes1, outcomes2) -> bool:
+    """Returns true if two sets of outcomes are the same"""
+
+    # Check if every outcome pair in the two lists is the same
+    # Assumes the same order
+    for o1, o2 in zip(outcomes1, outcomes2):
+        if o1 != o2:  # Dictionaries can be compared with just ==
+            return False
+
+    return True
+
+
+def learn_outcomes(examples, outcomes: List[dict]):
     """
     Learns a minimal set of outcomes by combining and dropping outcomes until
     everything is explained as small as possible
@@ -116,8 +112,6 @@ def learn_outcomes(examples, outcomes):
     # Step 2:
     # drops an outcome from the set. Outcomes can only be dropped if they were overlapping
     # with other outcomes on every example they cover, otherwise the outcome set would not remain proper
-    print(examples)
-    print(outcomes)
 
     # To cover an example means if you apply the outcome it explains the example
     # i.e. if you apply heads(c1), heads(c2) to HT, you get HH, which explains a result of HH
@@ -128,34 +122,47 @@ def learn_outcomes(examples, outcomes):
     # If this is true for all, then it can be removed
 
     # Add combines non contradictory outcomes into a new one. For example, heads(c1) and tails(c1) contradict
-    removed = True
-    added = True
 
-    i = 0
-    while removed or added:
-        print("Before removing")
-        print(outcomes)
-        # Remove any redundant outcomes, modifying outcomes list in place
-        removed = remove(examples, outcomes)
-        print("After removing")
-        print(outcomes)
+    # Uses greedy search through search space
+
+    print("Starting examples and outcomes")
+    print(examples)
+    print(outcomes)
+
+    _, likelihood = learn_params(examples, outcomes)
+    print("Starting likelihood {}".format(likelihood))
+    print()
+
+    best_likelihood = likelihood
+    last_best_outcomes = None
+    best_outcomes = outcomes
+
+    # Loop until no change occurs
+    while best_outcomes != last_best_outcomes:
+        print("Starting with: {}".format(best_outcomes))
+        last_best_outcomes = best_outcomes
+
+        # Generate all possible next 1-distance instances and combine into list
+        add_outcomes = add(best_outcomes)
+        remove_outcomes = remove(examples, best_outcomes)
+
+        new_outcome_list = add_outcomes
+        new_outcome_list.extend(remove_outcomes)
+
+        # Find which has the best likelihood
+        for new_outcomes in new_outcome_list:
+            _, likelihood = learn_params(examples, new_outcomes)
+
+            if likelihood > best_likelihood:
+                best_likelihood = likelihood
+                best_outcomes = new_outcomes
+
+            print("l: {:.4f}, {}".format(likelihood, new_outcomes))
         print()
 
-        print("Before Adding")
-        print(outcomes)
-        # Merge two outcomes, modify outcomes in-place
-        added = add(outcomes)
-        print("After Adding")
-        print(outcomes)
-        print()
-
-        print(removed, added)
-        i += 1
-
-        if i == 3:
-            break
-
-    return outcomes
+    # At this point we will have greedy searched the best set of outcomes
+    print("Result {}".format(best_outcomes))
+    return best_outcomes
 
 
 def test_covers(examples, outcomes):

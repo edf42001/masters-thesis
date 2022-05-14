@@ -18,22 +18,22 @@ if __name__ == "__main__":
 
     terms = [Term(name=name, x=o) for name in term_names for o in objects]
 
-    # Evaluate some iterations of coin world
-    world = CoinWorld()
-    for i in range(5):
-        world.reset()
-        state = world.state()
-        world.step()
-        next_state = world.state()
-
-        s1 = world_state_to_term_state(objects, term_names, state)
-        s2 = world_state_to_term_state(objects, term_names, next_state)
-        print(state, next_state)
-        print(s1, s2)
-
-        diff = State.get_changed_terms(s1, s2)
-        print(diff)
-    print()
+    # # Evaluate some iterations of coin world
+    # world = CoinWorld()
+    # for i in range(5):
+    #     world.reset()
+    #     state = world.state()
+    #     world.step()
+    #     next_state = world.state()
+    #
+    #     s1 = world_state_to_term_state(objects, term_names, state)
+    #     s2 = world_state_to_term_state(objects, term_names, next_state)
+    #     print(state, next_state)
+    #     print(s1, s2)
+    #
+    #     diff = State.get_changed_terms(s1, s2)
+    #     print(diff)
+    # print()
 
     # Setup an example experience to learn outcomes on
     experiences = [
@@ -60,18 +60,14 @@ if __name__ == "__main__":
     for example in examples:
         outcomes.append(State.get_changed_terms(example[0], example[1]))
 
-    print(examples)
-    print(outcomes)
-    print()
-
     result = learn_outcomes(examples, outcomes)
     print(result)
     print()
 
-    print("Covers test:")
-    test_covers(examples, outcomes)
-    print()
-
-    print("Redundant test:")
-    test_redundant(examples, outcomes)
-    print()
+    # print("Covers test:")
+    # test_covers(examples, outcomes)
+    # print()
+    #
+    # print("Redundant test:")
+    # test_redundant(examples, outcomes)
+    # print()

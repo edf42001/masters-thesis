@@ -1,7 +1,7 @@
 import numpy as np
 from typing import List, Tuple
 
-from symbolic_stochastic_domains.learn_outcomes import covers
+from symbolic_stochastic_domains.utils import covers
 
 """
 Given a set of example data and ruleset with outcomes, learn the optimal probability distribution
@@ -37,15 +37,15 @@ def learn_params(examples, outcomes) -> Tuple[np.ndarray, float]:
     for example in examples:
         covered = example_covered_by(example, outcomes)
 
-        print("Example {} covered by {}".format(example, covered))
-    print()
+    #     print("Example {} covered by {}".format(example, covered))
+    # print()
 
     for outcome in outcomes:
         covered = examples_covered_by_outcome(examples, outcome)
-        print("Outcome {} covers {}".format(outcome, covered))
+        # print("Outcome {} covers {}".format(outcome, covered))
 
         params.append(len(covered) / n_examples)
-    print()
+    # print()
 
     # Each example can be treated independently. The likelihood example is the total probability
     # of each outcome that covers it. This can be expressed with matrix multiplication
@@ -98,6 +98,10 @@ def conditional_gradient_ascent(params: np.ndarray, multiplier: np.ndarray, epsi
         gradients = []
         for i in range(len(params)):
             dx = 0.001
+
+            # THis is technically wrong because we don't normalize after.
+            # Is there a more efficient way to do that other than dividing by the sum?
+            # We need to move along the "probability simplex" (sum of params = 1)
             params[i] += dx
 
             # There are faster ways than doing this whole multiplication again?
