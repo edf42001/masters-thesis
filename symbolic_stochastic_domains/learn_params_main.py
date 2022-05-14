@@ -2,6 +2,7 @@ from symbolic_stochastic_domains.term import Term
 from symbolic_stochastic_domains.state import State
 from symbolic_stochastic_domains.learn_parameters import learn_params
 
+
 def world_state_to_term_state(objects, term_names, state):
     s = State()
     terms = [Term(name=name, negated=not state[i], x=o) for name in term_names for i, o in enumerate(objects)]
@@ -45,13 +46,13 @@ if __name__ == "__main__":
     # What is likelihood of default set?
     examples, outcomes = booleans_to_examples_outcomes(experiences)
 
-    params = learn_params(examples, outcomes)
-    print("Params from initial outcome set: " + str(params))
+    params, l = learn_params(examples, outcomes)
+    print("Params from optimal set: " + str(params) + " " + str(l))
     print()
 
     # Again, but with the optimal (and correct) set of outcomes
     outcomes = [{'heads(coin1)': True, 'heads(coin2)': True}, {'heads(coin1)': False, 'heads(coin2)': False}]
 
-    params = learn_params(examples, outcomes)
-    print("Params from optimal set: " + str(params))
+    params, l = learn_params(examples, outcomes)
+    print("Params from optimal set: " + str(params) + " " + str(l))
     print()
