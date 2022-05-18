@@ -1,10 +1,9 @@
 import pickle
 import time
-from typing import List
+from typing import Tuple
 
 
 class Runner:
-
     def __init__(self):
         self.name = None
         self.pkl_name = None
@@ -26,7 +25,7 @@ class Runner:
         total_steps = 0
         for _ in range(self.num_episodes):
             steps, reward = self.run_episode(True)
-            self.plot.update(steps, reward)
+            # self.plot.update(steps, reward)
             total_steps += steps
 
         if save_policy:
@@ -43,7 +42,9 @@ class Runner:
             with open(f'training_{self.name}_{self.pkl_name}_{self.exp_num}.pkl', 'wb') as f:
                 pickle.dump((rewards, steps), f)
 
-    def run_episode(self, is_learning: bool, max_steps: int = None):
+    def run_episode(self, is_learning: bool, max_steps: int = None) -> Tuple[int, float]:
+        """Runs an episode and returns steps taken and reward"""
+
         self.env.restart()
         max_steps = max_steps or self.max_steps
 

@@ -3,12 +3,16 @@ from typing import List, Union
 
 
 class EffectType(Enum):
-    ARITH = 0
-    SETTO = 1
+    INCREMENT = 0
+    SET_TO = 1
+    NO_CHANGE = 2
 
 
 class Effect:
-    """Specifies one numerical effect applied to one state variable"""
+    """
+    Specifies one numerical effect applied to one state variable
+    Note that a boolean can be represented by a zero or a one, so numbers work here too
+    """
     type = None
     value = None
     hash = None
@@ -25,10 +29,12 @@ class Effect:
     @staticmethod
     def create(e_type: EffectType, s_var: Union[int, float], next_s_var: Union[int, float]):
         """Factory for creating effect of specific type"""
-        if e_type == EffectType.ARITH:
-            return ArithEffect(s_var, next_s_var)
-        elif e_type == EffectType.SETTO:
+        if e_type == EffectType.INCREMENT:
+            return IncrementEffect(s_var, next_s_var)
+        elif e_type == EffectType.SET_TO:
             return SetToEffect(s_var, next_s_var)
+        elif e_type == EffectType.NO_CHANGE:
+            return NoChangeEffect()
         else:
             raise ValueError(f'Unrecognized effect type: {e_type}')
 
@@ -37,16 +43,19 @@ class Effect:
         raise NotImplementedError()
 
 
-class NoEffect(Effect):
-    """No Effect: the state variable does not change"""
+class NoChangeEffect(Effect):
+    """No Change Effect: the state variable does not change"""
     def apply_to(self, s_var: Union[int, float]):
         return s_var
 
+    def __str__(self):
+        return 'no_change'
 
-class ArithEffect(Effect):
-    """Arithmetic Effect: determines the numerical difference of a variable between states"""
+
+class IncrementEffect(Effect):
+    """Increment Effect: determines the numerical difference of a variable between states"""
     def __init__(self, s_var: Union[int, float], next_s_var: Union[int, float]):
-        self.type = EffectType.ARITH
+        self.type = EffectType.INCREMENT
         self.value = next_s_var - s_var
         self.hash = hash((self.type, self.value))
 
@@ -60,7 +69,7 @@ class ArithEffect(Effect):
 class SetToEffect(Effect):
     """Set-To Effect: sets the state variable to the value in next_s_var"""
     def __init__(self, s_var: Union[int, float], next_s_var: Union[int, float]):
-        self.type = EffectType.SETTO
+        self.type = EffectType.SET_TO
         self.value = next_s_var
         self.hash = hash((self.type, self.value))
 
@@ -72,8 +81,11 @@ class SetToEffect(Effect):
 
 
 class JointEffect:
-    """Maps each state var to a particular effect.
-    If a state var does not appear, it is assumed to be constant"""
+    # TODO: Figure out
+    """
+    Maps each state var to a particular effect.
+    If a state var does not appear, it is assumed to be constant
+    """
     def __init__(self, att_list: List[int], eff_list: List[Effect]):
         d, temp = {}, []
         for a, e in zip(att_list, eff_list):

@@ -1,4 +1,4 @@
-
+import logging
 import numpy as np
 import random
 from typing import List, Tuple, Union
@@ -62,7 +62,8 @@ class TaxiWorld(Environment):
              '|         |',
              '| |   |   |',
              '| |   |   |']
-    actions = ['North', 'East', 'South', 'West', 'Pickup', 'Dropoff']
+
+    ACTION_NAMES = ['North', 'East', 'South', 'West', 'Pickup', 'Dropoff']
 
     def __init__(self, stochastic=True, use_outcomes=True):
         self.stochastic: bool = stochastic
@@ -82,16 +83,15 @@ class TaxiWorld(Environment):
         # List of possible pickup/dropoff locations
         self.locations = [(0, 0), (0, 4), (3, 4), (4, 0)]
 
-        # Hierarchical decomposition
-        self.hierarchy = TaxiHierarchy(self)
-
         # Object instance in state information
-        # self.generate_object_maps() TODO
+        self.generate_object_maps()
 
         self.curr_state: List[int] = None
         self.last_action: int = None
         self.last_outcome: int = None
         self.last_reward: float = None
+
+        # Restart to begin episode
         self.restart()
 
     def end_of_episode(self, state: int = None) -> bool:
@@ -247,7 +247,7 @@ class TaxiWorld(Environment):
         try:
             return self.get_flat_state(factored_s)
         except ValueError:
-            # Outcome returned illegal state
+            logging.error("Outcome returned illegal state: {}, {}".format(state, outcome))
             return state
 
     def visualize(self):
@@ -265,3 +265,12 @@ class TaxiWorld(Environment):
         for line in lines[y + 1:]:
             print(line)
         print('-----------')
+
+        # ret = ""
+        # ret += '-----------\n'
+        # for line in lines:
+        #     ret += line + '\n'
+        # ret += '-----------\n'
+        #
+        # ret[11] = 'a'
+

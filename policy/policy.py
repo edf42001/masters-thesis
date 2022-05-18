@@ -1,5 +1,4 @@
 class Policy:
-
     def add_experience(self, state: int, action: int, reward: float, next_state: int, terminal: bool):
         raise NotImplementedError()
 
