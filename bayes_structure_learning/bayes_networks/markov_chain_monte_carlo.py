@@ -69,9 +69,18 @@ def extract_gamma_equation_params_from_cpts(cpt_tables) -> float:
     a_ijk = np.ones((Xs, max(Pas), max(rs)))
     N_ijk = np.zeros((Xs, max(Pas), max(rs)))
 
+    # print(Xs)
+    # print(rs)
+    # print(Pas)
+    # print(a_ijk.shape)
+    # print(N_ijk.shape)
+
     for i, table in enumerate(cpt_tables):
+        # print(i)
         for j in range(Pas[i]):
             parent_shape = table.shape[:-1]
+
+            # print(table.shape, parent_shape, j)
 
             # Algorithm to extract index values from a number (works for more than binary)
             # Like this: https://www.instructables.com/How-to-Convert-Numbers-to-Binary/
@@ -82,6 +91,9 @@ def extract_gamma_equation_params_from_cpts(cpt_tables) -> float:
                 remainder = int(remainder / arity)
 
             indices.reverse()
+
+            # print(indices, np.unravel_index(j, parent_shape))
+            indices = list(np.unravel_index(j, parent_shape))
 
             for k in range(rs[i]):
                 index = tuple(indices + [k])
@@ -97,9 +109,9 @@ def calculated_p_data_given_graph(adj_matrix: np.ndarray, data) -> float:
     # TODO: We need these here: or, can we pass like a bayseian network as a template?
     # or better yet, this become a method in the bayesian network? Don't know why it isn't like that
 
-    headers = ["touch_n", "touch_e", "touch_s", "touch_w", "dx"]
-    arities = [2, 2, 2, 2, 3]
-    ins_or_outs = [True, True, True, True, False]  # False represents an output node
+    headers = ["touch_n", "touch_e", "touch_s", "touch_w", "dx", "dy"]
+    arities = [2, 2, 2, 2, 3, 3]
+    ins_or_outs = [True, True, True, True, False, False]  # False represents an output node
 
     network = BayesNetworkCondEffect(adj_matrix, ins_or_outs=ins_or_outs, arities=arities, names=headers)
     network.update_node_counts(data)
