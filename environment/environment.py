@@ -88,7 +88,7 @@ class Environment:
             # Effect returned illegal state
             return state
 
-    def num_actions(self) -> int:
+    def get_num_actions(self) -> int:
         return self.NUM_ACTIONS
 
     def get_num_attributes(self) -> int:
@@ -101,9 +101,10 @@ class Environment:
         return self.NUM_COND
 
     def get_rmax(self) -> float:
+        """The maximum reward available in the environment"""
         return self.R_SUCCESS
 
-    def num_states(self) -> int:
+    def get_num_states(self) -> int:
         return int(np.prod(self.STATE_ARITIES))
 
     def get_max_parents(self) -> int:
@@ -113,6 +114,7 @@ class Environment:
         return self.hierarchy
 
     def get_action_name(self, action: int):
+        """Maps int action to string name"""
         return self.ACTION_NAMES[action]
 
     def generate_object_maps(self) -> None:

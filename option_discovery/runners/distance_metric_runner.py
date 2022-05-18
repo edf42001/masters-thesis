@@ -36,7 +36,7 @@ class DistanceMetricRunner(Runner):
 
         # Learning
         self.env = TwoRoomEnv()
-        self.policy = DistanceMetricOptionDiscoverPolicy(self.env.num_states(), self.env.num_actions(), params)
+        self.policy = DistanceMetricOptionDiscoverPolicy(self.env.get_num_states(), self.env.get_num_actions(), params)
         self.sampler = EpsilonGreedy(params)
         self.learner = DistanceMetricOptionDiscoveryAlgorithm(self.env, self.policy, self.sampler, visualize=self.visualize)
         self.plot = Plot(self, self.eval_episodes, self.eval_timer)

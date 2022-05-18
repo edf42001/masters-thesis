@@ -4,17 +4,17 @@ from algorithm.simulator import Simulator
 from environment.environment import Environment
 
 
-class Doormax(Simulator):
-    def __init__(self, env: Environment, visualize: bool = False, all_goals: bool = False):
+class DoormaxSimulator(Simulator):
+    def __init__(self, env: Environment, model, planner, visualize: bool = False):
         self.env = env
+        self.model = model
+        self.planner = planner
+
         self.visualize = visualize
-        self.all_goals = all_goals
 
         self.curr_state = self.env.get_state()
         self.last_episode_steps = -1
         self.last_episode_reward = -1
-        self.max_steps = -1
-        self.is_learning = True
 
     def run_single_episode(self, max_steps: int, is_learning: bool):
         steps, total_reward = 0, 0
@@ -25,10 +25,13 @@ class Doormax(Simulator):
             # Choose an action with the policy. Different actions can be taken if learning/executing optimal policy
             action = self.choose_action(is_learning)
             print(self.env.get_action_name(action))
+            print(self.env.get_condition(self.curr_state))
             # Perform action and observe the next state
-            self.env.step(action)
+            observation = self.env.step(action)
             reward = self.env.get_last_reward()
             next_state = self.env.get_state()
+
+            print(observation)
 
             # Display environment if need be
             if self.visualize:
@@ -44,14 +47,5 @@ class Doormax(Simulator):
         self.last_episode_reward = total_reward
 
     def choose_action(self, is_learning: bool):
-        # # Decide if explore or exploit
-        # if is_learning:
-        #     explore = self.the_sampler.sample()
-        #     self.the_sampler.update()
-        # else:
-        #     explore = False
-        #
-        # return self.the_policy.choose_action(self.curr_state, explore=explore)
-        # Random action for now
-        return random.randint(0, self.env.NUM_ACTIONS - 1)
+        return self.planner.choose_action(self.curr_state, is_learning)
 

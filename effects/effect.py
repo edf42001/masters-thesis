@@ -4,8 +4,9 @@ from typing import List, Union
 
 class EffectType(Enum):
     INCREMENT = 0
-    SET_TO = 1
-    NO_CHANGE = 2
+    SET_TO_NUMBER = 1
+    SET_TO_BOOL = 2
+    NO_CHANGE = 3
 
 
 class Effect:
@@ -30,11 +31,13 @@ class Effect:
     def create(e_type: EffectType, s_var: Union[int, float], next_s_var: Union[int, float]):
         """Factory for creating effect of specific type"""
         if e_type == EffectType.INCREMENT:
-            return IncrementEffect(s_var, next_s_var)
-        elif e_type == EffectType.SET_TO:
-            return SetToEffect(s_var, next_s_var)
+            return Increment(s_var, next_s_var)
+        elif e_type == EffectType.SET_TO_NUMBER:
+            return SetToNumber(s_var, next_s_var)
         elif e_type == EffectType.NO_CHANGE:
-            return NoChangeEffect()
+            return NoChange()
+        elif e_type == EffectType.SET_TO_BOOL:
+            return SetToBool(next_s_var)
         else:
             raise ValueError(f'Unrecognized effect type: {e_type}')
 
@@ -43,16 +46,16 @@ class Effect:
         raise NotImplementedError()
 
 
-class NoChangeEffect(Effect):
+class NoChange(Effect):
     """No Change Effect: the state variable does not change"""
     def apply_to(self, s_var: Union[int, float]):
         return s_var
 
     def __str__(self):
-        return 'no_change'
+        return 'NoChange'
 
 
-class IncrementEffect(Effect):
+class Increment(Effect):
     """Increment Effect: determines the numerical difference of a variable between states"""
     def __init__(self, s_var: Union[int, float], next_s_var: Union[int, float]):
         self.type = EffectType.INCREMENT
@@ -63,13 +66,13 @@ class IncrementEffect(Effect):
         return s_var + self.value
 
     def __str__(self):
-        return f'add({self.value})'
+        return f'Increment({self.value})'
 
 
-class SetToEffect(Effect):
+class SetToNumber(Effect):
     """Set-To Effect: sets the state variable to the value in next_s_var"""
     def __init__(self, s_var: Union[int, float], next_s_var: Union[int, float]):
-        self.type = EffectType.SET_TO
+        self.type = EffectType.SET_TO_NUMBER
         self.value = next_s_var
         self.hash = hash((self.type, self.value))
 
@@ -77,11 +80,24 @@ class SetToEffect(Effect):
         return self.value
 
     def __str__(self):
-        return f'set_to({self.value})'
+        return f'SetToNumber({self.value})'
+
+
+class SetToBool(Effect):
+    """Set-To Effect: sets the state variable to the value in next_s_var"""
+    def __init__(self, s_var: Union[int, float], next_s_var: Union[int, float]):
+        self.type = EffectType.SET_TO_BOOL
+        self.value = next_s_var != 0  # False is 0, anything else is true
+        self.hash = hash((self.type, self.value))
+
+    def apply_to(self, s_var: Union[int, float]):
+        return self.value
+
+    def __str__(self):
+        return f'SetToBool({self.value})'
 
 
 class JointEffect:
-    # TODO: Figure out
     """
     Maps each state var to a particular effect.
     If a state var does not appear, it is assumed to be constant
@@ -118,7 +134,11 @@ class JointEffect:
         return self.__str__()
 
     def __str__(self):
-        return ' '.join(f'<{a}, {str(e)}>' for a, e in self.value.items())
+        # Sometimes this is empty from dallans code
+        if not self.value.items():
+            return '?'
+        else:
+            return ' '.join(f'<{a}, {str(e)}>' for a, e in self.value.items())
 
     def is_empty(self) -> bool:
         """Check if this joint effect has no change to state"""
@@ -136,4 +156,7 @@ class JointNoEffect(JointEffect):
         super().__init__([], [])
 
     def __str__(self):
-        return '<no effect>'
+        return '<NoJointEffect>'
+
+    def __repr__(self):
+        return self.__str__()

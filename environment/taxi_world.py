@@ -3,7 +3,7 @@ import numpy as np
 import random
 from typing import List, Tuple, Union
 
-# from effects.utils import eff_joint TODO
+from effects.utils import eff_joint
 from effects.effect import JointEffect
 from environment.environment import Environment
 from environment.hierarchy.taxi_hierarchy import TaxiHierarchy
@@ -110,7 +110,11 @@ class TaxiWorld(Environment):
             self.curr_state = [0, 1, passenger, destination]
 
     def get_condition(self, state) -> List[bool]:
-        """Convert state vars to O-O conditions"""
+        """
+        Convert state vars to OO conditions
+        This basically enables the perfect knowledge assumption, that the agent knows the conditions for every state
+        This sortof makes sense, because you can just look at it as a human
+        """
         # Convert flat state to factored state
         if isinstance(state, (int, np.integer)):
             state = self.get_factored_state(state)
@@ -255,22 +259,29 @@ class TaxiWorld(Environment):
 
     def visualize_state(self, curr_state):
         x, y, passenger, dest = curr_state
+        dest_x, dest_y = self.locations[dest]
         lines = self.lines
         taxi = '@' if passenger == len(self.locations) else 'O'
 
-        print('-----------')
-        for line in lines[:y]:
-            print(line)
-        print(lines[y][:2 * x + 1] + taxi + lines[y][2 * x + 2:])
-        for line in lines[y + 1:]:
-            print(line)
-        print('-----------')
+        pass_x, pass_y = -1, -1
+        if passenger < len(self.locations):
+            pass_x, pass_y = self.locations[passenger]
 
-        # ret = ""
-        # ret += '-----------\n'
-        # for line in lines:
-        #     ret += line + '\n'
-        # ret += '-----------\n'
-        #
-        # ret[11] = 'a'
+        ret = ""
+        ret += '-----------\n'
+        for i, line in enumerate(lines):
+            for j, c in enumerate(line):
+                if i == y and j == 2 * x + 1:
+                    ret += taxi
+                elif i == dest_y and j == 2 * dest_x + 1:
+                    ret += "g"
+                elif i == pass_y and j == 2 * pass_x + 1:
+                    ret += "p"
+                else:
+                    ret += c
+            ret += '\n'
+        ret += '-----------\n'
+
+        # Do the display
+        print(ret)
 

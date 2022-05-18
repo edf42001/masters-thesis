@@ -1,8 +1,9 @@
-from algorithm.doormax import Doormax
 from common.plotting.plot import Plot
 from runners.runner import Runner
-from policy.hierarchical_policy import HierarchicalPolicy
-from policy.samplers.epsilon_greedy import EpsilonGreedy
+from policy.value_iteration import ValueIteration
+from algorithm.doormax.doormax import Doormax
+from algorithm.doormax.doormax_ruleset import DoormaxRuleset
+from algorithm.doormax.doormax_simulator import DoormaxSimulator
 from environment.taxi_world import TaxiWorld
 
 
@@ -16,28 +17,25 @@ class DoormaxTaxiRunner(Runner):
         self.exp_num = exp_num
 
         # Experiment parameters
-        self.max_steps = 30
+        self.max_steps = 1000
         self.num_episodes = 1
         self.eval_episodes = 20
         self.eval_timer = 10
         self.stochastic = False
-        self.all_goals = False
+        self.use_outcomes = False
         self.visualize = True
 
         # Hyperparameters
         params = {
-            'discount_factor': 1,  # Q-Learning
-            'learning_rate': 0.1,  # Q-Learning
-            'a_decay': 1,  # Q-Learning
-            'min_a': 0.1,  # Q-Learning
-            'epsilon': 0.2,  # E-Greedy Exploration
-            'e_decay': 1,  # E-Greedy Exploration
-            'min_e': 0.01,  # E-Greedy Exploration
+            'discount_factor': 0.95  # Cannot be 1 for Rmax (why?)
         }
 
         # Learning
-        self.env = TaxiWorld(stochastic=self.stochastic)
-        self.learner = Doormax(self.env, visualize=self.visualize, all_goals=self.all_goals)
+        self.env = TaxiWorld(stochastic=self.stochastic, use_outcomes=self.use_outcomes)
+        self.model = DoormaxRuleset(self.env)
+        self.planner = ValueIteration(self.env.get_num_states(), self.env.get_num_actions(),
+                                      params['discount_factor'], self.env.get_rmax(), self.model)
+        self.learner = DoormaxSimulator(self.env, self.model, self.planner, visualize=self.visualize)
         self.plot = Plot(self, self.eval_episodes, self.eval_timer)
 
 
