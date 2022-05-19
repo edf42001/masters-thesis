@@ -1,6 +1,7 @@
 import random
 import logging
 import sys
+import pickle
 
 from common.plotting.plot import Plot
 from runners.runner import Runner
@@ -20,13 +21,13 @@ class DoormaxTaxiRunner(Runner):
         self.exp_num = exp_num
 
         # Experiment parameters
-        self.max_steps = 2
+        self.max_steps = 1
         self.num_episodes = 1
-        self.eval_episodes = 20
+        self.eval_episodes = 1
         self.eval_timer = 10
         self.stochastic = False
         self.use_outcomes = False
-        self.visualize = True
+        self.visualize = False
 
         # For testing
         random.seed(1)
@@ -38,7 +39,13 @@ class DoormaxTaxiRunner(Runner):
 
         # Learning
         self.env = TaxiWorld(stochastic=self.stochastic, use_outcomes=self.use_outcomes)
+
         self.model = Doormax(self.env)
+
+        # LOAD, for testing
+        with open(f'model_{self.name}_{self.pkl_name}_{self.exp_num}.pkl', 'rb') as f:
+            self.model = pickle.load(f)
+
         self.planner = ValueIteration(self.env.get_num_states(), self.env.get_num_actions(),
                                       params['discount_factor'], self.env.get_rmax(), self.model)
         self.learner = DoormaxSimulator(self.env, self.model, self.planner, visualize=self.visualize)
@@ -50,3 +57,6 @@ if __name__ == '__main__':
 
     runner = DoormaxTaxiRunner(0)
     runner.run_experiment()
+
+    # with open(f'model_{runner.name}_{runner.pkl_name}_{runner.exp_num}.pkl', 'wb') as f:
+    #     pickle.dump(runner.model, f)

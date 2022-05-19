@@ -146,15 +146,10 @@ class DoormaxRuleset(TransitionModel):
         Returns the effects (transitions) of taking the action given the condition
         If unknown, return None
         """
-        """
-        Predicts the next state from current state and action,
-        or returns unknown (max reward) if it doesn't know
-        """
 
         condition_str = boolean_arr_to_string(condition)
         # print("Action: {}".format(action))
-        # print("Condition: {}".format(condition_s))
-        # print("State: {}".format(state))
+        # print("Condition: {}".format(condition_str))
 
         for failure_condition in self.failure_conditions[action]:
             if condition_matches(failure_condition, condition_str):
@@ -166,9 +161,9 @@ class DoormaxRuleset(TransitionModel):
         for attribute in range(self.num_atts):
             applied_effects = []
 
-            # print(attribute)
+            # print(f"Att: {attribute}")
             for e_type in EffectType:
-                # print(effect_type)
+                # print(e_type)
                 # If we have predictions that match the state we are currently in,
                 # then we know those effects will happen
                 current_predictions = self.predictions[action][attribute][e_type]

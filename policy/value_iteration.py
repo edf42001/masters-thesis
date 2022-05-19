@@ -8,7 +8,6 @@ from policy.policy import Policy
 
 
 class ValueIteration(Policy):
-
     max_steps = 100
     epsilon = 0.001
 
@@ -24,6 +23,7 @@ class ValueIteration(Policy):
         self.q_values = np.full((states, actions), init_value, dtype='float32')
 
     def choose_action(self, curr_state: int, is_learning: bool = True) -> int:
+        # TESTING HACK
         # return random.randint(0, self.num_actions-1)
 
         # Do q iteration to find the best action
