@@ -1,13 +1,14 @@
 from typing import List, Union
 import logging
 
-from effects.effect import JointEffect, EffectType, JointNoEffect
+from effects.effect import JointEffect, EffectType, NoChange
 from algorithm.transition_model import TransitionModel
 from algorithm.doormax.doormax_rule import DoormaxRule
 from environment.environment import Environment
+from common.structures import Transition
 
 from algorithm.doormax.utils import find_matching_prediction, boolean_arr_to_string,\
-    condition_matches, commute_condition_strings, check_conditions_overlap
+    condition_matches, commute_condition_strings, check_conditions_overlap, incompatible_effects
 
 
 class DoormaxRuleset(TransitionModel):
@@ -140,9 +141,59 @@ class DoormaxRuleset(TransitionModel):
                                 # print("Too many effects, removing")
                                 self.predictions[action][attribute][effect.type] = None
 
-    def get_prediction(self, condition: List[bool], action: int):
-        """Ask the meteorologists for their best predictions. If any is not ready, return nothing"""
-        pass
+    def get_prediction(self, condition: List[bool], action: int) -> List[Transition]:
+        """
+        Returns the effects (transitions) of taking the action given the condition
+        If unknown, return None
+        """
+        """
+        Predicts the next state from current state and action,
+        or returns unknown (max reward) if it doesn't know
+        """
+
+        condition_str = boolean_arr_to_string(condition)
+        # print("Action: {}".format(action))
+        # print("Condition: {}".format(condition_s))
+        # print("State: {}".format(state))
+
+        for failure_condition in self.failure_conditions[action]:
+            if condition_matches(failure_condition, condition_str):
+                # The current condition is a failure condition. No change
+                return []
+
+        # Otherwise, check all effects and attributes
+        # TODO: Is this wrong? Should applied effects be higher up??
+        for attribute in range(self.num_atts):
+            applied_effects = []
+
+            # print(attribute)
+            for e_type in EffectType:
+                # print(effect_type)
+                # If we have predictions that match the state we are currently in,
+                # then we know those effects will happen
+                current_predictions = self.predictions[action][attribute][e_type]
+                # print("Current_predictions: {}".format(current_predictions))
+
+                # If none, not a real effect, continue
+                if current_predictions is None:
+                    continue
+
+                for pred in self.predictions[action][attribute][e_type]:
+                    if condition_matches(pred.model, condition_str):
+                        # print("Matching condition: {}, {}".format(pred.model, condition_s))
+                        applied_effects.append(pred.effect)
+
+            # print(applied_effects)
+            # If e is empty or there are incompatible effects, we don't know what will happen, return max_reward
+            if len(applied_effects) == 0 or incompatible_effects(applied_effects):
+                return None  # None represents max reward
+            else:
+                # Otherwise, return the effects that will occur as transitions
+
+                # print("Effects for this state: {}".format(applied_effects))
+                # Convert effects to joint effect
+                joint_effect = JointEffect(att_list=[attribute], eff_list=applied_effects)
+                return [Transition(joint_effect, 1.0)]
 
     def print_action_predictions(self, condition: List[bool]):
         pass

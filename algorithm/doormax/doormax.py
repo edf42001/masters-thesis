@@ -2,7 +2,8 @@ from typing import List, Union
 
 from algorithm.doormax.doormax_ruleset import DoormaxRuleset
 from algorithm.transition_model import TransitionModel
-from effects.effect import JointEffect
+from common.structures import Transition
+from effects.effect import JointEffect, NoChange
 from environment.environment import Environment
 
 
@@ -24,7 +25,7 @@ class Doormax(TransitionModel):
         condition = self.env.get_condition(state)
         self.model.add_experience(action, condition, obs)
 
-    def compute_possible_transitions(self, state: int, action: int):
+    def compute_possible_transitions(self, state: int, action: int) -> List[Transition]:
         condition = self.env.get_condition(state)
         return self.model.get_prediction(condition, action)
 

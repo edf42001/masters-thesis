@@ -53,6 +53,7 @@ def find_matching_prediction(current_predictions: DoormaxRule, effect: Effect):
 
     return None
 
+
 def check_conditions_overlap(current_predictions, matched_pred):
     """
     Check if there exists some condition (but don't compare matched prediction to itself!)
@@ -62,6 +63,23 @@ def check_conditions_overlap(current_predictions, matched_pred):
         if pred != matched_pred and condition_matches(matched_pred.model, pred.model):
             # print("Found overlapping condition: {}, {}".format(matched_pred, pred))
             return True
+
+    return False
+
+
+def incompatible_effects(effects):
+    """
+    Returns if any incompatible affects are in this list
+    Technically, incompatible effects are those which produce different values
+    for the same initial value attribute, but I will just check for equality,
+    which is the same for this small set of effects
+    """
+
+    for i in range(len(effects)):
+        for j in range(len(effects)):
+            if i != j and effects[i] != effects[j]:
+                logging.debug("Found an incompatible effect")
+                return True
 
     return False
 

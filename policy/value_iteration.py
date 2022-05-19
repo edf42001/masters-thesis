@@ -24,6 +24,8 @@ class ValueIteration(Policy):
         self.q_values = np.full((states, actions), init_value, dtype='float32')
 
     def choose_action(self, curr_state: int, is_learning: bool = True) -> int:
+        # return random.randint(0, self.num_actions-1)
+
         # Do q iteration to find the best action
         if is_learning:
             self.q_value_iteration()

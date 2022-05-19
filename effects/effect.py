@@ -6,7 +6,7 @@ class EffectType(Enum):
     INCREMENT = 0
     SET_TO_NUMBER = 1
     # SET_TO_BOOL = 2
-    NO_CHANGE = 2  # 3  # Can't have NO_CHANGE because it gets autofilled even if there is a change in get_effects
+    # NO_CHANGE = 2  # 3  # Can't have NO_CHANGE because it gets autofilled even if there is a change in get_effects
 
 
 class Effect:
@@ -48,8 +48,9 @@ class Effect:
 
 class NoChange(Effect):
     def __init__(self):
-        self.type = EffectType.NO_CHANGE
-        self.hash = hash(self.type)  # Will be constant
+        pass
+        # self.type = EffectType.NO_CHANGE
+        # self.hash = hash(self.type)  # Will be constant
 
     """No Change Effect: the state variable does not change"""
     def apply_to(self, s_var: Union[int, float]):

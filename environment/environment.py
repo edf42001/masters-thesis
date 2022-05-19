@@ -1,5 +1,6 @@
 from typing import List, Union
 import numpy as np
+import logging
 
 from effects.effect import JointEffect
 from environment.hierarchy.hierarchy import Hierarchy
@@ -87,6 +88,7 @@ class Environment:
             return self.get_flat_state(factored_s)
         except ValueError:
             # Effect returned illegal state
+            logging.error(f"Effect {effect} returned illegal state")
             return state
 
     def get_num_actions(self) -> int:

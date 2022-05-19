@@ -1,5 +1,6 @@
 import random
 import logging
+import sys
 
 from common.plotting.plot import Plot
 from runners.runner import Runner
@@ -19,13 +20,13 @@ class DoormaxTaxiRunner(Runner):
         self.exp_num = exp_num
 
         # Experiment parameters
-        self.max_steps = 100
+        self.max_steps = 2
         self.num_episodes = 1
         self.eval_episodes = 20
         self.eval_timer = 10
         self.stochastic = False
         self.use_outcomes = False
-        self.visualize = False
+        self.visualize = True
 
         # For testing
         random.seed(1)
@@ -45,7 +46,7 @@ class DoormaxTaxiRunner(Runner):
 
 
 if __name__ == '__main__':
-    logging.basicConfig(level=logging.WARN)
+    logging.basicConfig(level=logging.WARN, stream=sys.stdout)
 
     runner = DoormaxTaxiRunner(0)
     runner.run_experiment()

@@ -12,7 +12,8 @@ def get_effects(att: int, s1: List[int], s2: List[int], is_bool: bool = False) -
     elif is_bool:
         return [Effect.create(EffectType.SET_TO_NUMBER, s1[att], s2[att])]
     else:
-        return [Effect.create(e_type, s1[att], s2[att]) for e_type in EffectType if e_type != EffectType.NO_CHANGE]
+        # Could modify this with  if e_type != EffectType.NO_CHANGE to ignore No_Change effects
+        return [Effect.create(e_type, s1[att], s2[att]) for e_type in EffectType]
 
 
 def eff_joint(curr_state: List[int], next_state: List[int], is_bool: bool = False) -> List[JointEffect]:
