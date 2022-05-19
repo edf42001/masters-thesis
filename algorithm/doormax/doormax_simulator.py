@@ -2,10 +2,11 @@ import random
 
 from algorithm.simulator import Simulator
 from environment.environment import Environment
-
+from algorithm.transition_model import TransitionModel
+from policy.policy import Policy
 
 class DoormaxSimulator(Simulator):
-    def __init__(self, env: Environment, model, planner, visualize: bool = False):
+    def __init__(self, env: Environment, model: TransitionModel , planner: Policy, visualize: bool = False):
         self.env = env
         self.model = model
         self.planner = planner
@@ -36,6 +37,9 @@ class DoormaxSimulator(Simulator):
             # Display environment if need be
             if self.visualize:
                 self.env.visualize()
+
+            if is_learning:
+                self.model.add_experience(action, self.curr_state, observation)
 
             # Update bookkeeping
             total_reward += reward

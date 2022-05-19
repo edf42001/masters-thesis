@@ -10,7 +10,7 @@ def get_effects(att: int, s1: List[int], s2: List[int], is_bool: bool = False) -
     if s1[att] == s2[att]:
         return []
     elif is_bool:
-        return [Effect.create(EffectType.S, s1[att], s2[att])]
+        return [Effect.create(EffectType.SET_TO_NUMBER, s1[att], s2[att])]
     else:
         return [Effect.create(e_type, s1[att], s2[att]) for e_type in EffectType]
 

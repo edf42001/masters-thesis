@@ -1,6 +1,6 @@
 from typing import List, Union
 
-from algorithm.KOOL.MeteorologistSet import MeteorologistSet
+from algorithm.doormax.doormax_ruleset import DoormaxRuleset
 from algorithm.transition_model import TransitionModel
 from effects.effect import JointEffect
 from environment.environment import Environment
@@ -16,9 +16,9 @@ class Doormax(TransitionModel):
         self.max_parents = self.env.get_max_parents()
         self.num_inputs = self.env.get_condition_size()
         self.num_actions = self.env.get_num_actions()
+        self.num_state_vars = self.env.NUM_ATT
 
-        self.model = MeteorologistSet(self.num_actions, self.num_inputs,
-                                      self.M, self.max_parents)
+        self.model = DoormaxRuleset(self.num_actions, self.num_state_vars)
 
     def add_experience(self, action: int, state: int, obs: List[Union[List[int], JointEffect]]):
         condition = self.env.get_condition(state)
@@ -29,6 +29,7 @@ class Doormax(TransitionModel):
         return self.model.get_prediction(condition, action)
 
     def get_reward(self, state: int, next_state: int, action: int):
+        """Assumes all rewards are known in advance"""
         return self.env.get_reward(state, next_state, action)
 
     def next_state(self, state: int, observation) -> int:

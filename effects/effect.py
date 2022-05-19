@@ -5,8 +5,8 @@ from typing import List, Union
 class EffectType(Enum):
     INCREMENT = 0
     SET_TO_NUMBER = 1
-    SET_TO_BOOL = 2
-    NO_CHANGE = 3
+    # SET_TO_BOOL = 2
+    # NO_CHANGE = 2  # 3  # Can't have NO_CHANGE because it gets autofilled even if there is a change in get_effects
 
 
 class Effect:
@@ -36,8 +36,8 @@ class Effect:
             return SetToNumber(s_var, next_s_var)
         elif e_type == EffectType.NO_CHANGE:
             return NoChange()
-        elif e_type == EffectType.SET_TO_BOOL:
-            return SetToBool(next_s_var)
+        # elif e_type == EffectType.SET_TO_BOOL:
+        #     return SetToBool(next_s_var)
         else:
             raise ValueError(f'Unrecognized effect type: {e_type}')
 
@@ -83,18 +83,18 @@ class SetToNumber(Effect):
         return f'SetToNumber({self.value})'
 
 
-class SetToBool(Effect):
-    """Set-To Effect: sets the state variable to the value in next_s_var"""
-    def __init__(self, s_var: Union[int, float], next_s_var: Union[int, float]):
-        self.type = EffectType.SET_TO_BOOL
-        self.value = next_s_var != 0  # False is 0, anything else is true
-        self.hash = hash((self.type, self.value))
-
-    def apply_to(self, s_var: Union[int, float]):
-        return self.value
-
-    def __str__(self):
-        return f'SetToBool({self.value})'
+# class SetToBool(Effect):
+#     """Set-To Effect: sets the state variable to the value in next_s_var"""
+#     def __init__(self, s_var: Union[int, float], next_s_var: Union[int, float]):
+#         self.type = EffectType.SET_TO_BOOL
+#         self.value = next_s_var != 0  # False is 0, anything else is true
+#         self.hash = hash((self.type, self.value))
+#
+#     def apply_to(self, s_var: Union[int, float]):
+#         return self.value
+#
+#     def __str__(self):
+#         return f'SetToBool({self.value})'
 
 
 class JointEffect:
@@ -156,7 +156,7 @@ class JointNoEffect(JointEffect):
         super().__init__([], [])
 
     def __str__(self):
-        return '<NoJointEffect>'
+        return '<JointNoEffect>'
 
     def __repr__(self):
         return self.__str__()
