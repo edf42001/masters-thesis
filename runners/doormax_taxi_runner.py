@@ -19,13 +19,13 @@ class DoormaxTaxiRunner(Runner):
         self.exp_num = exp_num
 
         # Experiment parameters
-        self.max_steps = 3
+        self.max_steps = 100
         self.num_episodes = 1
         self.eval_episodes = 20
         self.eval_timer = 10
         self.stochastic = False
         self.use_outcomes = False
-        self.visualize = True
+        self.visualize = False
 
         # For testing
         random.seed(1)
@@ -45,7 +45,7 @@ class DoormaxTaxiRunner(Runner):
 
 
 if __name__ == '__main__':
-    logging.basicConfig(level=logging.INFO)
+    logging.basicConfig(level=logging.WARN)
 
     runner = DoormaxTaxiRunner(0)
     runner.run_experiment()

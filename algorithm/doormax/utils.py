@@ -1,3 +1,5 @@
+import logging
+
 from algorithm.doormax.doormax_rule import DoormaxRule
 from effects.effect import Effect
 
@@ -38,7 +40,7 @@ def commute_condition_strings(c1, c2):
         elif s1 == "*" or s2 == "*":
             ret += "*"
         else:
-            print("Bad commute string conditions")
+            logging.error("Bad commute string conditions")
 
     return ret
 
@@ -50,6 +52,18 @@ def find_matching_prediction(current_predictions: DoormaxRule, effect: Effect):
             return p
 
     return None
+
+def check_conditions_overlap(current_predictions, matched_pred):
+    """
+    Check if there exists some condition (but don't compare matched prediction to itself!)
+    where the conditions overlap. This is a contradiction? For some reason?
+    """
+    for pred in current_predictions:
+        if pred != matched_pred and condition_matches(matched_pred.model, pred.model):
+            # print("Found overlapping condition: {}, {}".format(matched_pred, pred))
+            return True
+
+    return False
 
 
 if __name__ == "__main__":

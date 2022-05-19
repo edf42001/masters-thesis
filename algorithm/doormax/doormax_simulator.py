@@ -1,12 +1,13 @@
-import random
+import logging
 
 from algorithm.simulator import Simulator
 from environment.environment import Environment
 from algorithm.transition_model import TransitionModel
 from policy.policy import Policy
 
+
 class DoormaxSimulator(Simulator):
-    def __init__(self, env: Environment, model: TransitionModel , planner: Policy, visualize: bool = False):
+    def __init__(self, env: Environment, model: TransitionModel, planner: Policy, visualize: bool = False):
         self.env = env
         self.model = model
         self.planner = planner
@@ -25,14 +26,15 @@ class DoormaxSimulator(Simulator):
 
             # Choose an action with the policy. Different actions can be taken if learning/executing optimal policy
             action = self.choose_action(is_learning)
-            print(self.env.get_action_name(action))
-            print(self.env.get_condition(self.curr_state))
+
             # Perform action and observe the next state
             observation = self.env.step(action)
             reward = self.env.get_last_reward()
             next_state = self.env.get_state()
 
-            print(observation)
+            logging.debug(self.env.get_action_name(action))
+            logging.debug(self.env.get_condition(self.curr_state))
+            logging.debug(observation)
 
             # Display environment if need be
             if self.visualize:
@@ -49,6 +51,9 @@ class DoormaxSimulator(Simulator):
         # Final values to return for episode
         self.last_episode_steps = steps
         self.last_episode_reward = total_reward
+
+        print("Final model:")
+        self.model.print_model()
 
     def choose_action(self, is_learning: bool):
         return self.planner.choose_action(self.curr_state, is_learning)

@@ -3,8 +3,8 @@ import numpy as np
 import random
 from typing import List, Tuple, Union
 
-from effects.utils import eff_joint
-from effects.effect import JointEffect
+from effects.utils import eff_joint, get_effects
+from effects.effect import JointEffect, NoChange
 from environment.environment import Environment
 from environment.hierarchy.taxi_hierarchy import TaxiHierarchy
 
@@ -64,6 +64,7 @@ class TaxiWorld(Environment):
              '| |   |   |']
 
     ACTION_NAMES = ['North', 'East', 'South', 'West', 'Pickup', 'Dropoff']
+    ATT_NAMES = ["x", "y", "pass", "dest"]
 
     def __init__(self, stochastic=True, use_outcomes=True):
         self.stochastic: bool = stochastic
@@ -192,7 +193,20 @@ class TaxiWorld(Environment):
             observation = tuple(observation)
         else:
             # Get all possible JointEffects that could have transformed the current state into the next state
-            observation = eff_joint(self.curr_state, next_state)
+            # observation = eff_joint(self.curr_state, next_state)
+
+            # Instead of the above, lets return the actual effects for each attribute
+            # Or an empty dict for "failure state"
+            observation = dict()
+            if self.curr_state != next_state:
+                for att in range(self.NUM_ATT):
+                    # The passenger state is categorical: at a specific place, or not
+                    # at that place
+                    is_bool = att in [self.S_PASS]
+                    observation[att] = get_effects(att, self.curr_state, next_state, is_bool=is_bool)
+
+                    # if not observation[att]:
+                    #     observation[att] = [NoChange()]
 
         # Update current state
         self.curr_state = next_state

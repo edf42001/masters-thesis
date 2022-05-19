@@ -26,6 +26,7 @@ class Environment:
 
     # Names, to help debugging
     ACTION_NAMES = None
+    ATT_NAMES = None
 
     instance_index_map = {}
     state_index_instance_map = {}
@@ -116,6 +117,10 @@ class Environment:
     def get_action_name(self, action: int):
         """Maps int action to string name"""
         return self.ACTION_NAMES[action]
+
+    def get_att_name(self, attribute: int):
+        """Maps int attribute to string name"""
+        return self.ATT_NAMES[attribute]
 
     def generate_object_maps(self) -> None:
         """

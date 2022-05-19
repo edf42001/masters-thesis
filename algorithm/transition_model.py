@@ -19,3 +19,6 @@ class TransitionModel:
 
     def next_state(self, state: int, effect: JointEffect) -> int:
         raise NotImplementedError()
+
+    def print_model(self):
+        raise NotImplementedError()

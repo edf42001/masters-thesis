@@ -18,7 +18,7 @@ class Doormax(TransitionModel):
         self.num_actions = self.env.get_num_actions()
         self.num_state_vars = self.env.NUM_ATT
 
-        self.model = DoormaxRuleset(self.num_actions, self.num_state_vars)
+        self.model = DoormaxRuleset(self.num_actions, self.num_state_vars, self.env.ACTION_NAMES, self.env.ATT_NAMES)
 
     def add_experience(self, action: int, state: int, obs: List[Union[List[int], JointEffect]]):
         condition = self.env.get_condition(state)
@@ -46,5 +46,5 @@ class Doormax(TransitionModel):
         condition = self.env.get_condition(state)
         self.model.print_parent_predictions(condition, action)
 
-    def __str__(self):
-        return str(self.model)
+    def print_model(self):
+        self.model.print_model(self.env)
