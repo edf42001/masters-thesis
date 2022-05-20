@@ -3,7 +3,6 @@ import numpy as np
 import logging
 
 from effects.effect import JointEffect
-from environment.hierarchy.hierarchy import Hierarchy
 
 
 class Environment:
@@ -35,8 +34,6 @@ class Environment:
     state_index_class_index_map = {}
 
     eval_states = []
-
-    hierarchy = None
 
     curr_state: List[int] = None
     last_action: int = None
@@ -112,9 +109,6 @@ class Environment:
 
     def get_max_parents(self) -> int:
         return self.MAX_PARENTS
-
-    def get_hierarchy(self) -> Hierarchy:
-        return self.hierarchy
 
     def get_action_name(self, action: int):
         """Maps int action to string name"""

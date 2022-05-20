@@ -359,7 +359,7 @@ if __name__ == "__main__":
     #     env = doormax.env
 
     # How many iterations to iterate for, and iteration counter
-    NUM_ITERATIONS = 10000
+    NUM_ITERATIONS = 2
     iterations = 0
 
     # Main learning loop

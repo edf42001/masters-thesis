@@ -6,7 +6,6 @@ from typing import List, Tuple, Union
 from effects.utils import eff_joint, get_effects
 from effects.effect import JointEffect, NoChange
 from environment.environment import Environment
-from environment.hierarchy.taxi_hierarchy import TaxiHierarchy
 
 
 class TaxiWorld(Environment):
@@ -243,33 +242,6 @@ class TaxiWorld(Environment):
         else:
             return self.R_DEFAULT
 
-    def apply_outcome(self, state: int, outcome: List[int]) -> Union[int, np.ndarray]:
-        """Compute next state given an outcome"""
-        if all(o == self.O_NO_CHANGE for o in outcome):
-            return state
-
-        factored_s = self.get_factored_state(state)
-
-        # Only one attribute changes at a time in this environment
-        if outcome[self.S_X] == self.A_EAST:
-            factored_s[self.S_X] += 1
-        elif outcome[self.S_X] == self.A_WEST:
-            factored_s[self.S_X] -= 1
-        elif outcome[self.S_Y] == self.A_NORTH:
-            factored_s[self.S_Y] -= 1
-        elif outcome[self.S_Y] == self.A_SOUTH:
-            factored_s[self.S_Y] += 1
-        elif outcome[self.S_PASS] == self.A_PICKUP:
-            factored_s[self.S_PASS] = self.NUM_LOCATIONS
-        elif outcome[self.S_PASS] == self.A_DROPOFF:
-            factored_s[self.S_PASS] = self.NUM_LOCATIONS + 1
-
-        try:
-            return self.get_flat_state(factored_s)
-        except ValueError:
-            logging.error("Outcome returned illegal state: {}, {}".format(state, outcome))
-            return state
-
     def visualize(self):
         self.visualize_state(self.curr_state)
 
@@ -300,4 +272,8 @@ class TaxiWorld(Environment):
 
         # Do the display
         print(ret)
+
+    def get_rmax(self) -> float:
+        """The maximum reward available in the environment"""
+        return self.R_SUCCESS + 5  # In my implementation, this value is 15
 
