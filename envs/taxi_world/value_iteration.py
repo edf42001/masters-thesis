@@ -14,8 +14,8 @@ to solve the whole mdp. Or just from this state??
 
 
 def solve_mdp_value_iteration(curr_state, doormax, discount_rate):
-    NUM_STATES = doormax.env.get_num_states()  # x, y, passenger location (+ in taxi), goal location
-    NUM_ACTIONS = doormax.env.get_num_actions()
+    NUM_STATES = doormax.env.num_states()  # x, y, passenger location (+ in taxi), goal location
+    NUM_ACTIONS = doormax.env.num_actions()
 
     curr_state_hash = doormax.env.state_hash(curr_state)
 

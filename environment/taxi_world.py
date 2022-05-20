@@ -203,6 +203,7 @@ class TaxiWorld(Environment):
                     # The passenger state is categorical: at a specific place, or not
                     # at that place
                     is_bool = att in [self.S_PASS]
+                    print(is_bool)
                     observation[att] = get_effects(att, self.curr_state, next_state, is_bool=is_bool)
 
                     # if not observation[att]:
@@ -210,6 +211,7 @@ class TaxiWorld(Environment):
 
         # Update current state
         self.curr_state = next_state
+        print(observation)
 
         return observation
 

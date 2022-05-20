@@ -14,12 +14,15 @@ from algorithm.doormax.utils import find_matching_prediction, boolean_arr_to_str
 class DoormaxRuleset(TransitionModel):
     """Tracks all conditions and effects for each action/attribute pair"""
 
-    def __init__(self, num_actions: int, num_atts: int, action_names: List[str], att_names: List[str], k: int = 1):
-        self.num_actions = num_actions
-        self.num_atts = num_atts
+    def __init__(self, env: Environment):
+        self.env = env
+
+        self.num_inputs = self.env.get_condition_size()
+        self.num_actions = self.env.get_num_actions()
+        self.num_atts = self.env.NUM_ATT
 
         # Maximum number of different predictions allowed for an effect type
-        self.k = k
+        self.k = 1
 
         # Collection of failure conditions for actions (what conditions cause no change for given action)
         self.failure_conditions = dict()
@@ -48,18 +51,18 @@ class DoormaxRuleset(TransitionModel):
                     self.predictions[action][attribute][e_type] = []
 
     # TODO
-    def add_experience(self, action, condition: List[bool], obs_list: List[Union[List[int], JointEffect]]):
+    def add_experience(self, action: int, state: int, obs: List[Union[List[int], JointEffect]]):
         """Records experience of state action transition"""
-
+        condition = self.env.get_condition(state)
         condition_str = boolean_arr_to_string(condition)
 
         logging.info("Adding experience")
         logging.info(f"action: {action}")
         logging.info(f"condition: {condition_str}")
-        logging.info(f"observation: {obs_list}")
+        logging.info(f"observation: {obs}")
 
         # obs_list is a dictionary of lists of effects, or empty for all vars have no change
-        if not obs_list:
+        if not obs:
             logging.info("Is a failure condition")
             # If the states are the same, this is a failure condition for the action (nothing changed)
 
@@ -73,7 +76,7 @@ class DoormaxRuleset(TransitionModel):
         else:
             logging.info("Not a failure condition")
             # Look through all effects to all attributes
-            for attribute, effect_list in obs_list.items():
+            for attribute, effect_list in obs.items():
                 for effect in effect_list:
                     logging.info(f"Attribute/effect: {attribute}, {effect}")
 
@@ -141,12 +144,12 @@ class DoormaxRuleset(TransitionModel):
                                 # print("Too many effects, removing")
                                 self.predictions[action][attribute][effect.type] = None
 
-    def get_prediction(self, condition: List[bool], action: int) -> List[Transition]:
+    def compute_possible_transitions(self, state: int, action: int) -> List[Transition]:
         """
         Returns the effects (transitions) of taking the action given the condition
         If unknown, return None
         """
-
+        condition = self.env.get_condition(state)
         condition_str = boolean_arr_to_string(condition)
         # print("Action: {}".format(action))
         # print("Condition: {}".format(condition_str))
@@ -190,18 +193,27 @@ class DoormaxRuleset(TransitionModel):
                 joint_effect = JointEffect(att_list=[attribute], eff_list=applied_effects)
                 return [Transition(joint_effect, 1.0)]
 
-    def print_action_predictions(self, condition: List[bool]):
+    def get_reward(self, state: int, next_state: int, action: int):
+        """Assumes all rewards are known in advance"""
+        return self.env.get_reward(state, next_state, action)
+
+    def next_state(self, state: int, observation) -> int:
+        return self.env.apply_effect(state, observation)
+
+    def print_action_predictions(self, state: int):
+        condition = self.env.get_condition(state)
         pass
 
-    def print_parent_predictions(self, condition: List[bool], action: int):
+    def print_parent_predictions(self, state: int, action: int):
+        condition = self.env.get_condition(state)
         pass
 
-    def print_model(self, env: Environment):
+    def print_model(self):
         """Returns predictions in an easy to read format"""
         ret = ""
 
         for action in range(self.num_actions):
-            ret += env.get_action_name(action) + "\n"
+            ret += self.env.get_action_name(action) + "\n"
             for attribute in range(self.num_atts):
                 non_empty_effects = []
                 for e_type in EffectType:
@@ -211,6 +223,6 @@ class DoormaxRuleset(TransitionModel):
 
                 # Only print attribute and effects if there is something to see
                 if len(non_empty_effects) != 0:
-                    ret += "{}: {}\n".format(env.get_att_name(attribute), non_empty_effects)
+                    ret += "{}: {}\n".format(self.env.get_att_name(attribute), non_empty_effects)
 
         print(ret)

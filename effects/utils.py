@@ -13,7 +13,9 @@ def get_effects(att: int, s1: List[int], s2: List[int], is_bool: bool = False) -
         return [Effect.create(EffectType.SET_TO_NUMBER, s1[att], s2[att])]
     else:
         # Could modify this with  if e_type != EffectType.NO_CHANGE to ignore No_Change effects
-        return [Effect.create(e_type, s1[att], s2[att]) for e_type in EffectType]
+        # Have modified this to only return effects of increment unless is bool
+        # Basically, we need to know only the correct effects
+        return [Effect.create(e_type, s1[att], s2[att]) for e_type in EffectType if e_type == EffectType.INCREMENT]
 
 
 def eff_joint(curr_state: List[int], next_state: List[int], is_bool: bool = False) -> List[JointEffect]:
