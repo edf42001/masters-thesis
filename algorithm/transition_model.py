@@ -8,9 +8,6 @@ class TransitionModel:
     """A transition model computes possible transitions from a given state"""
     env = None
 
-    def initialize_learning(self):
-        pass
-
     def compute_possible_transitions(self, state: int, action: int) -> List[Transition]:
         raise NotImplementedError()
 

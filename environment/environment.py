@@ -58,6 +58,9 @@ class Environment:
     def apply_outcome(self, state: int, outcome: List[int]) -> int:
         raise NotImplementedError()
 
+    def unreachable_state(self, from_state, to_state) -> bool:
+        raise NotImplementedError()
+
     def visualize(self):
         pass
 

@@ -117,10 +117,10 @@ class DoormaxTaxi:
 
         # Current state condition
         condition_s = self.conditions(state)
-        print("Condition: {}".format(condition_s))
+        # print("Condition: {}".format(condition_s))
 
         if state == next_state:
-            print("Failure condition")
+            # print("Failure condition")
             # If the states are the same, this is a failure condition for the action (nothing changed)
 
             # TODO: remove all matches conditions (to prevent duplicates? why?)
@@ -131,7 +131,7 @@ class DoormaxTaxi:
             self.failure_conditions[action].append(condition_s)
             print(self.failure_conditions[action])
         else:
-            print("Not failure condition")
+            # print("Not failure condition")
             # Look through all effects to all attributes
             for attribute in ALL_ATTRIBUTES:
                 for effect in get_effects(state, next_state, attribute):
@@ -193,7 +193,7 @@ class DoormaxTaxi:
                             current_predictions.append(Prediction(condition_s, effect))
 
                             # Make sure it got added
-                            print(self.predictions[action][attribute][effect.type()])
+                            # print(self.predictions[action][attribute][effect.type()])
 
                             # Check if there are more than k predictions for this action/attribute/type
                             # If there are, that's not the real effect type, so remove it from the running
@@ -290,17 +290,18 @@ class DoormaxTaxi:
         # return ACTION.SOUTH
         # Pick the best action from the solved mdp:
         values = solve_mdp_value_iteration(state, self, discount_rate)
-        next_states = doormax.predict_next_states(state)
+        next_states = self.predict_next_states(state)
         best_value = -100
         best_action = None
 
-        print("Select action:")
+        # print("Select action:")
         # print("Values from value iteration: {}".format(values))
-        print("Next states: {}".format(next_states))
+        # print("Next states: {}".format(next_states))
 
         best_values = []
         for action in list(ACTION):
             next_state = next_states[action]
+            print(f"action {action}, next_state {next_state}")
             if next_state is None:
                 value = 15
             else:
@@ -309,7 +310,7 @@ class DoormaxTaxi:
                 # it actually gets the +10 reward TODO: Is this correct? I thought you could just use values.
                 # maybe in this case because there _is_ no next state?
                 # value = self.rewards[env.state_hash(state), action.value] + discount_rate * values[doormax.env.state_hash(next_state)]
-                value = values[doormax.env.state_hash(next_state)]
+                value = values[self.env.state_hash(next_state)]
 
                 # Hack for end of epsiode? Hardcoded information? How to deal??
                 # If they are dropping off and the dropoff works in dropiing off give them the reward
@@ -323,7 +324,8 @@ class DoormaxTaxi:
 
             best_values.append(value)
 
-        print("Values of actions: {}".format(best_values))
+        # print("Values of actions: {}".format(best_values))
+        print("Old best values: {}".format(best_values))
         return best_action
         # return np.random.choice(list(ACTION))
 
@@ -359,7 +361,7 @@ if __name__ == "__main__":
     #     env = doormax.env
 
     # How many iterations to iterate for, and iteration counter
-    NUM_ITERATIONS = 2
+    NUM_ITERATIONS = 200
     iterations = 0
 
     # Main learning loop

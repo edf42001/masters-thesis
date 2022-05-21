@@ -20,7 +20,6 @@ class DoormaxSimulator(Simulator):
 
     def run_single_episode(self, max_steps: int, is_learning: bool):
         steps, total_reward = 0, 0
-
         while steps < max_steps and not self.env.end_of_episode():
             self.curr_state = self.env.get_state()
 

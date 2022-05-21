@@ -26,7 +26,7 @@ def solve_mdp_value_iteration(curr_state, doormax, discount_rate):
     epsilon = 0.1
     iterations = 0  # Iterations counter
     max_change = 100
-    print("Value iteration current state: {}".format(curr_state))
+    # print("Value iteration current state: {}".format(curr_state))
     while max_change > epsilon:
         max_change = 0
 

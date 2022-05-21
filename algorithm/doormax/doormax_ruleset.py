@@ -1,7 +1,7 @@
 from typing import List, Union
 import logging
 
-from effects.effect import JointEffect, EffectType, NoChange
+from effects.effect import JointEffect, EffectType, JointNoEffect
 from algorithm.transition_model import TransitionModel
 from algorithm.doormax.doormax_rule import DoormaxRule
 from environment.environment import Environment
@@ -144,7 +144,7 @@ class DoormaxRuleset(TransitionModel):
                                 # print("Too many effects, removing")
                                 self.predictions[action][attribute][effect.type] = None
 
-    def compute_possible_transitions(self, state: int, action: int) -> List[Transition]:
+    def compute_possible_transitions(self, state: int, action: int, debug=False) -> List[Transition]:
         """
         Returns the effects (transitions) of taking the action given the condition
         If unknown, return None
@@ -157,10 +157,14 @@ class DoormaxRuleset(TransitionModel):
         for failure_condition in self.failure_conditions[action]:
             if condition_matches(failure_condition, condition_str):
                 # The current condition is a failure condition. No change
-                return []
+                return [Transition(JointNoEffect(), 1.0)]
 
         # Otherwise, check all effects and attributes
         # TODO: Is this wrong? Should applied effects be higher up??
+
+        # Store effects for each attribute to plug into a joint effect later
+        effects = []
+
         for attribute in range(self.num_atts):
             applied_effects = []
 
@@ -187,11 +191,15 @@ class DoormaxRuleset(TransitionModel):
                 return None  # None represents max reward
             else:
                 # Otherwise, return the effects that will occur as transitions
+                # Need to combine all effects into one joint effect.
 
                 # print("Effects for this state: {}".format(applied_effects))
                 # Convert effects to joint effect
-                joint_effect = JointEffect(att_list=[attribute], eff_list=applied_effects)
-                return [Transition(joint_effect, 1.0)]
+                effects.append(applied_effects[0])  # Only one valid effect will get through
+
+        # Create teh joint effect and say it has a probability of 1.0
+        joint_effect = JointEffect(att_list=list(range(self.num_atts)), eff_list=effects)
+        return [Transition(joint_effect, 1.0)]
 
     def get_reward(self, state: int, next_state: int, action: int):
         """Assumes all rewards are known in advance"""
@@ -207,6 +215,12 @@ class DoormaxRuleset(TransitionModel):
     def print_parent_predictions(self, state: int, action: int):
         condition = self.env.get_condition(state)
         pass
+
+    def unreachable_state(self, from_state: int, to_state: int) -> bool:
+        return self.env.unreachable_state(from_state, to_state)
+
+    def end_of_episode(self, state: int) -> bool:
+        return self.env.end_of_episode(state)
 
     def print_model(self):
         """Returns predictions in an easy to read format"""
