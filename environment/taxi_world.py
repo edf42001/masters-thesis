@@ -66,7 +66,7 @@ class TaxiWorld(Environment):
     ACTION_NAMES = ['North', 'East', 'South', 'West', 'Pickup', 'Dropoff']
     ATT_NAMES = ["x", "y", "pass", "dest"]
 
-    def __init__(self, stochastic=True):
+    def __init__(self, stochastic=True, shuffle_actions=False):
         self.stochastic: bool = stochastic
 
         # Add walls to the map
@@ -95,6 +95,13 @@ class TaxiWorld(Environment):
         # For testing purposes only:
         # Taxi position and pickup / dropoff
         self.curr_state = [0, 2, 3, 1]
+
+        # An action map, for if the actions are shuffled around. Used for learning action mappings
+        self.action_map = {i: i for i in range(self.NUM_ACTIONS)}
+        if shuffle_actions:
+            actions = list(range(self.NUM_ACTIONS))
+            random.shuffle(actions)
+            self.action_map = {i: actions[i] for i in range(self.NUM_ACTIONS)}
 
     def end_of_episode(self, state: int = None) -> bool:
         """Check if the episode has ended"""
@@ -145,6 +152,9 @@ class TaxiWorld(Environment):
         """Stochastically apply action to environment"""
         x, y, passenger, destination = self.curr_state
         next_x, next_y, next_passenger = x, y, passenger
+
+        # Lookup new action in action map
+        action = self.action_map[action]
 
         self.last_action = action
 
@@ -355,3 +365,7 @@ class TaxiWorld(Environment):
     def get_rmax(self) -> float:
         """The maximum reward available in the environment"""
         return self.R_SUCCESS + 5  # In my implementation, this value is 15
+
+    def get_action_map(self) -> dict:
+        """Returns the real action map for debugging purposes"""
+        return self.action_map

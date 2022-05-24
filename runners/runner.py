@@ -23,15 +23,19 @@ class Runner:
 
     def run_experiment(self, save_policy: bool = False, show: bool = False, save_training: bool = False):
         total_steps = 0
+        start_time = time.time()
         for _ in range(self.num_episodes):
             steps, reward = self.run_episode(True)
             # self.plot.update(steps, reward)
             total_steps += steps
+        end_time = time.time()
 
         if save_policy:
             self.policy.save(f'{self.name}_policy.npy')
 
+        print('----Experiment Complete----')
         print(f'Total steps:        {total_steps}')
+        print('Steps per second: {:.2f}'.format(total_steps / (end_time - start_time)))
 
         rewards, steps = self.plot.finalize(show=show)
         with open(f'{self.name}_{self.pkl_name}_{self.exp_num}.pkl', 'wb') as f:

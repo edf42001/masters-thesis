@@ -2,11 +2,12 @@ from typing import List
 
 from common.structures import Transition
 from effects.effect import JointEffect
+from environment.environment import Environment
 
 
 class TransitionModel:
     """A transition model computes possible transitions from a given state"""
-    env = None
+    env: Environment = None
 
     def compute_possible_transitions(self, state: int, action: int) -> List[Transition]:
         raise NotImplementedError()

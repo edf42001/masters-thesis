@@ -1,7 +1,6 @@
 import random
 import logging
 import sys
-import pickle
 
 from common.plotting.plot import Plot
 from runners.runner import Runner
@@ -22,11 +21,8 @@ class DoormaxTaxiRunner(Runner):
 
         # Experiment parameters
         self.max_steps = 100
-        self.num_episodes = 20
-        self.eval_episodes = 1
-        self.eval_timer = 10
+        self.num_episodes = 10
         self.stochastic = False
-        self.use_outcomes = False
         self.visualize = True
 
         # For testing
@@ -52,3 +48,5 @@ if __name__ == '__main__':
 
     runner = DoormaxTaxiRunner(0)
     runner.run_experiment()
+
+    runner.model.save("taxi-doormax-model.pkl")

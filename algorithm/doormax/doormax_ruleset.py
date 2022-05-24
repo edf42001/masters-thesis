@@ -1,10 +1,10 @@
 from typing import List, Union
 import logging
+import pickle
 
 from effects.effect import JointEffect, EffectType, JointNoEffect
 from algorithm.transition_model import TransitionModel
 from algorithm.doormax.doormax_rule import DoormaxRule
-from environment.environment import Environment
 from common.structures import Transition
 
 from algorithm.doormax.utils import find_matching_prediction, boolean_arr_to_string,\
@@ -14,7 +14,7 @@ from algorithm.doormax.utils import find_matching_prediction, boolean_arr_to_str
 class DoormaxRuleset(TransitionModel):
     """Tracks all conditions and effects for each action/attribute pair"""
 
-    def __init__(self, env: Environment):
+    def __init__(self, env):
         self.env = env
 
         self.num_inputs = self.env.get_condition_size()
@@ -50,7 +50,6 @@ class DoormaxRuleset(TransitionModel):
                     # List of predictions starts empty
                     self.predictions[action][attribute][e_type] = []
 
-    # TODO
     def add_experience(self, action: int, state: int, obs: List[Union[List[int], JointEffect]]):
         """Records experience of state action transition"""
         condition = self.env.get_condition(state)
@@ -240,3 +239,8 @@ class DoormaxRuleset(TransitionModel):
                     ret += "{}: {}\n".format(self.env.get_att_name(attribute), non_empty_effects)
 
         print(ret)
+
+    def save(self, filepath):
+        logging.info(f"Saving DoormaxRuleset to {filepath}")
+        with open(filepath, 'wb') as f:
+            pickle.dump(self, f)
