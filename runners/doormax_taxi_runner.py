@@ -23,7 +23,7 @@ class DoormaxTaxiRunner(Runner):
         self.max_steps = 100
         self.num_episodes = 10
         self.stochastic = False
-        self.visualize = True
+        self.visualize = False
 
         # For testing
         random.seed(1)

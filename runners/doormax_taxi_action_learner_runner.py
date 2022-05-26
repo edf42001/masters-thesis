@@ -8,6 +8,7 @@ from runners.runner import Runner
 from algorithm.action_learning.action_learning_model import ActionLearningModel
 from algorithm.action_learning.action_learner import ActionLearner
 from environment.taxi_world import TaxiWorld
+from policy.action_info_gain import ActionInfoGain
 
 
 class DoormaxTaxiActionLearnerRunner(Runner):
@@ -20,13 +21,13 @@ class DoormaxTaxiActionLearnerRunner(Runner):
         self.exp_num = exp_num
 
         # Experiment parameters
-        self.max_steps = 300
+        self.max_steps = 10
         self.num_episodes = 1
         self.stochastic = False
         self.visualize = True
 
         # For testing
-        random.seed(1)
+        random.seed(2)  # TODO: Set to 2 and watch it crash
 
         # Hyperparameters
         params = {
@@ -41,7 +42,8 @@ class DoormaxTaxiActionLearnerRunner(Runner):
             self.doormax_model = pickle.load(f)
 
         self.model = ActionLearningModel(self.env, self.doormax_model)
-        self.learner = ActionLearner(self.env, self.model, visualize=self.visualize)
+        self.planner = ActionInfoGain(self.env.get_num_actions(), self.model)
+        self.learner = ActionLearner(self.env, self.model, self.planner, visualize=self.visualize)
         self.plot = Plot(self, self.eval_episodes, self.eval_timer)
 
 

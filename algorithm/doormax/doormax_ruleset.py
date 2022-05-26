@@ -143,7 +143,7 @@ class DoormaxRuleset(TransitionModel):
                                 # print("Too many effects, removing")
                                 self.predictions[action][attribute][effect.type] = None
 
-    def compute_possible_transitions(self, state: int, action: int, debug=False) -> List[Transition]:
+    def compute_possible_transitions(self, state: int, action: int) -> List[Transition]:
         """
         Returns the effects (transitions) of taking the action given the condition
         If unknown, return None

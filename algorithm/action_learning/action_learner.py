@@ -3,14 +3,14 @@ import logging
 from algorithm.simulator import Simulator
 from environment.environment import Environment
 from algorithm.transition_model import TransitionModel
-from policy.random_policy import RandomPolicy
+from policy.policy import Policy
 
 
 class ActionLearner(Simulator):
-    def __init__(self, env: Environment, model: TransitionModel, visualize: bool = False):
+    def __init__(self, env: Environment, model: TransitionModel, planner: Policy, visualize: bool = False):
         self.env = env
         self.model = model
-        self.planner = RandomPolicy(self.env.get_num_actions())
+        self.planner = planner
 
         self.visualize = visualize
 

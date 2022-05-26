@@ -143,7 +143,7 @@ class JointEffect:
         if not self.value.items():
             return '?'
         else:
-            return ' '.join(f'<{a}, {str(e)}>' for a, e in self.value.items())
+            return '(' + ' '.join(f'<{a}, {str(e)}>' for a, e in self.value.items()) + ')'
 
     def is_empty(self) -> bool:
         """Check if this joint effect has no change to state"""

@@ -51,7 +51,7 @@ class ActionLearningModel(TransitionModel):
 
         for action_i in range(self.num_actions):
             # The transition that would have occurred if we took this action
-            transition = self.doormax_model.compute_possible_transitions(state, action_i)
+            transition = self.compute_possible_transitions(state, action_i)
             likelihood[action_i] = 1.0 if self.transitions_match(transition, obs) else 0.0
 
         print(f"Likelihood for each action: {likelihood}")
@@ -119,12 +119,12 @@ class ActionLearningModel(TransitionModel):
             # Need to have rows sum to 1, so need to transpose to get the alignment
             self.action_map_belief = (self.action_map_belief.T / np.sum(self.action_map_belief, axis=1)).T
 
-    def compute_possible_transitions(self, state: int, action: int, debug=False) -> List[Transition]:
+    def compute_possible_transitions(self, state: int, action: int) -> List[Transition]:
         """
         Returns the effects (transitions) of taking the action given the condition
         If unknown, return None
         """
-        pass
+        return self.doormax_model.compute_possible_transitions(state, action)
 
     def get_reward(self, state: int, next_state: int, action: int):
         """Assumes all rewards are known in advance"""
@@ -165,3 +165,5 @@ class ActionLearningModel(TransitionModel):
         best = {i: np.argmax(self.action_map_belief[i]) for i in range(self.num_actions)}
         return best == self.env.get_action_map()
 
+    def get_action_map_belief(self) -> np.ndarray:
+        return self.action_map_belief

@@ -268,8 +268,8 @@ class TaxiWorld(Environment):
             return False
 
     def visualize(self):
-        self.draw_taxi(self.curr_state, delay=1)
-        # self.visualize_state(self.curr_state)
+        # self.draw_taxi(self.curr_state, delay=1)
+        self.visualize_state(self.curr_state)
 
     def visualize_state(self, curr_state):
         x, y, passenger, dest = curr_state
