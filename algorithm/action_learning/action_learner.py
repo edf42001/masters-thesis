@@ -21,10 +21,13 @@ class ActionLearner(Simulator):
     def run_single_episode(self, max_steps: int, is_learning: bool):
         steps, total_reward = 0, 0
         while steps < max_steps and not self.env.end_of_episode():
+            print(f"Step {steps}")
             self.curr_state = self.env.get_state()
 
             # Choose an action with the policy. Different actions can be taken if learning/executing optimal policy
             action = self.choose_action(is_learning)
+
+            print(f"Taking action {action}")
 
             # Perform action and observe the next state
             observation = self.env.step(action)

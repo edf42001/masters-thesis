@@ -41,8 +41,8 @@ class ActionLearningModel(TransitionModel):
         # What we currently believe this action represents
         priors = self.action_map_belief[action]
 
-        print(f"Priors for action {action}")
-        print(priors)
+        # print(f"Priors for action {action}")
+        # print(priors)
 
         # Need to calculate P(observation | action = X). For an action X, this is 1 if executing that action in this
         # state would have created a matching transition. 0 otherwise
@@ -54,12 +54,12 @@ class ActionLearningModel(TransitionModel):
             transition = self.compute_possible_transitions(state, action_i)
             likelihood[action_i] = 1.0 if self.transitions_match(transition, obs) else 0.0
 
-        print(f"Likelihood for each action: {likelihood}")
+        # print(f"Likelihood for each action: {likelihood}")
 
         # Update priors
         posterior = priors * likelihood
         posterior = posterior / np.sum(posterior)  # Equivalent to dividing by P(O), normalize
-        print(f"Posterior {posterior}")
+        # print(f"Posterior {posterior}")
 
         self.action_map_belief[action] = posterior
 

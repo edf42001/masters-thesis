@@ -137,7 +137,7 @@ class TaxiWorld(Environment):
         else:
             at_pass = False
 
-        # Touch_N/E/S/W, on(Agent,Pass), in(Agent,Pass), on(Agent,Dest)
+        # Touch_N/E/S/W, on(Agent,Dest), in(Agent,Pass), on(Agent,Pass)
         conditions[0] = pos in self.walls['N']
         conditions[1] = pos in self.walls['E']
         conditions[2] = pos in self.walls['S']

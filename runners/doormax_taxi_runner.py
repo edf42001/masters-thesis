@@ -21,7 +21,7 @@ class DoormaxTaxiRunner(Runner):
 
         # Experiment parameters
         self.max_steps = 100
-        self.num_episodes = 10
+        self.num_episodes = 50
         self.stochastic = False
         self.visualize = False
 

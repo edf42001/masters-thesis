@@ -21,13 +21,13 @@ class DoormaxTaxiActionLearnerRunner(Runner):
         self.exp_num = exp_num
 
         # Experiment parameters
-        self.max_steps = 10
+        self.max_steps = 25
         self.num_episodes = 1
         self.stochastic = False
         self.visualize = True
 
         # For testing
-        random.seed(2)  # TODO: Set to 2 and watch it crash
+        random.seed(1)
 
         # Hyperparameters
         params = {
