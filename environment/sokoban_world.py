@@ -9,77 +9,60 @@ from effects.effect import JointEffect, NoChange
 from environment.environment import Environment
 
 
-class TaxiWorld(Environment):
+class SokobanWorld(Environment):
 
     # Environment constants
     SIZE_X = 5
     SIZE_Y = 5
-    NUM_LOCATIONS = 4
 
     # Actions of agent
     A_NORTH = 0
     A_EAST = 1
     A_SOUTH = 2
     A_WEST = 3
-    A_PICKUP = 4
-    A_DROPOFF = 5
-    NUM_ACTIONS = 6
+    NUM_ACTIONS = 4
 
     # State variables
     S_X = 0
     S_Y = 1
-    S_PASS = 2
-    S_DEST = 3
-    NUM_ATT = 4
-    STATE_ARITIES = [SIZE_X, SIZE_Y, NUM_LOCATIONS + 2, NUM_LOCATIONS]
+    S_BLOCK1_X = 2
+    S_BLOCK1_Y = 3
+    S_BLOCK2_X = 4
+    S_BLOCK2_Y = 5
+    NUM_ATT = 6
 
-    # Stochastic modification to actions
-    MOD = [-1, 0, 1]
-    P_PROB = [0.1, 0.8, 0.1]
+    # Each x/y variable has 5 possibilities
+    STATE_ARITIES = [SIZE_X, SIZE_Y] * 3
 
     # Rewards
-    R_DEFAULT = -0.5
-    R_SUCCESS = 10
+    R_DEFAULT = -1
+    R_GOAL = 3
+    R_DONE = 10
 
     # Object descriptions
-    OB_TAXI = 0
-    OB_PASS = 1
-    OB_DEST = 2
-    OB_COUNT = [1, 1, 1]
-    OB_ARITIES = [2, 1, 1]
+    OB_GUY = 0
+    OB_BLOCK = 1
+    OB_COUNT = [1, 2]
+    OB_ARITIES = [2, 2]
 
     # Conditions
     NUM_COND = 7  # touch_N/E/S/W, on(Agent,Passenger), in(Agent,Passenger), on(Agent,Dest)
-    MAX_PARENTS = 3
 
     # Outcomes (non-standard OO implementation)
     # All possible outcomes are results of successful actions or no change
     O_NO_CHANGE = NUM_ACTIONS
 
-    # For visualization
-    lines = ['|   |     |',
-             '|   |     |',
-             '|         |',
-             '| |   |   |',
-             '| |   |   |']
+    ACTION_NAMES = ['North', 'East', 'South', 'West']
+    ATT_NAMES = ["x", "y", "block1x", "block1y", "block2x", "block2y"]
 
-    ACTION_NAMES = ['North', 'East', 'South', 'West', 'Pickup', 'Dropoff']
-    ATT_NAMES = ["x", "y", "pass", "dest"]
-
-    def __init__(self, stochastic=True, shuffle_actions=False):
+    def __init__(self, stochastic=True):
         self.stochastic: bool = stochastic
 
-        # Add walls to the map
-        # For each direction, stores which positions, (x, y), have a wall in that direction
-        self.walls = {
-            'N': [(0, 4), (1, 4), (2, 4), (3, 4), (4, 4)],
-            'E': [(0, 0), (0, 1), (1, 3), (1, 4), (2, 0), (2, 1), (4, 0), (4, 1), (4, 2), (4, 3), (4, 4)],
-            'S': [(0, 0), (1, 0), (2, 0), (3, 0), (4, 0)],
-            'W': [(0, 0), (0, 1), (0, 2), (0, 3), (0, 4), (1, 0), (1, 1), (2, 3), (2, 4), (3, 0), (3, 1)]
-        }
+        # Add walls to the map. Walls are full squares on the map
+        self.walls = [(0, 4), (1, 3), (3, 1), (4, 0)]
 
-        # List of possible pickup/dropoff locations
-        self.locations = [(0, 4), (4, 4), (3, 0), (0, 0)]
+        # List of goal locations
+        self.goals = [(0, 3), (4, 1)]
 
         # Object instance in state information
         self.generate_object_maps()
@@ -92,31 +75,22 @@ class TaxiWorld(Environment):
         # Restart to begin episode
         self.restart()
 
-        # For testing purposes only:
-        # Taxi position and pickup / dropoff
-        self.curr_state = [0, 2, 3, 1]
-
-        # An action map, for if the actions are shuffled around. Used for learning action mappings
-        self.action_map = {i: i for i in range(self.NUM_ACTIONS)}
-        if shuffle_actions:
-            actions = list(range(self.NUM_ACTIONS))
-            random.shuffle(actions)
-            self.action_map = {i: actions[i] for i in range(self.NUM_ACTIONS)}
+        # For testing purposes only: Set initial state
+        self.curr_state = [1, 1, 2, 1, 3, 3]
 
     def end_of_episode(self, state: int = None) -> bool:
         """Check if the episode has ended"""
         state = self.get_factored_state(state) if state else self.curr_state
-        return state[self.S_PASS] == self.NUM_LOCATIONS + 1
 
-    def restart(self, init_state=None):
+        # When all blocks are on goals, the episode has ended
+        block1 = (state[self.S_BLOCK1_X], state[self.S_BLOCK2_X])
+        block2 = (state[self.S_BLOCK2_X], state[self.S_BLOCK2_Y])
+
+        return block1 in self.goals and block2 in self.goals
+
+    def restart(self):
         """Reset state variables to begin new episode"""
-        if init_state:
-            self.curr_state = [0, 1, init_state[0], init_state[1]]
-        else:
-            # Taxi starts at (0, 1)
-            # Randomly choose passenger and destination locations
-            passenger, destination = random.sample([0, 1, 2, 3], 2)
-            self.curr_state = [0, 1, passenger, destination]
+        self.curr_state = [1, 1, 2, 1, 3, 3]
 
     def get_condition(self, state) -> List[bool]:
         """
@@ -150,46 +124,20 @@ class TaxiWorld(Environment):
 
     def step(self, action: int) -> Union[List[JointEffect], List[int]]:
         """Stochastically apply action to environment"""
-        x, y, passenger, destination = self.curr_state
-        next_x, next_y, next_passenger = x, y, passenger
-
-        # Lookup new action in action map
-        action = self.action_map[action]
+        x, y, block1x, block1y, block2x, block2y = self.curr_state
+        next_x, next_y, next_block1x, next_block1y, next_block2x, next_block2y = x, y, block1x, block1y, block2x, block2y
+        blocks = [(block1x, block1y), (block2x, block2y)]
 
         self.last_action = action
 
-        # Movement action
-        if action <= 3:
-            if self.stochastic:
-                # Randomly change action according to stochastic property of env
-                modification = np.random.choice(self.MOD, p=self.P_PROB)
-                action = (action + modification) % 4
-            next_x, next_y = self.compute_next_loc(x, y, action)
-        # Pickup action
-        elif action == 4:
-            pos = (x, y)
-            # Check if taxi already holds passenger
-            if passenger == self.NUM_LOCATIONS:
-                next_passenger = self.NUM_LOCATIONS
-            # Check if taxi is on correct pickup location
-            elif passenger < self.NUM_LOCATIONS and pos == self.locations[passenger]:
-                next_passenger = self.NUM_LOCATIONS
-        # Dropoff action
-        else:
-            pos = (x, y)
-            # Check if passenger is in taxi and taxi is on the destination
-            if passenger == self.NUM_LOCATIONS and pos == self.locations[destination]:
-                next_passenger = self.NUM_LOCATIONS + 1
+        # TODO: see how dallan did dynamic duplicate objects
 
-        # Make updates to state
-        # Destination status does not change
-        next_state = [next_x, next_y, next_passenger, destination]
-
-        # Assign reward
-        if next_passenger == self.NUM_LOCATIONS + 1:
-            self.last_reward = self.R_SUCCESS
-        else:
-            self.last_reward = self.R_DEFAULT
+        
+        # # Assign reward
+        # if next_passenger == self.NUM_LOCATIONS + 1:
+        #     self.last_reward = self.R_SUCCESS
+        # else:
+        #     self.last_reward = self.R_DEFAULT
 
         # Calculate effects
         # Get all possible JointEffects that could have transformed the current state into the next state
@@ -198,18 +146,18 @@ class TaxiWorld(Environment):
         # Instead of the above, lets return the actual effects for each attribute
         # Or an empty dict for "failure state"
         observation = dict()
-        if self.curr_state != next_state:
-            for att in range(self.NUM_ATT):
-                # The passenger state is categorical: at a specific place, or not
-                # at that place
-                is_bool = att in [self.S_PASS]
-                observation[att] = get_effects(att, self.curr_state, next_state, is_bool=is_bool)
-
-                # if not observation[att]:
-                #     observation[att] = [NoChange()]
-
-        # Update current state
-        self.curr_state = next_state
+        # if self.curr_state != next_state:
+        #     for att in range(self.NUM_ATT):
+        #         # The passenger state is categorical: at a specific place, or not
+        #         # at that place
+        #         is_bool = att in [self.S_PASS]
+        #         observation[att] = get_effects(att, self.curr_state, next_state, is_bool=is_bool)
+        #
+        #         # if not observation[att]:
+        #         #     observation[att] = [NoChange()]
+        #
+        # # Update current state
+        # self.curr_state = next_state
 
         return observation
 
@@ -309,95 +257,94 @@ class TaxiWorld(Environment):
         # self.draw_taxi(self.curr_state, delay=1)
         self.visualize_state(self.curr_state)
 
-    def visualize_state(self, curr_state):
-        x, y, passenger, dest = curr_state
-        dest_x, dest_y = self.locations[dest]
-        lines = self.lines
-        taxi = '@' if passenger == len(self.locations) else 'O'
+    def visualize_state(self, state):
+        x, y, block1x, block1y, block2x, block2y = state
 
-        pass_x, pass_y = -1, -1
-        if passenger < len(self.locations):
-            pass_x, pass_y = self.locations[passenger]
+        blocks = [(block1x, block1y), (block2x, block2y)]
+
+        # Coordinate transform for printing
+        goals = [(y, 2*x+1) for (x, y) in self.goals]
+        walls = [(y, 2*x+1) for (x, y) in self.walls]
+        blocks = [(y, 2*x+1) for (x, y) in blocks]
 
         ret = ""
         ret += '-----------\n'
-        for i, line in enumerate(lines):
-            for j, c in enumerate(line):
+        for i in range(self.SIZE_Y):
+            for j in range(2*self.SIZE_X):
                 iy = self.SIZE_Y - i - 1  # Flip y axis vertically
+
                 if iy == y and j == 2 * x + 1:
-                    ret += taxi
-                elif iy == dest_y and j == 2 * dest_x + 1:
-                    ret += "g"
-                elif iy == pass_y and j == 2 * pass_x + 1:
-                    ret += "p"
+                    ret += "O"
+                elif (iy, j) in blocks:
+                    ret += "b"
+                elif (iy, j) in goals:
+                    ret += "."
+                elif (iy, j) in walls:
+                    ret += "X"
                 else:
-                    ret += c
+                    ret += " "
             ret += '\n'
         ret += '-----------\n'
 
         # Do the display
         print(ret)
 
-    def draw_taxi(self, state, delay=100):
+    def draw_world(self, state, delay=100):
         GRID_SIZE = 100
         WIDTH = self.SIZE_X
         HEIGHT = self.SIZE_Y
 
-        x, y, passenger, dest = state
+        # Have to name these guy_x or they get overwritten by the variables in the for loops
+        guy_x, guy_y, block1x, block1y, block2x, block2y = state
+
+        blocks = [(block1x, block1y), (block2x, block2y)]
 
         # Blank white square
         img = 255 * np.ones((HEIGHT * GRID_SIZE, WIDTH * GRID_SIZE, 3))
 
-        # Draw pickup and dropoff zones
-        colors = [[0, 0, 255], [0, 255, 0], [255, 0, 0], [0, 128, 128]]
-        for loc, color in zip(self.locations, colors):
-            bottom_left_x = loc[0] * GRID_SIZE
-            bottom_left_y = (HEIGHT - loc[1]) * GRID_SIZE
+        # Draw blocks
+        for (x, y) in blocks:
+            color = [0, 0, 0.8]
+            bottom_left_x = x * GRID_SIZE
+            bottom_left_y = (HEIGHT - y) * GRID_SIZE
             cv2.rectangle(img, (bottom_left_x, bottom_left_y), (bottom_left_x + GRID_SIZE, bottom_left_y - GRID_SIZE),
                           thickness=-1, color=color)
 
-        # Mark goal with small circle
-        goal_x = self.locations[dest][0]
-        goal_y = self.locations[dest][1]
-        cv2.circle(img, (int((goal_x + 0.5) * GRID_SIZE), int((HEIGHT - (goal_y + 0.5)) * GRID_SIZE)), int(GRID_SIZE * 0.05),
-                   thickness=-1, color=[0, 0, 0])
+        # Draw walls
+        for (x, y) in self.walls:
+            color = [0.05, 0, 0]
+            bottom_left_x = x * GRID_SIZE
+            bottom_left_y = (HEIGHT - y) * GRID_SIZE
+            cv2.rectangle(img, (bottom_left_x, bottom_left_y), (bottom_left_x + GRID_SIZE, bottom_left_y - GRID_SIZE),
+                          thickness=-1, color=color)
 
-        # Draw taxi
-        cv2.circle(img, (int((x + 0.5) * GRID_SIZE), int((HEIGHT - (y + 0.5)) * GRID_SIZE)), int(GRID_SIZE * 0.3),
-                   thickness=-1, color=[0, 0, 0])
+        # Draw goals
+        for (x, y) in self.goals:
+            color = [0.2, 0.7, 0]
+            bottom_left_x = x * GRID_SIZE
+            bottom_left_y = (HEIGHT - y) * GRID_SIZE
+            cv2.rectangle(img, (bottom_left_x, bottom_left_y), (bottom_left_x + GRID_SIZE, bottom_left_y - GRID_SIZE),
+                          thickness=-1, color=color)
 
-        # Draw passenger
-        if passenger >= len(self.locations):
-            pass_x = x
-            pass_y = y
-        else:
-            pass_x = self.locations[passenger][0]
-            pass_y = self.locations[passenger][1]
+        # Mark Guy with small circle
+        cv2.circle(img, (int((guy_x + 0.5) * GRID_SIZE), int((HEIGHT - (guy_y + 0.5)) * GRID_SIZE)), int(GRID_SIZE * 0.4),
+                   thickness=-1, color=[0, 0.4, 0.3])
 
-        cv2.circle(img, (int((pass_x + 0.5) * GRID_SIZE), int((HEIGHT - (pass_y + 0.5)) * GRID_SIZE)), int(GRID_SIZE * 0.2),
-                   thickness=-1, color=[0.5, 0.5, 0.5])
+        #
+        #     if pos in self.walls['N']:
+        #         cv2.line(img, (x * GRID_SIZE, (HEIGHT - y-1) * GRID_SIZE), ((x+1) * GRID_SIZE, (HEIGHT - y-1) * GRID_SIZE),
+        #                  thickness=3, color=[0, 0, 0])
+        #     if pos in self.walls['E']:
+        #         cv2.line(img, ((x+1) * GRID_SIZE, (HEIGHT - y) * GRID_SIZE), ((x+1) * GRID_SIZE, (HEIGHT - y-1) * GRID_SIZE),
+        #                  thickness=3, color=[0, 0, 0])
+        #     if pos in self.walls['S']:
+        #         cv2.line(img, (x * GRID_SIZE, (HEIGHT - y) * GRID_SIZE), ((x+1) * GRID_SIZE, (HEIGHT - y) * GRID_SIZE),
+        #                  thickness=3, color=[0, 0, 0])
+        #     if pos in self.walls['W']:
+        #         cv2.line(img, (x * GRID_SIZE, (HEIGHT - y) * GRID_SIZE), (x * GRID_SIZE, (HEIGHT - y-1) * GRID_SIZE),
+        #                  thickness=3, color=[0, 0, 0])
 
-        # Draw horizontal and vertical walls
-        for i in range((self.SIZE_X + 1) * (self.SIZE_Y + 1)):
-            x = i % (self.SIZE_X + 1)
-            y = int(i / (self.SIZE_Y + 1))
-
-            pos = (x, y)
-
-            if pos in self.walls['N']:
-                cv2.line(img, (x * GRID_SIZE, (HEIGHT - y-1) * GRID_SIZE), ((x+1) * GRID_SIZE, (HEIGHT - y-1) * GRID_SIZE),
-                         thickness=3, color=[0, 0, 0])
-            if pos in self.walls['E']:
-                cv2.line(img, ((x+1) * GRID_SIZE, (HEIGHT - y) * GRID_SIZE), ((x+1) * GRID_SIZE, (HEIGHT - y-1) * GRID_SIZE),
-                         thickness=3, color=[0, 0, 0])
-            if pos in self.walls['S']:
-                cv2.line(img, (x * GRID_SIZE, (HEIGHT - y) * GRID_SIZE), ((x+1) * GRID_SIZE, (HEIGHT - y) * GRID_SIZE),
-                         thickness=3, color=[0, 0, 0])
-            if pos in self.walls['W']:
-                cv2.line(img, (x * GRID_SIZE, (HEIGHT - y) * GRID_SIZE), (x * GRID_SIZE, (HEIGHT - y-1) * GRID_SIZE),
-                         thickness=3, color=[0, 0, 0])
-
-        cv2.imshow("Taxi World", img)
+        cv2.imshow("Sokoban", img)
         cv2.waitKey(delay)
 
     def get_rmax(self) -> float:
