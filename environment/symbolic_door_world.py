@@ -6,7 +6,7 @@ from enum import Enum
 
 
 # from effects.utils import eff_joint TODO
-from effects.effect import JointEffect
+from effects.effect import JointEffect, Effect, EffectType, JointNoEffect
 from environment.environment import Environment
 
 
@@ -93,6 +93,14 @@ class Predicate:
             return Open(o1, o2)
         else:
             raise ValueError(f'Unrecognized effect type: {p_type}')
+
+    def __eq__(self, other):
+        return (
+            self.type == other.type and
+            self.value == other.value and
+            self.object1 == other.object1 and
+            self.object2 == other.object2
+        )
 
 
 class TouchLeft(Predicate):
@@ -310,25 +318,23 @@ class SymbolicDoorWorld(Environment):
         else:
             self.last_reward = self.R_DEFAULT
 
-        # # Calculate outcome or effect
-        # if self.use_outcomes:
-        #     observation = [self.O_NO_CHANGE] * self.NUM_ATT
-        #     # Only one attribute changes at a time in this environment
-        #     if x != next_x:
-        #         observation[self.S_X] = self.A_WEST if next_x < x else self.A_EAST
-        #     elif y != next_y:
-        #         observation[self.S_Y] = self.A_NORTH if next_y < y else self.A_SOUTH
-        #     elif passenger != next_passenger:
-        #         observation[self.S_PASS] = self.A_DROPOFF if passenger == self.NUM_LOCATIONS else self.A_PICKUP
-        #     observation = tuple(observation)
-        # else:
-        #     # Get all possible JointEffects that could have transformed the current state into the next state
-        #     observation = eff_joint(self.curr_state, next_state)
+        # Calculate outcomes
+        att_list = []
+        effect_list = []
+        if next_x1 != x1:
+            att_list.append("taxi.x")
+            effect_list.append(Effect.create(EffectType.INCREMENT, x1, next_x1))
+        if next_door_open != door_open:
+            att_list.append("door.open")
+            effect_list.append(Effect.create(EffectType.SET_TO_NUMBER, door_open, next_door_open))
 
-        # Update current state
+        if len(att_list) == 0:
+            observation = JointNoEffect()
+        else:
+            observation = JointEffect(att_list=att_list, eff_list=effect_list)
+
         self.curr_state = next_state
 
-        observation = None
         return observation
 
     def compute_next_loc(self, x: int, action: int) -> int:
@@ -368,30 +374,7 @@ class SymbolicDoorWorld(Environment):
 
     def apply_outcome(self, state: int, outcome: List[int]) -> Union[int, np.ndarray]:
         """Compute next state given an outcome"""
-        if all(o == self.O_NO_CHANGE for o in outcome):
-            return state
-
-        factored_s = self.get_factored_state(state)
-
-        # Only one attribute changes at a time in this environment
-        if outcome[self.S_X] == self.A_EAST:
-            factored_s[self.S_X] += 1
-        elif outcome[self.S_X] == self.A_WEST:
-            factored_s[self.S_X] -= 1
-        elif outcome[self.S_Y] == self.A_NORTH:
-            factored_s[self.S_Y] -= 1
-        elif outcome[self.S_Y] == self.A_SOUTH:
-            factored_s[self.S_Y] += 1
-        elif outcome[self.S_PASS] == self.A_PICKUP:
-            factored_s[self.S_PASS] = self.NUM_LOCATIONS
-        elif outcome[self.S_PASS] == self.A_DROPOFF:
-            factored_s[self.S_PASS] = self.NUM_LOCATIONS + 1
-
-        try:
-            return self.get_flat_state(factored_s)
-        except ValueError:
-            # Outcome returned illegal state
-            return state
+        pass
 
     def visualize(self) -> str:
         return self.visualize_state(self.curr_state)
