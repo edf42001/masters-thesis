@@ -6,8 +6,14 @@ from environment.symbolic_door_world import Predicate
 
 class Outcome:
     """An outcome is which attributes change and how"""
-    def __init__(self, outcome):
-        self.outcome: JointEffect = outcome
+    def __init__(self, outcome: JointEffect):
+        self.outcome = outcome
+
+        # The "value" attribute is the dictionary of att/effect pairs
+        self.num_affected_atts = len(self.outcome.value)
+
+    def get_num_affected_atts(self):
+        return self.num_affected_atts
 
     def __str__(self):
         return str(self.outcome)
@@ -24,6 +30,15 @@ class OutcomeSet:
     def __init__(self):
         self.outcomes: List[Outcome] = []
         self.probabilities: List[float] = []
+
+    def add_outcome(self, outcome, p):
+        """Adds an outcome and associated probability to the list"""
+        self.outcomes.append(outcome)
+        self.probabilities.append(p)
+
+    def get_total_num_affected_atts(self):
+        """Returns the total number of changed attributes over all outcomes in the set"""
+        return sum([o.get_num_affected_atts() for o in self.outcomes])
 
     def __str__(self):
         ret = ""
@@ -50,12 +65,7 @@ class Example:
         ret += f"Action {self.action}:\n"
 
         # Only show true literals
-        for lit in self.state:
-            if lit.value:
-                ret += str(lit) + ", "
-
-        # Remove trailing comma
-        ret = ret[:-2]
+        ret += ", ".join([str(lit) for lit in self.state if lit.value])
 
         ret += "\n"
         ret += str(self.outcome)
@@ -92,7 +102,47 @@ class ExampleSet:
         for example, count in self.examples.items():
             ret += f"{example} ({count})\n"
 
+        # Remove final \n
+        return ret[:-1]
+
+    def __repr__(self):
+        return self.__str__()
+
+
+class Rule:
+    """A rule consists of a action, set of deictic references, context, and outcome set"""
+    # Deictic references are a todo
+
+    def __init__(self, action, context, outcomes):
+        self.action: int = action
+        self.context: List[Predicate] = context
+        self.outcomes: OutcomeSet = outcomes
+
+    def score(self, examples):
+        """
+        Scores a rule on a set of examples. The score is the total likelihood - the penalty,
+        where the penalty is the number of literals/effects in the outcomes and context of the rule
+        This encourages simpler rules
+        """
+        alpha = 0.5  # Penalty multiplier
+        penalty = alpha * self.outcomes.get_total_num_affected_atts()
+
+        # Log likelihood is the sum of log probabilities of each effect that the rule covers
+
+        return -penalty
+
+    def __str__(self):
+        ret = ""
+        ret += f"Action {self.action}:\n"
+        ret += f"{{{self.context}}}\n"
+        ret += str(self.outcomes)
         return ret
 
     def __repr__(self):
         return self.__str__()
+
+
+class RuleSet:
+    """A collection of rules"""
+    def __init__(self, rules: List[Rule]):
+        self.rules = rules
