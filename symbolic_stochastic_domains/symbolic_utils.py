@@ -56,12 +56,8 @@ def examples_applicable_by_rule(rule: Rule, examples: ExampleSet):
     return [ex for ex in examples.examples if applicable(rule, ex)]
 
 
-def proper_ruleset(rules: RuleSet):
-    pass
-
-
 # TODO: This is silly because of all the cyclic imports. They should probably all be member variables
-def score(rule: Rule, examples: ExampleSet) -> float:
+def rule_score(rule: Rule, examples: ExampleSet) -> float:
     """
     Scores a rule on a set of examples. The score is the total likelihood - the penalty,
     where the penalty is the number of literals/effects in the outcomes and context of the rule
@@ -105,5 +101,28 @@ def score(rule: Rule, examples: ExampleSet) -> float:
 
 def ruleset_score(ruleset: RuleSet, examples: ExampleSet):
     """Total score of a ruleset is the sum of scores of rules in the ruleset"""
-    return sum([score(rule, examples) for rule in ruleset.rules])
+    # All rules except the default rule, default rule is calculated separetly
+    rules_score = sum([rule_score(rule, examples) for rule in ruleset.rules[1:]])
+
+    p_min = 0.01
+    p_noise = 0
+    default_rule_score = 0
+    default_rule = ruleset.rules[0]
+    for i, outcome in enumerate(default_rule.outcomes.outcomes):
+        if type(outcome.outcome) is NoiseEffect:
+            if type(outcome.outcome) is NoiseEffect:
+                p_noise = default_rule.outcomes.probabilities[i]
+                break
+
+    for i, outcome in enumerate(default_rule.outcomes.outcomes):
+        # Basically this num_covered section is the only difference
+        if type(outcome.outcome) is NoiseEffect:
+            num_covered = ruleset.default_rule_num_noise
+        else:
+            num_covered = ruleset.default_rule_num_no_change
+
+        # Basic log of probability, but with the addition of the p_noise value * the p_min bound
+        default_rule_score += math.log10(default_rule.outcomes.probabilities[i] + p_noise * p_min) * num_covered
+
+    return rules_score + default_rule_score
 

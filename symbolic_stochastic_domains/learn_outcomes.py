@@ -1,5 +1,5 @@
 from symbolic_stochastic_domains.symbolic_classes import ExampleSet, Rule
-from symbolic_stochastic_domains.symbolic_utils import context_matches, score
+from symbolic_stochastic_domains.symbolic_utils import context_matches, rule_score
 from symbolic_stochastic_domains.learn_parameters import learn_params
 
 
@@ -36,5 +36,5 @@ def learn_outcomes(rule: Rule, examples: ExampleSet):
     rule.outcomes.probabilities = learn_params(rule, examples)
 
     # print(f"Final probabilities: {rule.outcomes.probabilities}")
-    rule_score = score(rule, examples)
-    # print(f"Rule score: {rule_score:0.4}")
+    score = rule_score(rule, examples)
+    # print(f"Rule score: {score:0.4}")

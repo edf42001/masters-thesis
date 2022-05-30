@@ -7,7 +7,7 @@ from symbolic_stochastic_domains.learn_ruleset import learn_ruleset
 if __name__ == "__main__":
     random.seed(1)
 
-    env = SymbolicDoorWorld()
+    env = SymbolicDoorWorld(stochastic=False)
     example_set = ExampleSet()
 
     # Generate training examples
@@ -18,5 +18,8 @@ if __name__ == "__main__":
         outcome = Outcome(obs)
         example = Example(action, literals, outcome)
         example_set.add_example(example)
+
+        # if env.end_of_episode(env.get_state()):
+        #     env.restart()
 
     ruleset = learn_ruleset(example_set)

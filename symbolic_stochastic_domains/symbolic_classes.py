@@ -124,36 +124,6 @@ class Rule:
         self.context: List[Predicate] = context
         self.outcomes: OutcomeSet = outcomes
 
-    def score(self, examples: ExampleSet) -> float:
-        """
-        Scores a rule on a set of examples. The score is the total likelihood - the penalty,
-        where the penalty is the number of literals/effects in the outcomes and context of the rule
-        This encourages simpler rules
-        """
-        alpha = 0.5  # Penalty multiplier. Notice num atts in outcomes and len(self.context) are treated equally
-        penalty = alpha * (self.outcomes.get_total_num_affected_atts() + len(self.context))
-
-        # Approximate noise probability, used for calculating likelihood
-        p_min = 0.01
-
-        # For example, if outcome1 predicts 2 examples with probability 0.25, and outcome2 predicts
-        # six examples with probability 0.75, the likelihood is 0.25^2 * 0.75^6.
-        # Log likelihood of this is 0.25 * 2 + 0.75 * 6
-
-        log_likelihood = 0
-
-        # # TODO:  Note, this is exactly the same computation done in learn_params. Should be someway to reuse that
-        # # I would like to use examples_applicable_by_rule and num_examples_covered_by_outcome, but this
-        # # creates cyclic imports. Perhaps this should be member functions instead of ones that take in args
-        # applicable_examples = examples_applicable_by_rule(self, examples)
-        #
-        # for i, outcome in enumerate(self.outcomes.outcomes):
-        #     num_covered = num_examples_covered_by_outcome(outcome, applicable_examples, examples)
-        #
-        #     log_likelihood += math.log10(self.outcomes.probabilities[i]) * num_covered
-
-        return log_likelihood - penalty
-
     def __str__(self):
         ret = ""
         ret += f"Action {self.action}:\n"
@@ -170,13 +140,13 @@ class RuleSet:
     def __init__(self, rules: List[Rule]):
         self.rules = rules
 
+        # Keeps track of how many outcomes in the example set of the current session,
+        # does the default rule apply to a noise or a no change outcome. Used for likelihood calculation
+        self.default_rule_num_no_change = 0
+        self.default_rule_num_noise = 0
+
     def add_rule(self, rule: Rule):
         self.rules.append(rule)
-
-    def score(self, examples: ExampleSet) -> float:
-        """Returns the total score of this ruleset"""
-        # Rules can be considered separately
-        return sum(rule.score(examples) for rule in self.rules)
 
     def __str__(self):
         return "\n".join([str(rule) for rule in self.rules])

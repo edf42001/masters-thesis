@@ -231,8 +231,9 @@ class SymbolicDoorWorld(Environment):
         # Extract state variables from state integer if passed as option
         state = self.get_factored_state(state) if state else self.curr_state
 
-        # Either taxi has made it to the goal
-        return state[0] == self.goal
+        # Taxi has made it to the goal
+        # TODO: Have to change this to .x because goal is now an object
+        return state[0] == self.goal.x
 
     def restart(self, init_state=None):
         """Reset state variables to begin new episode"""
@@ -241,6 +242,10 @@ class SymbolicDoorWorld(Environment):
         else:
             # Taxi starts at 3, door is closed
             self.curr_state = [3, 0]
+
+            # TODO Have to change these as well
+            self.taxi.x = 3
+            self.door.open = False
 
     def get_literals(self, state) -> List[Predicate]:
         """Converts state to the literals from that state"""

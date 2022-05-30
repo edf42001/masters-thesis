@@ -13,7 +13,6 @@ def calculate_default_rule(ruleset: RuleSet, examples: ExampleSet) -> Rule:
     # The default rule has to cover everything that isn't covered by any other rule
     # The default rule is indicated by an action of -1.
 
-    print("Calculating default rule")
     covered_examples: Dict[Example, bool] = dict()
 
     for rule in ruleset.rules:
@@ -47,9 +46,12 @@ def calculate_default_rule(ruleset: RuleSet, examples: ExampleSet) -> Rule:
     if no_change != 0:
         outcomes.add_outcome(Outcome(JointNoEffect()), no_change / total)
 
+    # Update these values in the ruleset for future use of calculating likelihood of default rule
+    ruleset.default_rule_num_no_change = no_change
+    ruleset.default_rule_num_noise = noise
+
     default_rule = Rule(-1, [], outcomes)
     return default_rule
-
 
 
 class ExplainExamples:
@@ -85,13 +87,15 @@ class ExplainExamples:
             # Use them to create a new action substitution σ
             # Set r’s action to be σ −1 (a)
             # Note: Our actions don't take parameters, so we don't need to do the above
+            # No need to make a copy here because this is an int
             new_rule.action = example.action
 
             # Set r’s context to be the conjunction of boolean and equality literals that can
             # be formed using the variables and the available functions and predicates
             # (primitive and derived) and that are entailed by s
             # Note: I don't know what this means so, we are going to set it to the context (state) of the example
-            new_rule.context = example.state
+            # Make sure to make a copy, or any literals removed will be reflected in the example
+            new_rule.context = example.state.copy()
 
             # Step 1.2: Create deictic references for r
             # Collect the set of constants C whose properties changed from s to s  , but
@@ -124,6 +128,7 @@ class ExplainExamples:
             new_ruleset.add_rule(new_rule)
 
             # For testing calculate default rule
+            print("Calculating default rule")
             new_default_rule = calculate_default_rule(new_ruleset, examples)
             # Insert this new default rule into the new_ruleset
             new_ruleset.rules[0] = new_default_rule
@@ -149,14 +154,16 @@ class ExplainExamples:
             # Recompute the set of examples that the default rule in R  covers and the parameters
             # of this default rule
             # Add R  to the return rule sets R O
-            # Output:
-            # A set of rule sets, R O
+
 
             # new_ruleset.add_rule(new_rule)
 
             # Tabbed in so it only executes on 1
             new_rulesets.append(new_ruleset)
-            return new_rulesets
+
+        # Output:
+        # A set of rule sets, R O
+        return new_rulesets
 
     @staticmethod
     def trim_rule(rule: Rule, example: Example, ruleset: RuleSet, examples: ExampleSet):
@@ -171,15 +178,24 @@ class ExplainExamples:
         # Greedily try removing all literals until score doesn't improve
         i = 0
         while i < len(rule.context):
-            literal = rule.context[i]
+            literal = rule.context.pop(i)
             print(f"Trying to remove {literal}")
-            del rule.context[i]
+
+            # Update outcomes for the new rule:
+            learn_outcomes(rule, examples)
+
+            # Because we modified the ruleset, need to update the default rule:
+            new_default_rule = calculate_default_rule(ruleset, examples)
+            ruleset.rules[0] = new_default_rule
+            print("Current ruleset")
+            print(ruleset)
 
             if applicable(rule, example):
                 score = ruleset_score(ruleset, examples)
                 print(f"Current score: {score:0.3}")
                 if score > best_score:
-                    i = 0
+                    # TODO: Is this the most effecient way of calculating?
+                    i = 0  # We actually want to keep going in this case, the ones that were bad are at the front
                     best_score = score
                 else:
                     print("Not better score")
@@ -189,7 +205,12 @@ class ExplainExamples:
                 i += 1
                 rule.context.insert(0, literal)
                 print("Not applicable")
+            print()
 
+        # Need to recalculate the things in case we had reinserted at the end
+        learn_outcomes(rule, examples)
+        new_default_rule = calculate_default_rule(ruleset, examples)
+        ruleset.rules[0] = new_default_rule
         print("Final rule")
         print(rule)
 
