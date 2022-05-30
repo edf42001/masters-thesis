@@ -197,6 +197,7 @@ class SymbolicDoorWorld(Environment):
 
     def __init__(self, stochastic=False):
         self.stochastic: bool = stochastic
+
         # Taxi object
         self.taxi = Taxi(x=3, name="taxi")
 
@@ -212,6 +213,9 @@ class SymbolicDoorWorld(Environment):
 
         # Location of goal
         self.goal = Goal(x=7, name="goal")
+
+        # Chance for action to do nothing
+        self.no_move_probability = 0.3
 
         # Object instance in state information
         # self.generate_object_maps() TODO
@@ -291,8 +295,11 @@ class SymbolicDoorWorld(Environment):
 
         self.last_action = action
 
+        # If stochastic, there is a chance for no movement to occur
+        if self.stochastic and random.random() < self.no_move_probability:
+            pass
         # Left action
-        if action == 0:
+        elif action == 0:
             next_x1 = self.compute_next_loc(x1, action)
             self.taxi.x = next_x1  # Adding in stuff to update the object values
         # Right action
