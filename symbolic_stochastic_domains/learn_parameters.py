@@ -1,5 +1,4 @@
-import numpy as np
-from typing import List, Tuple
+from typing import List
 
 from symbolic_stochastic_domains.symbolic_classes import ExampleSet, Rule, Outcome, Example
 from symbolic_stochastic_domains.symbolic_utils import examples_applicable_by_rule, covers

@@ -1,4 +1,5 @@
 from typing import List
+import math
 
 from symbolic_stochastic_domains.symbolic_classes import Outcome, Example, ExampleSet, Rule, RuleSet
 from environment.symbolic_door_world import Predicate
@@ -56,3 +57,35 @@ def examples_applicable_by_rule(rule: Rule, examples: ExampleSet):
 
 def proper_ruleset(rules: RuleSet):
     pass
+
+
+# TODO: This is silly because of all the cyclic imports. They should probably all be member variables
+def score(rule: Rule, examples: ExampleSet) -> float:
+    """
+    Scores a rule on a set of examples. The score is the total likelihood - the penalty,
+    where the penalty is the number of literals/effects in the outcomes and context of the rule
+    This encourages simpler rules
+    """
+    alpha = 0.5  # Penalty multiplier. Notice num atts in outcomes and len(self.context) are treated equally
+    penalty = alpha * (rule.outcomes.get_total_num_affected_atts() + len(rule.context))
+
+    # Approximate noise probability, used for calculating likelihood
+    p_min = 0.01
+
+    # For example, if outcome1 predicts 2 examples with probability 0.25, and outcome2 predicts
+    # six examples with probability 0.75, the likelihood is 0.25^2 * 0.75^6.
+    # Log likelihood of this is 0.25 * 2 + 0.75 * 6
+
+    log_likelihood = 0
+
+    # TODO:  Note, this is exactly the same computation done in learn_params. Should be someway to reuse that
+    # I would like to use examples_applicable_by_rule and num_examples_covered_by_outcome, but this
+    # creates cyclic imports. Perhaps this should be member functions instead of ones that take in args
+    applicable_examples = examples_applicable_by_rule(rule, examples)
+
+    for i, outcome in enumerate(rule.outcomes.outcomes):
+        num_covered = sum([examples.examples[example] for example in applicable_examples if covers(outcome, example)])
+
+        log_likelihood += math.log10(rule.outcomes.probabilities[i]) * num_covered
+
+    return log_likelihood - penalty

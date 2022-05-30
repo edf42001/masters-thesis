@@ -24,6 +24,10 @@ class Outcome:
     def __eq__(self, other):
         return self.outcome == other.outcome
 
+    def __hash__(self):
+        # Inherit the unique hash from the joint effect
+        return self.outcome.__hash__()
+
 
 class OutcomeSet:
     """A set of outcomes, each associated with a probability"""
@@ -132,9 +136,23 @@ class Rule:
         # Approximate noise probability, used for calculating likelihood
         p_min = 0.01
 
-        # TODO Log likelihood is the sum of log probabilities of each effect that the rule covers
+        # For example, if outcome1 predicts 2 examples with probability 0.25, and outcome2 predicts
+        # six examples with probability 0.75, the likelihood is 0.25^2 * 0.75^6.
+        # Log likelihood of this is 0.25 * 2 + 0.75 * 6
 
-        return -penalty
+        log_likelihood = 0
+
+        # # TODO:  Note, this is exactly the same computation done in learn_params. Should be someway to reuse that
+        # # I would like to use examples_applicable_by_rule and num_examples_covered_by_outcome, but this
+        # # creates cyclic imports. Perhaps this should be member functions instead of ones that take in args
+        # applicable_examples = examples_applicable_by_rule(self, examples)
+        #
+        # for i, outcome in enumerate(self.outcomes.outcomes):
+        #     num_covered = num_examples_covered_by_outcome(outcome, applicable_examples, examples)
+        #
+        #     log_likelihood += math.log10(self.outcomes.probabilities[i]) * num_covered
+
+        return log_likelihood - penalty
 
     def __str__(self):
         ret = ""
