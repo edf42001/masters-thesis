@@ -1,6 +1,7 @@
 from typing import List
 import math
 
+from effects.effect import NoiseEffect
 from symbolic_stochastic_domains.symbolic_classes import Outcome, Example, ExampleSet, Rule, RuleSet
 from environment.symbolic_door_world import Predicate
 
@@ -66,6 +67,8 @@ def score(rule: Rule, examples: ExampleSet) -> float:
     where the penalty is the number of literals/effects in the outcomes and context of the rule
     This encourages simpler rules
     """
+
+    # TODO: Should NoChange and Noise not be included in the penalty value?
     alpha = 0.5  # Penalty multiplier. Notice num atts in outcomes and len(self.context) are treated equally
     penalty = alpha * (rule.outcomes.get_total_num_affected_atts() + len(rule.context))
 
@@ -83,9 +86,24 @@ def score(rule: Rule, examples: ExampleSet) -> float:
     # creates cyclic imports. Perhaps this should be member functions instead of ones that take in args
     applicable_examples = examples_applicable_by_rule(rule, examples)
 
+    # The probability this rule assigns to noise
+    p_noise = 0
     for i, outcome in enumerate(rule.outcomes.outcomes):
+        if type(outcome.outcome) is NoiseEffect:
+            p_noise = rule.outcomes.probabilities[i]
+            break
+
+    for i, outcome in enumerate(rule.outcomes.outcomes):
+        # TODO: noise outcomes num_covered need to be counted separately
         num_covered = sum([examples.examples[example] for example in applicable_examples if covers(outcome, example)])
 
-        log_likelihood += math.log10(rule.outcomes.probabilities[i]) * num_covered
+        # Basic log of probability, but with the addition of the p_noise value * the p_min bound
+        log_likelihood += math.log10(rule.outcomes.probabilities[i] + p_noise * p_min) * num_covered
 
     return log_likelihood - penalty
+
+
+def ruleset_score(ruleset: RuleSet, examples: ExampleSet):
+    """Total score of a ruleset is the sum of scores of rules in the ruleset"""
+    return sum([score(rule, examples) for rule in ruleset.rules])
+

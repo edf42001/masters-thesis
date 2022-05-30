@@ -13,12 +13,12 @@ def learn_outcomes(rule: Rule, examples: ExampleSet):
     Changes rule in-place
     """
 
-    print("Rule:")
-    print(rule)
-    print()
-    print("Examples:")
-    print(examples)
-    print()
+    # print("Rule:")
+    # print(rule)
+    # print()
+    # print("Examples:")
+    # print(examples)
+    # print()
 
     # In this case, because we consider each outcome to be unique, we just have to find all outcomes
     # this rule applies to (i.e., matching action and context)
@@ -26,15 +26,15 @@ def learn_outcomes(rule: Rule, examples: ExampleSet):
                        (rule.action == example.action and context_matches(rule.context, example.state))]
     unique_outcomes = list(set(unique_outcomes))  # Uniquify
 
-    print("Unique outcomes:")
-    for outcome in unique_outcomes:
-        print(outcome)
-    print()
+    # print("Unique outcomes:")
+    # for outcome in unique_outcomes:
+    #     print(outcome)
+    # print()
 
     # Update outcome
     rule.outcomes.outcomes = unique_outcomes
     rule.outcomes.probabilities = learn_params(rule, examples)
 
-    print(f"Final probabilities: {rule.outcomes.probabilities}")
+    # print(f"Final probabilities: {rule.outcomes.probabilities}")
     rule_score = score(rule, examples)
-    print(f"Rule score: {rule_score:0.4}")
+    # print(f"Rule score: {rule_score:0.4}")

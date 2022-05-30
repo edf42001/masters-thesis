@@ -31,24 +31,24 @@ def learn_params(rule: Rule, examples: ExampleSet) -> List[float]:
     applicable_examples = examples_applicable_by_rule(rule, examples)
     total_applicable_examples = sum([examples.examples[example] for example in applicable_examples])
 
-    print("Rule:")
-    print(rule)
-    print()
-    print("Examples:")
-    print(examples)
-    print()
-    print(f"Applicable Examples: ({total_applicable_examples})")
-    for example in applicable_examples:
-        print(example)
-    print()
+    # print("Rule:")
+    # print(rule)
+    # print()
+    # print("Examples:")
+    # print(examples)
+    # print()
+    # print(f"Applicable Examples: ({total_applicable_examples})")
+    # for example in applicable_examples:
+    #     print(example)
+    # print()
 
     # In this case where no outcomes overlap, the Maximum Likelihood is count based
     for i, outcome in enumerate(outcomes):
         num_covered = num_examples_covered_by_outcome(outcome, applicable_examples, examples)
         probabilities[i] = num_covered / total_applicable_examples
-        print(f"{num_covered}: {outcome}")
-    print()
+        # print(f"{num_covered}: {outcome}")
+    # print()
 
-    print(f"Final probabilities: {probabilities}")
+    # print(f"Final probabilities: {probabilities}")
 
     return probabilities

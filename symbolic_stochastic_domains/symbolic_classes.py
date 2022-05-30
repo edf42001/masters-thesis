@@ -179,10 +179,7 @@ class RuleSet:
         return sum(rule.score(examples) for rule in self.rules)
 
     def __str__(self):
-        ret = ""
-        for rule in self.rules:
-            ret += str(rule) + "\n"
-        return ret
+        return "\n".join([str(rule) for rule in self.rules])
 
     def __repr__(self):
         return self.__str__()

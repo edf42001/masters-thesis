@@ -167,13 +167,13 @@ class JointNoEffect(JointEffect):
         return self.__str__()
 
 
-class JointNoiseEffect(JointEffect):
+class NoiseEffect(JointEffect):
     """No Effect: the entire state does not change"""
     def __init__(self):
         super().__init__([], [])
 
     def __str__(self):
-        return '<JointNoiseEffect>'
+        return '<NoiseEffect>'
 
     def __repr__(self):
         return self.__str__()
