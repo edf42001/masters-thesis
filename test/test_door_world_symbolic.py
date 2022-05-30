@@ -6,6 +6,7 @@ from environment.symbolic_door_world import SymbolicDoorWorld, TouchLeft, Taxi, 
 from symbolic_stochastic_domains.symbolic_classes import Example, ExampleSet, Rule, OutcomeSet, Outcome
 from effects.effect import JointEffect, Increment, SetToNumber, JointNoEffect
 from symbolic_stochastic_domains.symbolic_utils import context_matches, examples_covered_by_outcome
+from symbolic_stochastic_domains.learn_ruleset import learn_ruleset
 
 if __name__ == "__main__":
     random.seed(1)
@@ -21,12 +22,13 @@ if __name__ == "__main__":
         action = random.randint(0, env.get_num_actions()-1)
 
         obs = env.step(action)
+        outcome = Outcome(obs)
         #
         # print(f"Took action {action}")
         # print(env.visualize())
         # print(f"Observed {obs}")
 
-        example = Example(action, literals, obs)
+        example = Example(action, literals, outcome)
 
         # print("Training example:")
         # print(example)
@@ -66,5 +68,8 @@ if __name__ == "__main__":
     print("Covered examples:")
     for example in covered_examples:
         print(example)
+    print("-------")
+    print()
 
-
+    print("Learning ruleset")
+    ruleset = learn_ruleset(example_set)

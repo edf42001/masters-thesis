@@ -29,7 +29,8 @@ def covers(outcome: Outcome, example: Example) -> bool:
 
     # I think for now, this is the same as saying they are exactly equal
     # Eventually it may need to be if initial state variable with outcome applied == final state variable.
-    return outcome == example
+    return outcome == example.outcome
+
 
 def applicable(rule: Rule, example: Example) -> bool:
     """Returns if a rule is applicable to the example"""
