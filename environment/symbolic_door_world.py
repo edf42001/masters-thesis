@@ -94,6 +94,15 @@ class Predicate:
         else:
             raise ValueError(f'Unrecognized effect type: {p_type}')
 
+    def copy(self):
+        # TODO: this is silly
+        ret = type(self)(Door(), Door())
+        ret.type = self.type
+        ret.object1 = self.object1
+        ret.object2 = self.object2
+        ret.value = self.value
+        return ret
+
     def __eq__(self, other):
         return (
             self.type == other.type and

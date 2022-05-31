@@ -1,4 +1,5 @@
 import random
+import time
 
 from environment.symbolic_door_world import SymbolicDoorWorld, TouchLeft, Taxi, Switch
 from symbolic_stochastic_domains.symbolic_classes import Example, ExampleSet, Rule, OutcomeSet, Outcome
@@ -22,4 +23,14 @@ if __name__ == "__main__":
         # if env.end_of_episode(env.get_state()):
         #     env.restart()
 
+    # import cProfile
+    # import pstats
+    # profiler = cProfile.Profile()
+    # profiler.enable()
+    start = time.perf_counter()
     ruleset = learn_ruleset(example_set)
+    end = time.perf_counter()
+    print(f"Elapsed time: {end-start}")
+    # profiler.disable()
+    # stats = pstats.Stats(profiler)
+    # stats.dump_stats('test_learn_ruleset_stats.prof')

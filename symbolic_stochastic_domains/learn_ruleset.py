@@ -1,4 +1,3 @@
-import copy
 from typing import List, Dict
 import numpy as np
 
@@ -165,7 +164,7 @@ class ExplainExamples:
             # Recompute the set of examples that the default rule in R  covers and the parameters
             # of this default rule
             # Add R  to the return rule sets R O
-            new_ruleset = copy.deepcopy(ruleset)
+            new_ruleset = ruleset.copy()
             print("To be inserted into ruleset:")
             print(new_ruleset)
 
@@ -244,7 +243,7 @@ class DropRules:
 
         # Remove every rule, but start at one to not remove the default rule
         for i in range(1, len(ruleset.rules)):
-            new_ruleset = copy.deepcopy(ruleset)
+            new_ruleset = ruleset.copy()
             new_ruleset.rules.pop(i)
 
             # Now that we have modified the rule, update the default rule's params
@@ -269,8 +268,8 @@ class DropLits:
         for i, rule in enumerate(ruleset.rules):
             for j, literal in enumerate(rule.context):
                 # Create copies of the new ruleset and the new rule
-                new_ruleset = copy.deepcopy(ruleset)
-                new_rule = copy.deepcopy(rule)
+                new_ruleset = ruleset.copy()
+                new_rule = rule.copy()
 
                 # Remove the literal
                 new_rule.context.pop(j)
@@ -324,7 +323,7 @@ class SplitOnLits:
             # print(f"Rule's context: {rule.context}")
             for literal in literals:
                 # Copy to make sure modifying it doesn't cause issues
-                literal = copy.copy(literal)
+                literal = literal.copy()
                 # If the rule is present in the context in either form, skip this literal
                 # This should be a method that just doesn't compare the value
                 literal.value = False
@@ -335,13 +334,13 @@ class SplitOnLits:
                     continue
 
                 # Create two new rules with this literal added
-                new_rule1 = copy.deepcopy(rule)
-                literal1 = copy.deepcopy(literal)
+                new_rule1 = rule.copy()
+                literal1 = literal.copy()
                 literal1.value = False
                 new_rule1.context.append(literal1)
 
-                new_rule2 = copy.deepcopy(rule)
-                literal2 = copy.deepcopy(literal)
+                new_rule2 = rule.copy()
+                literal2 = literal.copy()
                 literal2.value = True
                 new_rule2.context.append(literal2)
 
@@ -361,7 +360,7 @@ class SplitOnLits:
 
                 # Create new ruleset for these rules
                 # Remove the old rule, these two rules are guaranteed to cover only all the examples it covered
-                new_ruleset = copy.deepcopy(ruleset)
+                new_ruleset = ruleset.copy()
                 new_ruleset.rules.pop(i)
                 new_ruleset.add_rule(new_rule1)
                 new_ruleset.add_rule(new_rule2)
@@ -393,13 +392,13 @@ class AddLits:
 
             # Get the set of valid literals from one of the examples' state.
             # Make a copy so we can modify it without affecting the examples
-            literals = copy.deepcopy(list(examples.examples.keys())[0].state)
+            literals = [lit.copy() for lit in list(examples.examples.keys())[0].state]
             num_literals = len(literals)
 
             # Go through, make each of these false, and add a copy that is true
             for l in range(num_literals):
                 literals[l].value = False
-                copied_literal = copy.copy(literals[l])
+                copied_literal = literals[i].copy()
                 copied_literal.value = True
                 literals.append(copied_literal)
 
@@ -412,8 +411,8 @@ class AddLits:
                     continue
 
                 # Create the new rule with this literal added
-                new_rule = copy.deepcopy(rule)
-                literal = copy.deepcopy(literal)
+                new_rule = rule.copy()
+                literal = literal.copy()
                 new_rule.context.append(literal)
 
                 # Update outcomes for this rule
@@ -424,7 +423,7 @@ class AddLits:
                     continue
 
                 # Create new ruleset for this rule
-                new_ruleset = copy.deepcopy(ruleset)
+                new_ruleset = ruleset.copy()
 
                 # Remove rules that are now redundant. Wouldn't this always be the old rule? What is the purpose here?
                 remove_redundant_rules(new_ruleset, examples, new_rule)

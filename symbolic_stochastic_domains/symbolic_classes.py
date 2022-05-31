@@ -15,6 +15,10 @@ class Outcome:
     def get_num_affected_atts(self):
         return self.num_affected_atts
 
+    def copy(self):
+        # Return a copy of this. TODO: Don't need to copy the join effect because we won't be editing it?
+        return Outcome(self.outcome)
+
     def __str__(self):
         return str(self.outcome)
 
@@ -44,6 +48,12 @@ class OutcomeSet:
         """Returns the total number of changed attributes over all outcomes in the set"""
         return sum([o.get_num_affected_atts() for o in self.outcomes])
 
+    def copy(self):
+        ret = OutcomeSet()
+        ret.outcomes = [outcome.copy() for outcome in self.outcomes]
+        ret.probabilities = self.probabilities.copy()
+        return ret
+
     def __str__(self):
         ret = ""
         for p, outcome in zip(self.probabilities, self.outcomes):
@@ -64,6 +74,9 @@ class Example:
         self.action = action
         self.state = state
         self.outcome = outcome
+
+    def copy(self):
+        return Example(self.action, [literal.copy() for literal in self.state], self.outcome.copy())
 
     def __str__(self):
         ret = ""
@@ -102,6 +115,9 @@ class ExampleSet:
         else:
             self.examples[example] += 1
 
+    def copy(self):
+        return {example.copy: count for example, count in self.examples.items()}
+
     def __str__(self):
         ret = ""
 
@@ -123,6 +139,9 @@ class Rule:
         self.action: int = action
         self.context: List[Predicate] = context
         self.outcomes: OutcomeSet = outcomes
+
+    def copy(self):
+        return Rule(self.action, [literal.copy() for literal in self.context], self.outcomes.copy())
 
     def __str__(self):
         ret = ""
@@ -148,6 +167,10 @@ class RuleSet:
 
     def add_rule(self, rule: Rule):
         self.rules.append(rule)
+
+    def copy(self):
+        # TODO? Do I need to copy the default rule stuff, I think not because it always gets filled in
+        return RuleSet([rule.copy() for rule in self.rules])
 
     def __str__(self):
         return "\n".join([str(rule) for rule in self.rules])
