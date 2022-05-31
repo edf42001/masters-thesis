@@ -117,7 +117,7 @@ class ExplainExamples:
             # (primitive and derived) and that are entailed by s
             # Note: I don't know what this means so, we are going to set it to the context (state) of the example
             # Make sure to make a copy, or any literals removed will be reflected in the example
-            new_rule.context = example.state.copy()
+            new_rule.context = [lit.copy() for lit in example.state]
 
             # Step 1.2: Create deictic references for r
             # Collect the set of constants C whose properties changed from s to s  , but
@@ -337,11 +337,16 @@ class SplitOnLits:
                 new_rule1 = rule.copy()
                 literal1 = literal.copy()
                 literal1.value = False
+
+                # Whoops, need to update the has here because we change the value. TODO: need a better way to do this
+                literal1.hash = hash((literal1.type, literal1.value, literal1.object1, literal1.object2))
                 new_rule1.context.append(literal1)
 
                 new_rule2 = rule.copy()
                 literal2 = literal.copy()
                 literal2.value = True
+                # TODO: Same here
+                literal2.hash = hash((literal2.type, literal2.value, literal2.object1, literal2.object2))
                 new_rule2.context.append(literal2)
 
                 # Update outcomes for these rules
@@ -398,8 +403,12 @@ class AddLits:
             # Go through, make each of these false, and add a copy that is true
             for l in range(num_literals):
                 literals[l].value = False
+                # TODO: Same here
+                literals[l].hash = hash((literals[l].type, literals[l].value, literals[l].object1, literals[l].object2))
                 copied_literal = literals[i].copy()
                 copied_literal.value = True
+                # TODO: Same here
+                copied_literal.hash = hash((copied_literal.type, copied_literal.value, copied_literal.object1,copied_literal.object2))
                 literals.append(copied_literal)
 
             # Now that we have all pairs of literals, loop over them and add to the rule

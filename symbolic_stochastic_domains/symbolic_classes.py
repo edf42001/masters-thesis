@@ -75,6 +75,9 @@ class Example:
         self.state = state
         self.outcome = outcome
 
+        # Convert state to a set, so we can also have easy lookup with hashes
+        self.state_set = set(self.state)
+
         # Examples are used in a lookup dictionary so they need to be hashed, I believe each one has a unique string
         # so we can use that as the hash. This might not be the most efficient way, but make sure to calculate it
         # Only once here at the beginning.

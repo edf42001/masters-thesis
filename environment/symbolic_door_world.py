@@ -73,6 +73,8 @@ class Predicate:
     object2 = ""
     value = False
 
+    hash = 0
+
     def __repr__(self):
         """For example, predicate on with args block1, table that is false will be ~on(block1, table)"""
         squiggle = "" if self.value else "~"
@@ -101,7 +103,11 @@ class Predicate:
         ret.object1 = self.object1
         ret.object2 = self.object2
         ret.value = self.value
+        ret.hash = self.hash
         return ret
+
+    def __hash__(self):
+        return self.hash
 
     def __eq__(self, other):
         return (
@@ -118,6 +124,7 @@ class TouchLeft(Predicate):
         self.value = self.evaluate(object1, object2)
         self.object1 = object1.name
         self.object2 = object2.name
+        self.hash = hash((self.type, self.value, self.object1, self.object2))
 
     def evaluate(self, o1, o2):
         if type(o2) is Wall:
@@ -133,6 +140,7 @@ class TouchRight(Predicate):
         self.value = self.evaluate(object1, object2)
         self.object1 = object1.name
         self.object2 = object2.name
+        self.hash = hash((self.type, self.value, self.object1, self.object2))
 
     @staticmethod
     def evaluate(o1, o2):
@@ -146,6 +154,7 @@ class On(Predicate):
         self.value = self.evaluate(object1, object2)
         self.object1 = object1.name
         self.object2 = object2.name
+        self.hash = hash((self.type, self.value, self.object1, self.object2))
 
     @staticmethod
     def evaluate(o1, o2):
@@ -162,6 +171,7 @@ class Open(Predicate):
         self.value = self.evaluate(object1, object2)
         self.object1 = object1.name
         self.object2 = object2.name
+        self.hash = hash((self.type, self.value, self.object1, self.object2))
 
     @staticmethod
     def evaluate(o1, o2):

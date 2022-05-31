@@ -1,4 +1,4 @@
-from typing import List
+from typing import List, Set
 import math
 
 from effects.effect import NoiseEffect
@@ -6,12 +6,12 @@ from symbolic_stochastic_domains.symbolic_classes import Outcome, Example, Examp
 from environment.symbolic_door_world import Predicate
 
 
-def context_matches(context: List[Predicate], state: List[Predicate]) -> bool:
+def context_matches(context: List[Predicate], state_set: Set[Predicate]) -> bool:
     """A context holds in a state if for every literal in the context, that literal has the same value in the state"""
 
     for literal in context:
         # This will match the type, object names, and equality using the Predicate's __eq__ functions
-        if literal not in state:
+        if literal not in state_set:
             return False
 
     return True
@@ -42,7 +42,7 @@ def applicable(rule: Rule, example: Example) -> bool:
     return (
         rule.action == example.action and
         # By switching the order of the last two here, we can cause one or other other to run more or less
-        context_matches(rule.context, example.state) and
+        context_matches(rule.context, example.state_set) and
         any([covers(outcome, example) for outcome in rule.outcomes.outcomes])
     )
 

@@ -59,7 +59,7 @@ if __name__ == "__main__":
     print("Checking for context match")
     print(f"Context: {rule.context}")
     for example in example_set.examples.keys():
-        matches = context_matches(rule.context, example.state)
+        matches = context_matches(rule.context, example.state_set)
         print(f"Example {example}")
         print(f"Matches: {matches}")
     print()
