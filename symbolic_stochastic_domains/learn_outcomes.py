@@ -22,9 +22,13 @@ def learn_outcomes(rule: Rule, examples: ExampleSet):
 
     # In this case, because we consider each outcome to be unique, we just have to find all outcomes
     # this rule applies to (i.e., matching action and context)
-    unique_outcomes = [example.outcome for example in examples.examples.keys() if
-                       (rule.action == example.action and context_matches(rule.context, example.state))]
-    unique_outcomes = list(set(unique_outcomes))  # Uniquify
+    unique_outcomes = []
+    for example in examples.examples.keys():
+        if example.outcome in unique_outcomes:
+            continue
+
+        if rule.action == example.action and context_matches(rule.context, example.state):
+            unique_outcomes.append(example.outcome)
 
     # print("Unique outcomes:")
     # for outcome in unique_outcomes:
