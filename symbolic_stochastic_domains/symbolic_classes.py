@@ -75,8 +75,15 @@ class Example:
         self.state = state
         self.outcome = outcome
 
+        # Examples are used in a lookup dictionary so they need to be hashed, I believe each one has a unique string
+        # so we can use that as the hash. This might not be the most efficient way, but make sure to calculate it
+        # Only once here at the beginning.
+        self.hash = hash(self.__str__())
+
     def copy(self):
-        return Example(self.action, [literal.copy() for literal in self.state], self.outcome.copy())
+        ret = Example(self.action, [literal.copy() for literal in self.state], self.outcome.copy())
+        ret.hash = self.hash
+        return ret
 
     def __str__(self):
         ret = ""
@@ -98,7 +105,7 @@ class Example:
         return self.action == other.action and self.state == other.state and self.outcome == other.outcome
 
     def __hash__(self):
-        return hash(self.__str__())
+        return self.hash
 
 
 class ExampleSet:
