@@ -8,8 +8,23 @@ from symbolic_stochastic_domains.symbolic_utils import applicable, examples_appl
 from symbolic_stochastic_domains.learn_outcomes import learn_outcomes
 
 
-def calculate_default_rule(ruleset: RuleSet, examples: ExampleSet) -> Rule:
-    """Given the other rules in a ruleset, calculates the parameters of the default rule"""
+def remove_redundant_rules(ruleset: RuleSet, examples: ExampleSet, new_rule: Rule):
+    """Removes rules from a ruleset that cover any example the new_rule covers"""
+    print("Removing redundant rules")
+    for i in range(len(ruleset.rules)-1, 0, -1):  # Start at the end, go down to i = 1 to ignore the default rule
+        test_rule = ruleset.rules[i]
+
+        # Search for any example this rule applies to and so does the other
+        for example in examples.examples:
+            if applicable(test_rule, example) and applicable(new_rule, example):
+                # Remove this rule, and move to the next one
+                print(f"Found redundant rule #{i}")
+                ruleset.rules.pop(i)
+                continue
+
+
+def calculate_default_rule(ruleset: RuleSet, examples: ExampleSet):
+    """Given the other rules in a ruleset, calculates the parameters of the default rule in-place"""
     # The default rule has no context, and two outcomes, no change or noise (anything goes)
     # The default rule has to cover everything that isn't covered by any other rule
     # The default rule is indicated by an action of -1.
@@ -57,8 +72,9 @@ def calculate_default_rule(ruleset: RuleSet, examples: ExampleSet) -> Rule:
     ruleset.default_rule_num_no_change = no_change
     ruleset.default_rule_num_noise = noise
 
+    # Update the default rule in the ruleset
     default_rule = Rule(-1, [], outcomes)
-    return default_rule
+    ruleset.rules[0] = default_rule
 
 
 class ExplainExamples:
@@ -83,7 +99,7 @@ class ExplainExamples:
 
         # Note: for now, assume that we only run this at the start so this is all of the examples
         for example in ruleset.default_rule_covered_examples:
-            print(f"---------\nExplaining example:\n{example}")
+            print(f"Explaining example:\n{example}")
             print()
 
             # Step 1: Create a new rule r
@@ -127,32 +143,20 @@ class ExplainExamples:
 
             # Step 2: Trim literals from r
             # Create a rule set R  containing r and the default rule
-            # new_ruleset = ruleset.add_rule(rule)
             # Greedily trim literals from r, ensuring that r still covers (s, a, s  ) and filling in the
             # outcomes using InduceOutcomes until R  ’s score stops improving
             # Note: In place trim the rule
-            new_ruleset = copy.deepcopy(ruleset)
-            new_ruleset.add_rule(new_rule)
+            # Note: Create default ruleset, calculate parameters of the default rule
+            default_ruleset = RuleSet([Rule(action=-1, context=[], outcomes=OutcomeSet()), new_rule])
+            calculate_default_rule(default_ruleset, examples)
 
-            # For testing calculate default rule
-            print("Calculating default rule")
-            new_default_rule = calculate_default_rule(new_ruleset, examples)
-            # Insert this new default rule into the new_ruleset
-            new_ruleset.rules[0] = new_default_rule
-            print("New default rule:")
-            print(new_default_rule)
-            # return []
-
-            print("Untrimmed new rule:")
-            print(new_rule)
-            print()
-            print("New ruleset:")
-            print(new_ruleset)
-            print()
-            ExplainExamples.trim_rule(new_rule, example, new_ruleset, examples)
+            # print("Untrimmed new rule:")
+            # print(new_rule)
+            # print()
+            ExplainExamples.trim_rule(new_rule, example, default_ruleset, examples)
             print()
             print("Trimmed ruleset:")
-            print(new_ruleset)
+            print(default_ruleset)
             print()
 
             # Step 3: Create a new rule set containing r
@@ -161,11 +165,20 @@ class ExplainExamples:
             # Recompute the set of examples that the default rule in R  covers and the parameters
             # of this default rule
             # Add R  to the return rule sets R O
+            new_ruleset = copy.deepcopy(ruleset)
+            print("To be inserted into ruleset:")
+            print(new_ruleset)
 
+            # Remove any rules in R that cover an example that r covers
+            remove_redundant_rules(ruleset, examples, new_rule)
 
-            # new_ruleset.add_rule(new_rule)
+            # Insert the new rule
+            new_ruleset.add_rule(new_rule)
 
-            # Tabbed in so it only executes on 1
+            # Recompute the default examples
+            calculate_default_rule(new_ruleset, examples)
+
+            # Add to list
             new_rulesets.append(new_ruleset)
 
         # Output:
@@ -178,45 +191,43 @@ class ExplainExamples:
         Greedily removes literals from the rule's context while it is applicable to the example and the score improves
         """
 
-        print(f"Trimming rule:\n{rule}")
+        print(f"Trimming rule")
         best_score = ruleset_score(ruleset, examples)
-        print(f"Current score: {best_score:0.3}")
+        # print(f"Current score: {best_score:0.3}")
 
         # Greedily try removing all literals until score doesn't improve
         i = 0
         while i < len(rule.context):
             literal = rule.context.pop(i)
-            print(f"Trying to remove {literal}")
+            # print(f"Trying to remove {literal}")
 
             # Update outcomes for the new rule:
             learn_outcomes(rule, examples)
 
             # Because we modified the ruleset, need to update the default rule:
-            new_default_rule = calculate_default_rule(ruleset, examples)
-            ruleset.rules[0] = new_default_rule
+            calculate_default_rule(ruleset, examples)
             # print("Current ruleset")
             # print(ruleset)
 
             if applicable(rule, example):
                 score = ruleset_score(ruleset, examples)
-                print(f"Current score: {score:0.3}")
+                # print(f"Current score: {score:0.3}")
                 if score > best_score:
                     # TODO: Is this the most effecient way of calculating?
                     i = 0  # We actually want to keep going in this case, the ones that were bad are at the front
                     best_score = score
                 else:
-                    print("Not better score")
+                    # print("Not better score")
                     i += 1
                     rule.context.insert(0, literal)
             else:
                 i += 1
                 rule.context.insert(0, literal)
-                print("Not applicable")
+                # print("Not applicable")
 
         # Need to recalculate the things in case we had reinserted at the end
         learn_outcomes(rule, examples)
-        new_default_rule = calculate_default_rule(ruleset, examples)
-        ruleset.rules[0] = new_default_rule
+        calculate_default_rule(ruleset, examples)
         print("Final rule")
         print(rule)
 
@@ -243,13 +254,49 @@ class DropRules:
         return new_rulesets
 
 
+class DropLits:
+    """
+    DropLits selects every rule r ∈ R n times, where n is the number of literals in the
+    context of r; It then creates a new rule r  by removing that literal from r’s context;
+    """
+    @staticmethod
+    def execute(ruleset: RuleSet, examples: ExampleSet) -> List[RuleSet]:
+        new_rulesets = []
+
+        # For every rule and every literal in that rule, try to drop it, then integrate the new rule
+        for i, rule in enumerate(ruleset.rules):
+            for j, literal in enumerate(rule.context):
+                # Create copies of the new ruleset and the new rule
+                new_ruleset = copy.deepcopy(ruleset)
+                new_rule = copy.deepcopy(rule)
+
+                # Remove the literal
+                new_rule.context.pop(j)
+
+                # Update the outcomes for this rule
+                learn_outcomes(new_rule, examples)
+
+                # We know it is more general so we can automatically remove the old rule,
+                # before trying to remove other redundant rules
+                new_ruleset.rules.pop(i)
+                remove_redundant_rules(new_ruleset, examples, new_rule)
+                # Now that done removing redundant rules, add the new rule (don't forget this step)
+                new_ruleset.add_rule(new_rule)
+
+                # Update the parameters of the default rule
+                calculate_default_rule(new_ruleset, examples)
+
+                # Add the rule to the list
+                new_rulesets.append(new_ruleset)
+
+        return new_rulesets
+
+
 def learn_ruleset(examples: ExampleSet) -> RuleSet:
     """Given a set of training examples, learns the optimal ruleset to explain them"""
 
     # An action of -1 indicates default rule. Perhaps should have a specific subclass to represent it
-    outcomes = OutcomeSet()
-    outcomes.add_outcome(Outcome(JointNoEffect()), 1.0)
-    default_rule = Rule(action=-1, context=[], outcomes=outcomes)
+    default_rule = Rule(action=-1, context=[], outcomes=OutcomeSet())
 
     print("Example set:")
     print(examples)
@@ -266,14 +313,23 @@ def learn_ruleset(examples: ExampleSet) -> RuleSet:
     # Break the while loop when no improvement has been made
     while True:
         # Generate all next rulesets
-        new_rulesets = ExplainExamples.execute(ruleset, examples)
+        new_rulesets = []
+        print("Executing ExplainExamples")
+        new_rulesets.extend(ExplainExamples.execute(ruleset, examples))
+        print(f"Created {len(new_rulesets)} rules")
+        print("Executing DropRules")
         new_rulesets.extend(DropRules.execute(ruleset, examples))
+        print(f"Created {len(new_rulesets)} rules")
+        print("Executing DropLits")
+        new_rulesets.extend(DropLits.execute(ruleset, examples))
+        print(f"Created {len(new_rulesets)} rules")
 
         scores = [ruleset_score(rules, examples) for rules in new_rulesets]
 
+        # Be careful. If you use the same variable for loop iteration as to store the best ruleset, it overwrites it
         print("New rulesets:")
-        for ruleset in new_rulesets:
-            print(ruleset)
+        for r in new_rulesets:
+            print(r)
             print("-----")
 
         print(f"Ruleset scores {scores}")
@@ -281,8 +337,8 @@ def learn_ruleset(examples: ExampleSet) -> RuleSet:
         best = np.argmax(scores)
         new_score = scores[best]
 
-        # We are done if no improvement
-        if new_score < best_score:
+        # We are done if the score does not improve
+        if new_score <= best_score:
             print("New best score not bigger than best, done")
             break
 
@@ -294,12 +350,7 @@ def learn_ruleset(examples: ExampleSet) -> RuleSet:
 
         print("Best ruleset")
         print(ruleset)
-
-        # Keep going until the score stops improving (Can only use this operator if default rule covers some examples)
-
-        if ruleset.default_rule_num_noise == 0 and ruleset.default_rule_num_no_change == 0:
-            print("Default rule no longer covers anything, done")
-            break
+        print("-----------------------------------------------")
 
     print(f"Final ruleset: score = {best_score:0.4}")
     print(ruleset)

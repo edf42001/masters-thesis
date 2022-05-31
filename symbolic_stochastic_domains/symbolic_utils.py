@@ -65,7 +65,7 @@ def rule_score(rule: Rule, examples: ExampleSet) -> float:
     """
 
     # TODO: Should NoChange and Noise not be included in the penalty value?
-    alpha = 0.5  # Penalty multiplier. Notice num atts in outcomes and len(self.context) are treated equally
+    alpha = 0.1  # Penalty multiplier. Notice num atts in outcomes and len(self.context) are treated equally
     penalty = alpha * (rule.outcomes.get_total_num_affected_atts() + len(rule.context))
 
     # Approximate noise probability, used for calculating likelihood
@@ -104,7 +104,8 @@ def ruleset_score(ruleset: RuleSet, examples: ExampleSet):
     # All rules except the default rule, default rule is calculated separetly
     rules_score = sum([rule_score(rule, examples) for rule in ruleset.rules[1:]])
 
-    p_min = 0.01
+    # Params that get the effect I want are p_min = 0.5, alpha = 0.1. Others are 0.01, alpha = 0.5
+    p_min = 0.5
     p_noise = 0
     default_rule_score = 0
     default_rule = ruleset.rules[0]
