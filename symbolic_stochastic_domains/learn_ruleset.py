@@ -20,7 +20,7 @@ def remove_redundant_rules(ruleset: RuleSet, examples: ExampleSet, new_rule: Rul
                 # Remove this rule, and move to the next one
                 print(f"Found redundant rule #{i}")
                 ruleset.rules.pop(i)
-                continue
+                break
 
 
 def calculate_default_rule(ruleset: RuleSet, examples: ExampleSet):
@@ -170,7 +170,8 @@ class ExplainExamples:
             print(new_ruleset)
 
             # Remove any rules in R that cover an example that r covers
-            remove_redundant_rules(ruleset, examples, new_rule)
+            # Had a bug here where I put ruleset instead of new_ruleset. I would love if I could make that immutable
+            remove_redundant_rules(new_ruleset, examples, new_rule)
 
             # Insert the new rule
             new_ruleset.add_rule(new_rule)
@@ -264,6 +265,7 @@ class DropLits:
         new_rulesets = []
 
         # For every rule and every literal in that rule, try to drop it, then integrate the new rule
+        # TODO: need to ignore default rule
         for i, rule in enumerate(ruleset.rules):
             for j, literal in enumerate(rule.context):
                 # Create copies of the new ruleset and the new rule
@@ -287,6 +289,86 @@ class DropLits:
                 calculate_default_rule(new_ruleset, examples)
 
                 # Add the rule to the list
+                new_rulesets.append(new_ruleset)
+
+        return new_rulesets
+
+
+class SplitOnLits:
+    """
+    SplitOnLits selects each rule r ∈ R n times, where n is the number of literals that
+    are absent from the rule’s context and deictic references. (The set of absent literals
+    is obtained by applying the available functions and predicates—both primitive and
+    derived—to the terms present in the rule, and removing the literals already present in
+    the rule from the resulting set.) It then constructs a set of new rules. In the case of
+    predicate literals, it creates one rule in which the positive version of the
+    literal is inserted into the context, and one in which it is the negative version.
+    Rules that cover no examples will be dropped. Any remaining rules corresponding to the
+    one literal are placed in N , and they are then integrated into the rule set simultaneously.
+    """
+    @staticmethod
+    def execute(ruleset: RuleSet, examples: ExampleSet) -> List[RuleSet]:
+        new_rulesets = []
+
+        # Iterate over every rule,
+        for i, rule in enumerate(ruleset.rules):
+            if i == 0:  # Skip over default rule
+                continue
+
+            # Get the set of valid literals from one of the examples' state. This only works because there are
+            # no deictic references yet, so all literals are applicable here
+            # But is it supposed to only reference variables in the rule already? Perhaps this is more like add refs?
+            literals = list(examples.examples.keys())[0].state
+
+            # For every literal that is absent, construct two new rules, one with positive, and one with negative
+            print(f"Rule's context: {rule.context}")
+            for literal in literals:
+                # Copy to make sure modifying it doesn't cause issues
+                literal = copy.copy(literal)
+                # If the rule is present in the context in either form, skip this literal
+                # This should be a method that just doesn't compare the value
+                literal.value = False
+                if literal in rule.context:
+                    continue
+                literal.value = True
+                if literal in rule.context:
+                    continue
+
+                # Create two new rules with this literal added
+                new_rule1 = copy.deepcopy(rule)
+                literal1 = copy.deepcopy(literal)
+                literal1.value = False
+                new_rule1.context.append(literal1)
+
+                new_rule2 = copy.deepcopy(rule)
+                literal2 = copy.deepcopy(literal)
+                literal2.value = True
+                new_rule2.context.append(literal2)
+
+                # Update outcomes for these rules
+                learn_outcomes(new_rule1, examples)
+                learn_outcomes(new_rule2, examples)
+
+                # If either of the new rule doesn't have any outcomes, meaning it doesn't cover any examples,
+                # Then there was probably no point in splitting on this literal
+                if len(new_rule1.outcomes.outcomes) == 0 or len(new_rule2.outcomes.outcomes) == 0:
+                    continue
+
+                # print("Two new rules:")
+                # print(new_rule1)
+                # print("--")
+                # print(new_rule2)
+
+                # Create new ruleset for these rules
+                # Remove the old rule, these two rules are guaranteed to cover only all the examples it covered
+                new_ruleset = copy.deepcopy(ruleset)
+                new_ruleset.rules.pop(i)
+                new_ruleset.add_rule(new_rule1)
+                new_ruleset.add_rule(new_rule2)
+
+                # Update default rule
+                calculate_default_rule(new_ruleset, examples)
+
                 new_rulesets.append(new_ruleset)
 
         return new_rulesets
@@ -322,6 +404,9 @@ def learn_ruleset(examples: ExampleSet) -> RuleSet:
         print(f"Created {len(new_rulesets)} rules")
         print("Executing DropLits")
         new_rulesets.extend(DropLits.execute(ruleset, examples))
+        print(f"Created {len(new_rulesets)} rules")
+        print("Executing SplitOnLits")
+        new_rulesets.extend(SplitOnLits.execute(ruleset, examples))
         print(f"Created {len(new_rulesets)} rules")
 
         scores = [ruleset_score(rules, examples) for rules in new_rulesets]
