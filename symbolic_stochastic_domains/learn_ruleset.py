@@ -321,7 +321,7 @@ class SplitOnLits:
             literals = list(examples.examples.keys())[0].state
 
             # For every literal that is absent, construct two new rules, one with positive, and one with negative
-            print(f"Rule's context: {rule.context}")
+            # print(f"Rule's context: {rule.context}")
             for literal in literals:
                 # Copy to make sure modifying it doesn't cause issues
                 literal = copy.copy(literal)
@@ -374,6 +374,72 @@ class SplitOnLits:
         return new_rulesets
 
 
+class AddLits:
+    """
+    AddLits selects each rule r ∈ R 2n times, where n is the number of predicate-based
+    literals that are absent from the rule’s context and deictic references, and the 2 re-
+    flects the fact that each literal may be considered in its positive or negative form. It
+    constructs a new rule for each literal by inserting that literal into the earliest place
+    in the rule in which its variables are all well-defined:
+    """
+    @staticmethod
+    def execute(ruleset: RuleSet, examples: ExampleSet) -> List[RuleSet]:
+        new_rulesets = []
+
+        # Iterate over every rule,
+        for i, rule in enumerate(ruleset.rules):
+            if i == 0:  # Skip over default rule
+                continue
+
+            # Get the set of valid literals from one of the examples' state.
+            # Make a copy so we can modify it without affecting the examples
+            literals = copy.deepcopy(list(examples.examples.keys())[0].state)
+            num_literals = len(literals)
+
+            # Go through, make each of these false, and add a copy that is true
+            for l in range(num_literals):
+                literals[l].value = False
+                copied_literal = copy.copy(literals[l])
+                copied_literal.value = True
+                literals.append(copied_literal)
+
+            # Now that we have all pairs of literals, loop over them and add to the rule
+            for literal in literals:
+                # Copy to make sure modifying it doesn't cause issues
+                # If this literal is already present, continue
+                # TODO: what if its false version is present?
+                if literal in rule.context:
+                    continue
+
+                # Create the new rule with this literal added
+                new_rule = copy.deepcopy(rule)
+                literal = copy.deepcopy(literal)
+                new_rule.context.append(literal)
+
+                # Update outcomes for this rule
+                learn_outcomes(new_rule, examples)
+
+                # If it doesn't cover any outcomes, maybe we added a contradicting literal or maybe this never occurs
+                if len(new_rule.outcomes.outcomes) == 0:
+                    continue
+
+                # Create new ruleset for this rule
+                new_ruleset = copy.deepcopy(ruleset)
+
+                # Remove rules that are now redundant. Wouldn't this always be the old rule? What is the purpose here?
+                remove_redundant_rules(new_ruleset, examples, new_rule)
+
+                # Add the new rule
+                new_ruleset.add_rule(new_rule)
+
+                # Update default rule
+                calculate_default_rule(new_ruleset, examples)
+
+                new_rulesets.append(new_ruleset)
+
+        return new_rulesets
+
+
 def learn_ruleset(examples: ExampleSet) -> RuleSet:
     """Given a set of training examples, learns the optimal ruleset to explain them"""
 
@@ -407,6 +473,9 @@ def learn_ruleset(examples: ExampleSet) -> RuleSet:
         print(f"Created {len(new_rulesets)} rules")
         print("Executing SplitOnLits")
         new_rulesets.extend(SplitOnLits.execute(ruleset, examples))
+        print(f"Created {len(new_rulesets)} rules")
+        print("Executing AddLits")
+        new_rulesets.extend(AddLits.execute(ruleset, examples))
         print(f"Created {len(new_rulesets)} rules")
 
         scores = [ruleset_score(rules, examples) for rules in new_rulesets]
