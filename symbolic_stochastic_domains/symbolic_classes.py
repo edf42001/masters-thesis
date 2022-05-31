@@ -144,6 +144,7 @@ class RuleSet:
         # does the default rule apply to a noise or a no change outcome. Used for likelihood calculation
         self.default_rule_num_no_change = 0
         self.default_rule_num_noise = 0
+        self.default_rule_covered_examples: List[Example] = []
 
     def add_rule(self, rule: Rule):
         self.rules.append(rule)

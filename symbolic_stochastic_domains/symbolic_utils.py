@@ -118,11 +118,14 @@ def ruleset_score(ruleset: RuleSet, examples: ExampleSet):
         # Basically this num_covered section is the only difference
         if type(outcome.outcome) is NoiseEffect:
             num_covered = ruleset.default_rule_num_noise
+            prob = 0
         else:
             num_covered = ruleset.default_rule_num_no_change
+            prob = default_rule.outcomes.probabilities[i]
 
         # Basic log of probability, but with the addition of the p_noise value * the p_min bound
-        default_rule_score += math.log10(default_rule.outcomes.probabilities[i] + p_noise * p_min) * num_covered
+        # TODO: look more closely at this equation and how it differs for noise vs not noise
+        default_rule_score += math.log10(prob + p_noise * p_min) * num_covered
 
     return rules_score + default_rule_score
 

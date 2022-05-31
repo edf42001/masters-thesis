@@ -1,5 +1,6 @@
 import copy
 from typing import List, Dict
+import numpy as np
 
 from symbolic_stochastic_domains.symbolic_classes import ExampleSet, RuleSet, Rule, OutcomeSet, Outcome, Example
 from effects.effect import JointNoEffect, NoiseEffect
@@ -29,8 +30,14 @@ def calculate_default_rule(ruleset: RuleSet, examples: ExampleSet) -> Rule:
     no_change = 0
     noise = 0
     total = 0
+
+    # Also, we update the list of covered examples in here
+    ruleset.default_rule_covered_examples = []
     for example in examples.examples.keys():
         if example not in covered_examples:
+            # Keep track of what the default rule covers
+            ruleset.default_rule_covered_examples.append(example)
+
             count = examples.examples[example]  # Use dictionary to get total count of this example
             total += count
 
@@ -75,7 +82,7 @@ class ExplainExamples:
         new_rulesets = []
 
         # Note: for now, assume that we only run this at the start so this is all of the examples
-        for example in examples.examples:
+        for example in ruleset.default_rule_covered_examples:
             print(f"---------\nExplaining example:\n{example}")
             print()
 
@@ -187,8 +194,8 @@ class ExplainExamples:
             # Because we modified the ruleset, need to update the default rule:
             new_default_rule = calculate_default_rule(ruleset, examples)
             ruleset.rules[0] = new_default_rule
-            print("Current ruleset")
-            print(ruleset)
+            # print("Current ruleset")
+            # print(ruleset)
 
             if applicable(rule, example):
                 score = ruleset_score(ruleset, examples)
@@ -205,7 +212,6 @@ class ExplainExamples:
                 i += 1
                 rule.context.insert(0, literal)
                 print("Not applicable")
-            print()
 
         # Need to recalculate the things in case we had reinserted at the end
         learn_outcomes(rule, examples)
@@ -213,6 +219,28 @@ class ExplainExamples:
         ruleset.rules[0] = new_default_rule
         print("Final rule")
         print(rule)
+
+
+class DropRules:
+    """
+    DropRules cycles through all the rules in the current rule set, and removes each one
+    in turn from the set. It returns a set of rule sets, each one missing a different rule.
+    """
+    @staticmethod
+    def execute(ruleset: RuleSet, examples: ExampleSet) -> List[RuleSet]:
+        new_rulesets = []
+
+        # Remove every rule, but start at one to not remove the default rule
+        for i in range(1, len(ruleset.rules)):
+            new_ruleset = copy.deepcopy(ruleset)
+            new_ruleset.rules.pop(i)
+
+            # Now that we have modified the rule, update the default rule's params
+            calculate_default_rule(new_ruleset, examples)
+
+            new_rulesets.append(new_ruleset)
+
+        return new_rulesets
 
 
 def learn_ruleset(examples: ExampleSet) -> RuleSet:
@@ -228,9 +256,52 @@ def learn_ruleset(examples: ExampleSet) -> RuleSet:
     print()
 
     ruleset = RuleSet([default_rule])
-    new_rulesets = ExplainExamples.execute(ruleset, examples)
 
-    print("New rulesets:")
-    for ruleset in new_rulesets:
+    # Update the starting statistics for this ruleset. We need to know that the default rule covers everything
+    calculate_default_rule(ruleset, examples)
+
+    # best_score = ruleset_score(ruleset, examples)  # todo, make this work? why doesn't it work
+    best_score = -1E10
+
+    # Break the while loop when no improvement has been made
+    while True:
+        # Generate all next rulesets
+        new_rulesets = ExplainExamples.execute(ruleset, examples)
+        new_rulesets.extend(DropRules.execute(ruleset, examples))
+
+        scores = [ruleset_score(rules, examples) for rules in new_rulesets]
+
+        print("New rulesets:")
+        for ruleset in new_rulesets:
+            print(ruleset)
+            print("-----")
+
+        print(f"Ruleset scores {scores}")
+
+        best = np.argmax(scores)
+        new_score = scores[best]
+
+        # We are done if no improvement
+        if new_score < best_score:
+            print("New best score not bigger than best, done")
+            break
+
+        # Update best score
+        best_score = new_score
+
+        # Choose best ruleset greedily
+        ruleset = new_rulesets[best]
+
+        print("Best ruleset")
         print(ruleset)
-        print("-----")
+
+        # Keep going until the score stops improving (Can only use this operator if default rule covers some examples)
+
+        if ruleset.default_rule_num_noise == 0 and ruleset.default_rule_num_no_change == 0:
+            print("Default rule no longer covers anything, done")
+            break
+
+    print(f"Final ruleset: score = {best_score:0.4}")
+    print(ruleset)
+
+
