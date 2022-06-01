@@ -1,12 +1,10 @@
 import random
 
-from algorithm.transition_model import TransitionModel
 from policy.policy import Policy
 
 
 class RandomPolicy(Policy):
-    max_steps = 100
-    epsilon = 0.01
+    """Chooses an action from the N available randomly"""
 
     def __init__(self, actions: int):
         self.num_actions = actions

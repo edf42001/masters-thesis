@@ -12,8 +12,8 @@ if __name__ == "__main__":
     example_set = ExampleSet()
 
     # Generate training examples
-    for i in range(3):
-        literals = env.get_literals(env.curr_state)
+    for i in range(300):
+        literals = env.get_literals(env.get_state())
         action = random.randint(0, env.get_num_actions()-1)
         obs = env.step(action)
         outcome = Outcome(obs)

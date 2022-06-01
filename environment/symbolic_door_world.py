@@ -119,6 +119,8 @@ class Predicate:
 
 
 class TouchLeft(Predicate):
+    # Perhaps each predicate can have a creator function which will create the object
+    # thent he real constructor can take in the strings, but can call the evaluate function for the objects
     def __init__(self, object1: SymbolicObject, object2: SymbolicObject):
         self.type = PredicateType.TOUCH_LEFT
         self.value = self.evaluate(object1, object2)
@@ -266,23 +268,28 @@ class SymbolicDoorWorld(Environment):
             self.taxi.x = 3
             self.door.open = False
 
-    def get_literals(self, state) -> List[Predicate]:
+    def get_literals(self, state: int) -> List[Predicate]:
         """Converts state to the literals from that state"""
 
         # Convert flat state to factored state
-        if isinstance(state, (int, np.integer)):
-            state = self.get_factored_state(state)
+        state = self.get_factored_state(state)
 
-        non_taxi_objects = [self.switch, self.goal, self.door] + self.walls
+        # Convert state to objects
+        x, open = state
+        taxi = Taxi(name="taxi", x=x)
+        door = Door(name="door", x=self.door.x, open=open)
+
+        # Switch, goal, and walls never changed, so they do not need to be converted. Neither does door.x
+        non_taxi_objects = [self.switch, self.goal, door] + self.walls
 
         predicates = []
 
         for p_type in [PredicateType.TOUCH_LEFT, PredicateType.TOUCH_RIGHT, PredicateType.ON]:
             for object in non_taxi_objects:
-                predicates.append(Predicate.create(p_type, self.taxi, object))
+                predicates.append(Predicate.create(p_type, taxi, object))
 
         # TODO: huh?
-        predicates.append(Predicate.create(PredicateType.OPEN, self.door, self.door))
+        predicates.append(Predicate.create(PredicateType.OPEN, door, door))
         return predicates
 
     def get_condition(self, state) -> List[bool]:
@@ -342,12 +349,8 @@ class SymbolicDoorWorld(Environment):
         # Make updates to state
         next_state = [next_x1, next_door_open]
 
-        # TODO: This is duplicate code from get_reward(). Make that function able to take in factored or int state
         # Assign reward if any taxi made it to the goal state
-        if next_state[self.S_X1] == self.goal:
-            self.last_reward = self.R_SUCCESS
-        else:
-            self.last_reward = self.R_DEFAULT
+        self.last_reward = self.get_reward(self.get_flat_state(self.curr_state), self.get_flat_state(next_state), action)
 
         # Calculate outcomes
         att_list = []
@@ -379,13 +382,14 @@ class SymbolicDoorWorld(Environment):
 
         if action == self.A_LEFT:
             # If bump wall or door, don't move
-            if x in walls or ((x - 1) == self.door and not self.curr_state[self.S_DOOR_OPEN]):
+            # TODO: door.x is because this is an object not a variable anymore
+            if x in walls or ((x - 1) == self.door.x and not self.curr_state[self.S_DOOR_OPEN]):
                 return x
             else:
                 return x - 1
         elif action == self.A_RIGHT:
             # If bump wall or door, don't move
-            if (x + 1) in walls or ((x + 1) == self.door and not self.curr_state[self.S_DOOR_OPEN]):
+            if (x + 1) in walls or ((x + 1) == self.door.x and not self.curr_state[self.S_DOOR_OPEN]):
                 return x
             else:
                 return x + 1
@@ -398,14 +402,33 @@ class SymbolicDoorWorld(Environment):
         factored_ns = self.get_factored_state(next_state)
 
         # Assign reward if any taxi made it to the goal state
-        if factored_ns[self.S_X1] == self.goal:
+        # TODO: need .x in here because goal is now a object
+        if factored_ns[self.S_X1] == self.goal.x:
             return self.R_SUCCESS
         else:
             return self.R_DEFAULT
 
-    def apply_outcome(self, state: int, outcome: List[int]) -> Union[int, np.ndarray]:
-        """Compute next state given an outcome"""
-        pass
+    def apply_effect(self, state: int, effect: JointEffect) -> Union[int, np.ndarray]:
+        # TODO: because I am doing this hackily, need to convert the strings in my joint effect to state variables
+
+        if type(effect) is JointNoEffect:
+            return state
+
+        factored_s = self.get_factored_state(state)
+        for att, change in effect.value.items():
+            if att == "taxi.x":
+                factored_s[0] = change.apply_to(factored_s[0])
+            else:
+                factored_s[1] = 1 if change.apply_to(factored_s[1]) else 0
+
+        try:
+            state = self.get_flat_state(factored_s)
+            return state
+        # This can happen when the taxi predicts a movement out of bounds, for example
+        except ValueError:
+            # Effect returned illegal state
+            logging.error(f"Effect {effect} returned illegal state")
+            return state
 
     def visualize(self) -> str:
         return self.visualize_state(self.curr_state)

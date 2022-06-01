@@ -1,4 +1,3 @@
-import random
 import numpy as np
 from collections import deque
 
@@ -122,7 +121,7 @@ class ActionInfoGain(Policy):
         expected_information = prior_entropy - expected_information
         return expected_information
 
-    def breadth_first_search_for_info_gain(self, state):
+    def breadth_first_search_for_info_gain(self, state: int):
         """Uses breadth first search to find the closest state to the current state with a non-0 information gain"""
 
         # List of visited states

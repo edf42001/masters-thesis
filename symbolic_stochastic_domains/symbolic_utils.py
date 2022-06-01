@@ -102,6 +102,12 @@ def rule_score(rule: Rule, examples: ExampleSet) -> float:
 
 def ruleset_score(ruleset: RuleSet, examples: ExampleSet):
     """Total score of a ruleset is the sum of scores of rules in the ruleset"""
+
+    # TODO: SOme ideas for different scoring metrics. Penalize number of rules, instead of complexity.
+    # Maybe have complexity as second. Penalize number of outcomes, instead of what changes during outcomes.
+    # Same for default rule, make the penalty the number of different examples it covers.
+    # Basically in our worlds, we don't want default rules.
+
     # All rules except the default rule, default rule is calculated separetly
     rules_score = sum([rule_score(rule, examples) for rule in ruleset.rules[1:]])
 

@@ -448,17 +448,20 @@ class AddLits:
         return new_rulesets
 
 
-def learn_ruleset(examples: ExampleSet) -> RuleSet:
+def learn_ruleset(examples: ExampleSet, init_ruleset=None) -> RuleSet:
     """Given a set of training examples, learns the optimal ruleset to explain them"""
 
-    # An action of -1 indicates default rule. Perhaps should have a specific subclass to represent it
-    default_rule = Rule(action=-1, context=[], outcomes=OutcomeSet())
+    # The paper suggest starting with only the default rule, but you can start with any proper ruleset
+    if init_ruleset:
+        ruleset = init_ruleset
+    else:
+        # An action of -1 indicates default rule. Perhaps should have a specific subclass to represent it
+        default_rule = Rule(action=-1, context=[], outcomes=OutcomeSet())
+        ruleset = RuleSet([default_rule])
 
     print("Example set:")
     print(examples)
     print()
-
-    ruleset = RuleSet([default_rule])
 
     # Update the starting statistics for this ruleset. We need to know that the default rule covers everything
     calculate_default_rule(ruleset, examples)
@@ -516,5 +519,7 @@ def learn_ruleset(examples: ExampleSet) -> RuleSet:
 
     print(f"Final ruleset: score = {best_score:0.4}")
     print(ruleset)
+
+    return ruleset
 
 
