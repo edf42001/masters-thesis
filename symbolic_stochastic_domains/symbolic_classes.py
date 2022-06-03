@@ -89,17 +89,8 @@ class Example:
         return ret
 
     def __str__(self):
-        ret = ""
-
-        ret += f"Action {self.action}:\n"
-
-        # Only show true literals
-        ret += ", ".join([str(lit) for lit in self.state if lit.value])
-
-        ret += "\n"
-        ret += str(self.outcome)
-
-        return ret
+        # Only show true literals in the example
+        return f"Action {self.action}: {[lit for lit in self.state if lit.value]} --> {self.outcome}"
 
     def __repr__(self):
         return self.__str__()

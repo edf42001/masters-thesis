@@ -472,6 +472,8 @@ def learn_ruleset(examples: ExampleSet, init_ruleset=None) -> RuleSet:
     # Break the while loop when no improvement has been made
     while True:
         # Generate all next rulesets
+        # TODO: What to do if there are no rules to operate on? I think it should still go (for example for add lits)
+        # TODO: do experiments on the 300/determinsitc dataset and see if removing literals really doesn't do anything
         new_rulesets = []
         print("Executing ExplainExamples")
         new_rulesets.extend(ExplainExamples.execute(ruleset, examples))
