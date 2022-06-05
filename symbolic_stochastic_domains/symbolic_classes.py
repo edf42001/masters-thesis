@@ -65,6 +65,11 @@ class OutcomeSet:
     def __repr__(self):
         return self.__str__()
 
+    def __eq__(self, other):
+        # TODO: Does this compare elements of the lists for equality, or just the lists themselves?
+        # What about floating point comparisons for probabilities?
+        return self.outcomes == other.outcomes and self.probabilities == other.probabilities
+
 
 class Example:
     """

@@ -8,6 +8,7 @@ from common.structures import Transition
 
 from symbolic_stochastic_domains.symbolic_classes import Example, Outcome, ExampleSet, RuleSet, Rule, OutcomeSet
 from symbolic_stochastic_domains.learn_ruleset import learn_ruleset
+from symbolic_stochastic_domains.learn_ruleset_outcomes import learn_ruleset_outcomes
 from symbolic_stochastic_domains.symbolic_utils import context_matches
 
 
@@ -39,7 +40,7 @@ class SymbolicModel(TransitionModel):
 
         # Currently, update the model on every step. I wonder how it would work to update it based
         # on the existing ruleset
-        self.ruleset = learn_ruleset(self.examples, init_ruleset=None)
+        self.ruleset = learn_ruleset_outcomes(self.examples)
 
         print("New model:")
         self.print_model()
