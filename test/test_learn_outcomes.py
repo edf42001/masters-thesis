@@ -2,7 +2,7 @@ import pickle
 
 from symbolic_stochastic_domains.symbolic_classes import Rule, OutcomeSet
 from symbolic_stochastic_domains.learn_outcomes import learn_outcomes
-from environment.symbolic_door_world import TouchLeft, Taxi, Switch, Predicate
+from symbolic_stochastic_domains.predicates_and_objects import TouchLeft, Taxi, Switch, Predicate
 
 
 if __name__ == "__main__":

@@ -3,7 +3,7 @@ import math
 
 from effects.effect import NoiseEffect
 from symbolic_stochastic_domains.symbolic_classes import Outcome, Example, ExampleSet, Rule, RuleSet
-from environment.symbolic_door_world import Predicate
+from symbolic_stochastic_domains.predicates_and_objects import Predicate
 
 
 def context_matches(context: List[Predicate], state_set: Set[Predicate]) -> bool:

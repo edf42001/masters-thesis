@@ -77,6 +77,8 @@ class Environment:
         return self.last_reward
 
     def get_state(self) -> int:
+        print(self.curr_state)
+        print(self.STATE_ARITIES)
         return self.get_flat_state(self.curr_state)
 
     def apply_effect(self, state: int, effect: JointEffect) -> Union[int, np.ndarray]:
@@ -133,12 +135,16 @@ class Environment:
         instance_arities = [arity for arity, count in zip(self.OB_ARITIES, self.OB_COUNT) for _ in range(count)]
         instance_classes = [cl for cl, count in enumerate(self.OB_COUNT) for _ in range(count)]
 
+        # print(f"Instance arities: {instance_arities}")
+        # print(f"Instance classes: {instance_classes}")
+
         # Iteration variables
         instance_num = 0
         base_idx, next_base_idx = 0, instance_arities[0]
         self.instance_index_map[0] = base_idx
 
         for idx in range(self.NUM_ATT):
+            # print(f"Instance num: {instance_num}, base_idx: {base_idx}, next_base_idx: {next_base_idx}, idx: {idx}")
             # Shift iteration variables when state variable belongs to new object instance
             if idx == next_base_idx:
                 instance_num += 1

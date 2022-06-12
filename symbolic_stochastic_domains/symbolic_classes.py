@@ -1,7 +1,7 @@
 from typing import List, Dict
 
 from effects.effect import JointEffect
-from environment.symbolic_door_world import Predicate
+from symbolic_stochastic_domains.predicates_and_objects import Predicate
 
 
 class Outcome:
