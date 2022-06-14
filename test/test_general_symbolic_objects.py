@@ -12,3 +12,15 @@ if __name__ == "__main__":
     print(f"Current state: {env.get_factored_state(curr_state)}")
     objects = env.get_object_list(curr_state)
     print(f"Current objects: {objects}")
+    literals = env.get_literals(curr_state)
+    print(f"Literals: {literals}")
+    print(f"Len = {len(literals)}")
+    print(f"Num states: {env.get_num_states()}")
+
+    examples = set()
+    for state in range(env.get_num_states()):
+        literals = env.get_literals(state)
+        examples.update(literals)
+
+    # TODO: I think there are issues with my open and on code. Also, we are missing walls
+    print(f"Different states: {len(examples)}")

@@ -4,7 +4,8 @@ from typing import List, Tuple, Union
 from effects.utils import eff_joint
 from effects.effect import JointEffect
 from environment.environment import Environment
-from symbolic_stochastic_domains.predicates_and_objects import Taxi2D, Key2D, Lock2D, Wall2D, Gem2D
+from symbolic_stochastic_domains.predicates_and_objects import Taxi2D, Key2D, Lock2D, Wall2D,\
+    Gem2D, Predicate, PredicateType
 
 
 class SymbolicHeist(Environment):
@@ -51,12 +52,24 @@ class SymbolicHeist(Environment):
     R_SUCCESS = 10
 
     # Object descriptions
-    OB_AGENT = 0
+    OB_TAXI = 0
     OB_KEY = 1
     OB_LOCK = 2
     OB_GEM = 3
     OB_COUNT = [1, 5, 3, 1]
     OB_ARITIES = [2, 1, 1, 1]
+
+    # For each predicate type, defines which objects are valid for each argument
+    # This is basically just (taxi, everything else) except for the ones that are just params?
+    PREDICATE_MAPPINGS = {
+        PredicateType.TOUCH_LEFT2D: [[OB_TAXI], [OB_KEY, OB_LOCK, OB_GEM]],
+        PredicateType.TOUCH_RIGHT2D: [[OB_TAXI], [OB_KEY, OB_LOCK, OB_GEM]],
+        PredicateType.TOUCH_UP2D: [[OB_TAXI], [OB_KEY, OB_LOCK, OB_GEM]],
+        PredicateType.TOUCH_DOWN2D: [[OB_TAXI], [OB_KEY, OB_LOCK, OB_GEM]],
+        PredicateType.ON2D: [[OB_TAXI], [OB_KEY, OB_LOCK, OB_GEM]],
+        PredicateType.IN: [[OB_TAXI], [OB_KEY, OB_GEM]],
+        PredicateType.OPEN: [[OB_LOCK]]
+    }
 
     # Conditions
     # touch(N/E/S/W wall), touch(N/E/S/W lock), on(key/gem), hold(key/gem)
@@ -131,7 +144,7 @@ class SymbolicHeist(Environment):
         taxi = (state[self.S_X], state[self.S_Y])
         keys = state[self.S_KEY_1: self.S_KEY_5 + 1]
         locks = state[self.S_LOCK_1: self.S_LOCK_3 + 1]
-        gem = state[self.S_GEM]  # TODO: need gem held
+        gem_state = state[self.S_GEM]  # TODO: need gem held
 
         objects = []
 
@@ -143,10 +156,41 @@ class SymbolicHeist(Environment):
         for i, (lock_open, location) in enumerate(zip(locks, self.locks)):
             objects.append(Lock2D("lock" + str(i), location, lock_open == 1))  # Convert 0 or 1 to boolean
 
-        objects.append(Gem2D("gem", self.gem))
+        objects.append(Gem2D("gem", self.gem, gem_state))
         objects.append(Wall2D("wall", self.walls))
 
         return objects
+
+    def get_literals(self, state: int) -> List[Predicate]:
+        """Converts state to the literals from that state"""
+
+        # Get object list from the current state
+        objects = self.get_object_list(state)
+
+        predicates = []
+
+        # Find the start and end indices for each object type
+        ob_index_range_map = np.cumsum(self.OB_COUNT)
+
+        for p_type, mappings in self.PREDICATE_MAPPINGS.items():
+            # TODO: need to convert class variable to a range maybe
+            if len(mappings) == 1:
+                # One arity predicate
+                objects1 = mappings[0]
+                for ob_id in objects1:
+                    for ob_idx in range(ob_index_range_map[ob_id-1], ob_index_range_map[ob_id]):
+                        predicates.append(Predicate.create(p_type, objects[ob_idx], objects[ob_idx]))
+            else:
+                # Create predicates combining every object in the first list with every object from the second
+                objects1 = mappings[0]
+                objects2 = mappings[1]
+                for ob1_id in objects1:  # Could do the same here
+                    for ob2_id in objects2:
+                        for ob2_idx in range(ob_index_range_map[ob2_id-1], ob_index_range_map[ob2_id]):
+                            predicates.append(Predicate.create(p_type, objects[ob1_id], objects[ob2_idx]))
+
+        # TODO: huh?
+        return predicates
 
     def get_condition(self, state: int):
         """Convert state vars to O-O conditions, return grounded instances for each True condition"""

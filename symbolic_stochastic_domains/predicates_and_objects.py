@@ -49,10 +49,11 @@ class Wall(SymbolicObject):
 
 
 class Gem2D(SymbolicObject):
-    def __init__(self, name, location):
+    def __init__(self, name, location, state):
         super().__init__(name)
 
         self.location = location
+        self.state = state
 
 
 class Wall2D(SymbolicObject):
@@ -97,9 +98,12 @@ class PredicateType(Enum):
     OPEN = 3
 
     # These are currently used for heist
-    TOUCH_UP = 4
-    TOUCH_DOWN = 5
-    IN = 6
+    TOUCH_LEFT2D = 4
+    TOUCH_RIGHT2D = 5
+    TOUCH_UP2D = 6
+    TOUCH_DOWN2D = 7
+    ON2D = 8
+    IN = 9
 
 
 class Predicate:
@@ -139,6 +143,20 @@ class Predicate:
             return On(p_type, o1.name, o2.name, On.evaluate(o1, o2))
         elif p_type == PredicateType.OPEN:
             return Open(p_type, o1.name, o2.name, Open.evaluate(o1, o2))
+        elif p_type == PredicateType.TOUCH_LEFT2D:
+            return TouchLeft2D(p_type, o1.name, o2.name, TouchLeft2D.evaluate(o1, o2))
+        elif p_type == PredicateType.TOUCH_RIGHT2D:
+            return TouchRight2D(p_type, o1.name, o2.name, TouchRight2D.evaluate(o1, o2))
+        elif p_type == PredicateType.TOUCH_UP2D:
+            return TouchUp2D(p_type, o1.name, o2.name, TouchUp2D.evaluate(o1, o2))
+        elif p_type == PredicateType.TOUCH_DOWN2D:
+            return TouchDown2D(p_type, o1.name, o2.name, TouchDown2D.evaluate(o1, o2))
+        elif p_type == PredicateType.TOUCH_UP2D:
+            return TouchUp2D(p_type, o1.name, o2.name, TouchUp2D.evaluate(o1, o2))
+        elif p_type == PredicateType.ON2D:
+            return On2D(p_type, o1.name, o2.name, On2D.evaluate(o1, o2))
+        elif p_type == PredicateType.IN:
+            return In(p_type, o1.name, o2.name, In.evaluate(o1, o2))
         else:
             raise ValueError(f'Unrecognized effect type: {p_type}')
 
@@ -249,11 +267,13 @@ class On2D(Predicate):
             return o1.location == o2.location
 
 
-class In2D(Predicate):
+class In(Predicate):
     @staticmethod
     def evaluate(o1, o2):
-        # The only thing that can be in the taxi is the key
+        # Only Key or Gem can be in the taxi
         if type(o2) is Key2D:
+            return o2.state == 1
+        elif type(o2) is Gem2D:
             return o2.state == 1
         else:
             return False
