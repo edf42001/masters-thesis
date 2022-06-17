@@ -217,7 +217,7 @@ class TouchLeft2D(Predicate):
     @staticmethod
     def evaluate(o1, o2):
         # The wall object refers to all walls and is handled separately
-        if type(o2) is Wall:
+        if type(o2) is Wall2D:
             return o1.location in o2.locations['W']
         else:
             # If these used x and y this could work for 1D as well
@@ -228,7 +228,7 @@ class TouchLeft2D(Predicate):
 class TouchRight2D(Predicate):
     @staticmethod
     def evaluate(o1, o2):
-        if type(o2) is Wall:
+        if type(o2) is Wall2D:
             return o1.location in o2.locations['E']
         else:
             x, y = o1.location
@@ -238,7 +238,7 @@ class TouchRight2D(Predicate):
 class TouchUp2D(Predicate):
     @staticmethod
     def evaluate(o1, o2):
-        if type(o2) is Wall:
+        if type(o2) is Wall2D:
             return o1.location in o2.locations['N']
         else:
             x, y = o1.location
@@ -248,7 +248,7 @@ class TouchUp2D(Predicate):
 class TouchDown2D(Predicate):
     @staticmethod
     def evaluate(o1, o2):
-        if type(o2) is Wall:
+        if type(o2) is Wall2D:
             return o1.location in o2.locations['S']
         else:
             x, y = o1.location
@@ -258,7 +258,7 @@ class TouchDown2D(Predicate):
 class On2D(Predicate):
     @staticmethod
     def evaluate(o1, o2):
-        if type(o2) is Wall:
+        if type(o2) is Wall2D:
             return False  # Can't be on a wall
         elif type(o2) is Key2D:
             # If the key is no longer there, even if we are at the location we aren't on it, Nor if it is in the taxi

@@ -20,7 +20,11 @@ if __name__ == "__main__":
     examples = set()
     for state in range(env.get_num_states()):
         literals = env.get_literals(state)
-        examples.update(literals)
+        examples.add(str(literals))
 
-    # TODO: I think there are issues with my open and on code. Also, we are missing walls
+    # TODO: I think there are issues with my open and on code.
+    # Predicates need to know that touchleft(key1) and touchLeft(key2) will have the same effect (dynamic objects)
+    # Perhaps the object class and the object id can be stored differently? How will that effect hashing?
+    # Making it so all the keys have the same name reduces the number of states from 13568 to only 232
+    # Also reduces the len of the literal list from 58 to 22
     print(f"Different states: {len(examples)}")
