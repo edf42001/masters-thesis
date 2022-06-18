@@ -212,13 +212,16 @@ class Open(Predicate):
         return o1.open
 
 
-# Whoops, the other coordinate needs to be equal
 class TouchLeft2D(Predicate):
     @staticmethod
     def evaluate(o1, o2):
         # The wall object refers to all walls and is handled separately
         if type(o2) is Wall2D:
             return o1.location in o2.locations['W']
+        elif type(o2) is Key2D:
+            # Key needs to be on the ground to be touching it
+            x, y = o1.location
+            return (x - 1, y) == o2.location and o2.state == 1
         else:
             # If these used x and y this could work for 1D as well
             x, y = o1.location
@@ -230,6 +233,10 @@ class TouchRight2D(Predicate):
     def evaluate(o1, o2):
         if type(o2) is Wall2D:
             return o1.location in o2.locations['E']
+        elif type(o2) is Key2D:
+            # Key needs to be on the ground to be touching it
+            x, y = o1.location
+            return (x + 1, y) == o2.location and o2.state == 1
         else:
             x, y = o1.location
             return (x + 1, y) == o2.location
@@ -240,6 +247,10 @@ class TouchUp2D(Predicate):
     def evaluate(o1, o2):
         if type(o2) is Wall2D:
             return o1.location in o2.locations['N']
+        elif type(o2) is Key2D:
+            # Key needs to be on the ground to be touching it
+            x, y = o1.location
+            return (x, y + 1) == o2.location and o2.state == 1
         else:
             x, y = o1.location
             return (x, y + 1) == o2.location
@@ -250,6 +261,10 @@ class TouchDown2D(Predicate):
     def evaluate(o1, o2):
         if type(o2) is Wall2D:
             return o1.location in o2.locations['S']
+        elif type(o2) is Key2D:
+            # Key needs to be on the ground to be touching it
+            x, y = o1.location
+            return (x, y - 1) == o2.location and o2.state == 1
         else:
             x, y = o1.location
             return (x, y - 1) == o2.location
@@ -261,8 +276,8 @@ class On2D(Predicate):
         if type(o2) is Wall2D:
             return False  # Can't be on a wall
         elif type(o2) is Key2D:
-            # If the key is no longer there, even if we are at the location we aren't on it, Nor if it is in the taxi
-            return o2.state == 0 and o1.location == o2.location
+            # We are only on it if it is on the ground, not in the taxi nor non-existent
+            return o2.state == 1 and o1.location == o2.location
         else:
             return o1.location == o2.location
 
@@ -272,7 +287,7 @@ class In(Predicate):
     def evaluate(o1, o2):
         # Only Key or Gem can be in the taxi
         if type(o2) is Key2D:
-            return o2.state == 1
+            return o2.state == 2
         elif type(o2) is Gem2D:
             return o2.state == 1
         else:

@@ -77,8 +77,6 @@ class Environment:
         return self.last_reward
 
     def get_state(self) -> int:
-        print(self.curr_state)
-        print(self.STATE_ARITIES)
         return self.get_flat_state(self.curr_state)
 
     def apply_effect(self, state: int, effect: JointEffect) -> Union[int, np.ndarray]:

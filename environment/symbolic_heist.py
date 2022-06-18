@@ -1,8 +1,9 @@
 import numpy as np
+import cv2
 from typing import List, Tuple, Union
 
 from effects.utils import eff_joint
-from effects.effect import JointEffect
+from effects.effect import JointEffect, EffectType, Effect, JointNoEffect
 from environment.environment import Environment
 from symbolic_stochastic_domains.predicates_and_objects import Taxi2D, Key2D, Lock2D, Wall2D,\
     Gem2D, Predicate, PredicateType
@@ -38,7 +39,7 @@ class SymbolicHeist(Environment):
 
     # Agent can be anywhere in grid
     # Keys are existing, not existing, or held by agent
-    # Locks are locked or unlocked
+    # Locks are locked (1) or unlocked (0)
     # Gem is not held or held
     STATE_ARITIES = [SIZE_X, SIZE_Y] + [3] * 5 + [2] * 4
 
@@ -58,6 +59,10 @@ class SymbolicHeist(Environment):
     OB_GEM = 3
     OB_COUNT = [1, 5, 3, 1]
     OB_ARITIES = [2, 1, 1, 1]
+
+    OB_NAMES = ["taxi", "key", "lock", "gem"]
+    ACTION_NAMES = ['Up', 'Right', 'Down', 'Left', 'Pickup', 'Unlock']
+    ATT_NAMES = [["x", "y"], ["state"], ["state"], ["state"]]
 
     # For each predicate type, defines which objects are valid for each argument
     # This is basically just (taxi, everything else) except for the ones that are just params?
@@ -89,28 +94,28 @@ class SymbolicHeist(Environment):
         # For each direction, stores which positions, (x, y), have a wall in that direction
         #   x 0 1 2 3 4
         # y   _ _ _ _ _
-        # 0  | |_ _    |
-        # 1  |  _    | |
+        # 4  | |_ _    |
+        # 3  |  _    | |
         # 2  | | | | |_|
-        # 3  | |_ _| | |
-        # 4  |_ _|_ _ _|
+        # 1  | |_ _| | |
+        # 0  |_ _|_ _ _|
         self.walls = {
-            'N': {(0, 0), (1, 0), (1, 1), (1, 2), (1, 4), (2, 0), (2, 1), (2, 4), (3, 0), (4, 0), (4, 3)},
-            'E': {(0, 0), (0, 2), (0, 3), (1, 2), (1, 4), (2, 2), (2, 3), (3, 1), (3, 2), (3, 3), (4, 0), (4, 1),
-                  (4, 2), (4, 3), (4, 4)},
-            'S': {(0, 4), (1, 0), (1, 1), (1, 3), (1, 4), (2, 0), (2, 3), (2, 4), (3, 4), (4, 2), (4, 4)},
-            'W': {(0, 0), (0, 1), (0, 2), (0, 3), (0, 4), (1, 0), (1, 2), (1, 3), (2, 2), (2, 4), (3, 2), (3, 3),
-                  (4, 1), (4, 2), (4, 3)}
+            'N': {(1, 2), (0, 4), (3, 4), (1, 0), (2, 3), (2, 4), (4, 1), (2, 0), (1, 4), (1, 3), (4, 4)},
+            'E': {(1, 2), (3, 2), (0, 4), (3, 1), (3, 3), (4, 0), (1, 0), (2, 1), (4, 1), (2, 2), (4, 2),
+                  (0, 1), (4, 3), (0, 2), (4, 4)},
+            'S': {(1, 1), (4, 0), (1, 0), (2, 4), (2, 0), (2, 1), (0, 0), (4, 2), (1, 4), (3, 0), (1, 3)},
+            'W': {(0, 3), (1, 2), (3, 2), (0, 4), (1, 1), (3, 1), (1, 4), (2, 2), (2, 0), (4, 1), (0, 0),
+                  (4, 2), (0, 1), (4, 3), (0, 2)}
         }
 
         # List of possible key locations
-        self.keys = [(0, 0), (1, 0), (1, 2), (2, 4), (4, 2)]
+        self.keys = [(0, 4), (1, 4), (1, 2), (2, 0), (4, 2)]
 
         # List of lock locations
-        self.locks = [(0, 2), (0, 3), (0, 4)]
+        self.locks = [(0, 2), (0, 1), (0, 0)]
 
         # Location of gem
-        self.gem = (1, 4)
+        self.gem = (1, 0)
 
         # Object instance and class in state information
         self.generate_object_maps()
@@ -155,18 +160,20 @@ class SymbolicHeist(Environment):
             objects.append(Key2D("key", location, key_state))
 
         for i, (lock_open, location) in enumerate(zip(locks, self.locks)):
-            objects.append(Lock2D("lock", location, lock_open == 1))  # Convert 0 or 1 to boolean
+            objects.append(Lock2D("lock", location, lock_open == 0))  # A locked lock has a value of 1
 
         objects.append(Gem2D("gem", self.gem, gem_state))
         objects.append(Wall2D("wall", self.walls))
 
         return objects
 
-    def get_literals(self, state: int) -> List[Predicate]:
+    def get_literals(self, state: int) -> Tuple[List[Predicate], List[int]]:
         """Converts state to the literals from that state"""
 
         # Get object list from the current state
         objects = self.get_object_list(state)
+
+        bindings = []  # List of dynamic object bindings ungrounded variable to grounded
 
         predicates = []
 
@@ -184,11 +191,13 @@ class SymbolicHeist(Environment):
                         pred = Predicate.create(p_type, objects[ob_idx], objects[ob_idx])
                         if pred.value:
                             predicates.append(pred)
+                            bindings.append(ob_idx)
                             found = True
                             break
                     if not found:
                         # Any will do
                         predicates.append(Predicate.create(p_type, objects[ob_idx], objects[ob_idx]))  # note duplicate
+                        bindings.append(-1)
             else:
                 # Create predicates combining every object in the first list with every object from the second
                 objects1 = mappings[0]
@@ -203,18 +212,21 @@ class SymbolicHeist(Environment):
                             pred = Predicate.create(p_type, objects[ob1_id], objects[ob2_idx])
                             if pred.value:
                                 predicates.append(pred)
+                                bindings.append(ob2_idx)
                                 found = True
                                 break
                         if not found:
                             # Any will do
                             predicates.append(Predicate.create(p_type, objects[ob1_id], objects[ob2_idx]))
+                            bindings.append(-1)
 
         # TODO: Do walls need to be handled separately. Also technically this needs all the types, including on and in
         for p_type in [PredicateType.TOUCH_LEFT2D, PredicateType.TOUCH_RIGHT2D,
                        PredicateType.TOUCH_UP2D, PredicateType.TOUCH_DOWN2D]:
             predicates.append(Predicate.create(p_type, objects[self.OB_TAXI], objects[-1]))  # Objects -1 is the wall
+            bindings.append(-1)
 
-        return predicates
+        return predicates, bindings
 
     def get_condition(self, state: int):
         """Convert state vars to O-O conditions, return grounded instances for each True condition"""
@@ -290,7 +302,7 @@ class SymbolicHeist(Environment):
 
         return conditions, groundings
 
-    def perform_action(self, action: int) -> List[JointEffect]:
+    def step(self, action: int) -> List[JointEffect]:
         """Stochastically apply action to environment"""
         state = self.curr_state
         x, y, keys, locks, gem = \
@@ -388,8 +400,28 @@ class SymbolicHeist(Environment):
                         observation[self.S_LOCK_1 + i] = self.A_UNLOCK
                         break
         else:
-            # Get all possible JointEffects that could have transformed the current state into the next state
-            observation = eff_joint(self.curr_state, next_state)
+            # Get the correct effect type for each attribute. This is pretty good, but it would be better if it
+            # was on a per class basis, that is then mapped. So lets map the attribute to a class,
+            # and then we can reverse it using the groundings
+
+            correct_types = [EffectType.INCREMENT] * 2 + [EffectType.SET_TO_NUMBER] * 8
+            effects = []
+            atts = []
+            for att, e_type in enumerate(correct_types):
+                if self.curr_state[att] != next_state[att]:
+                    effects.append(Effect.create(e_type, self.curr_state[att], next_state[att]))
+
+                    class_id = self.state_index_class_map[att]  #  Whoops, this doesn't take into account the taxi has two variables
+                    class_att_idx = self.state_index_class_index_map[att]
+                    # Convert the class and att idx to a string. (For viewing only, this probably makes the code slower)
+                    identifier = f"{self.OB_NAMES[class_id]}.{self.ATT_NAMES[class_id][class_att_idx]}"
+
+                    atts.append(identifier)
+
+            if len(effects) == 0:
+                observation = JointNoEffect()
+            else:
+                observation = JointEffect(atts, effects)
 
         # Update current state
         self.curr_state = next_state
@@ -400,13 +432,13 @@ class SymbolicHeist(Environment):
         """Deterministically return the result of taking an action"""
         pos = (x, y)
         if action == self.A_NORTH:
-            next_pos = (x, y - 1)
+            next_pos = (x, y + 1)
             is_wall = pos in self.walls['N']
         elif action == self.A_EAST:
             next_pos = (x + 1, y)
             is_wall = pos in self.walls['E']
         elif action == self.A_SOUTH:
-            next_pos = (x, y + 1)
+            next_pos = (x, y - 1)
             is_wall = pos in self.walls['S']
         else:
             next_pos = (x - 1, y)
@@ -471,3 +503,80 @@ class SymbolicHeist(Environment):
 
     def visualize(self):
         pass
+
+    def draw_world(self, state: int, delay=100):
+        state = self.get_factored_state(state)
+
+        GRID_SIZE = 100
+        WIDTH = self.SIZE_X
+        HEIGHT = self.SIZE_Y
+
+        # x, y, passenger, dest = state
+        taxi_x = state[self.S_X]
+        taxi_y = state[self.S_Y]
+
+        # Blank white square
+        img = 255 * np.ones((HEIGHT * GRID_SIZE, WIDTH * GRID_SIZE, 3))
+
+        # Draw horizontal and vertical walls
+        for i in range((self.SIZE_X + 1) * (self.SIZE_Y + 1)):
+            x = i % (self.SIZE_X + 1)
+            y = int(i / (self.SIZE_Y + 1))
+
+            pos = (x, y)
+
+            if pos in self.walls['N']:
+                cv2.line(img, (x * GRID_SIZE, (HEIGHT - y-1) * GRID_SIZE), ((x+1) * GRID_SIZE, (HEIGHT - y-1) * GRID_SIZE),
+                         thickness=3, color=[0, 0, 0])
+            if pos in self.walls['E']:
+                cv2.line(img, ((x+1) * GRID_SIZE, (HEIGHT - y) * GRID_SIZE), ((x+1) * GRID_SIZE, (HEIGHT - y-1) * GRID_SIZE),
+                         thickness=3, color=[0, 0, 0])
+            if pos in self.walls['S']:
+                cv2.line(img, (x * GRID_SIZE, (HEIGHT - y) * GRID_SIZE), ((x+1) * GRID_SIZE, (HEIGHT - y) * GRID_SIZE),
+                         thickness=3, color=[0, 0, 0])
+            if pos in self.walls['W']:
+                cv2.line(img, (x * GRID_SIZE, (HEIGHT - y) * GRID_SIZE), (x * GRID_SIZE, (HEIGHT - y-1) * GRID_SIZE),
+                         thickness=3, color=[0, 0, 0])
+
+        # Draw locks (need to be before taxi so taxi is shown on top)
+        lock_values = state[self.S_LOCK_1:self.S_LOCK_3+1]
+        for lock, value in zip(self.locks, lock_values):
+            inset = 0.05
+            bottom_left_x = lock[0] * GRID_SIZE + int(inset * GRID_SIZE)
+            bottom_left_y = (HEIGHT - lock[1]) * GRID_SIZE - int(inset * GRID_SIZE)
+            top_right_x = bottom_left_x + int((1 - 2 * inset) * GRID_SIZE)
+            top_right_y = bottom_left_y - int((1 - 2 * inset) * GRID_SIZE)
+
+            if value == 1:  # Closed lock
+                color = [0, 0, 0.8]
+            else:  # Open lock
+                color = [0.8, 0.8, 1]
+
+            cv2.rectangle(img, (bottom_left_x, bottom_left_y), (top_right_x, top_right_y), thickness=-1, color=color)
+
+        # Draw taxi
+        cv2.circle(img, (int((taxi_x + 0.5) * GRID_SIZE), int((HEIGHT - (taxi_y + 0.5)) * GRID_SIZE)), int(GRID_SIZE * 0.3),
+                   thickness=-1, color=[0, 0, 0])
+
+        # Draw gem
+        gem_x, gem_y = self.gem
+        cv2.circle(img, (int((gem_x + 0.5) * GRID_SIZE), int((HEIGHT - (gem_y + 0.5)) * GRID_SIZE)), int(GRID_SIZE * 0.25),
+                   thickness=-1, color=[0.8, 0, 0])
+
+        # Draw keys
+        key_values = state[self.S_KEY_1:self.S_KEY_5+1]
+        for key, value in zip(self.keys, key_values):
+            if value == 0:  # Non existent key
+                continue
+
+            key_x, key_y = key
+
+            if value == 1:  # Key on the ground
+                cv2.circle(img, (int((key_x + 0.5) * GRID_SIZE), int((HEIGHT - (key_y + 0.5)) * GRID_SIZE)), int(GRID_SIZE * 0.25),
+                           thickness=-1, color=[0, 0.7, 0.7])
+            else:  # Key in the taxi
+                cv2.circle(img, (int((taxi_x + 0.5) * GRID_SIZE), int((HEIGHT - (taxi_y + 0.5)) * GRID_SIZE)), int(GRID_SIZE * 0.2),
+                           thickness=-1, color=[0, 0.7, 0.7])
+
+        cv2.imshow("Taxi World", img)
+        cv2.waitKey(delay)
