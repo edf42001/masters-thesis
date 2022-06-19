@@ -5,6 +5,8 @@ from symbolic_stochastic_domains.symbolic_classes import ExampleSet, RuleSet, Ru
 from symbolic_stochastic_domains.symbolic_utils import context_matches, covers, applicable
 from symbolic_stochastic_domains.learn_outcomes import learn_outcomes
 
+from effects.effect import JointNoEffect
+
 
 def applicable_by_outcome(rule: Rule, example: Example, outcome: Outcome):
     return (
@@ -172,8 +174,10 @@ def learn_ruleset_outcomes(examples: ExampleSet) -> RuleSet:
     # First, get a list of every unique outcome
     unique_outcomes = []
 
+    # Find all the unique outcomes that have been experienced. Exclude JointNoEffect, we will assume
+    # anything not covered by the other rules leads to no effect
     for example in examples.examples.keys():
-        if example.outcome in unique_outcomes:
+        if example.outcome in unique_outcomes or type(example.outcome.outcome) is JointNoEffect:
             continue
 
         unique_outcomes.append(example.outcome)

@@ -2,13 +2,13 @@ from typing import List
 import logging
 import pickle
 import sys
+import time
 
 from effects.effect import JointEffect
 from algorithm.transition_model import TransitionModel
 from common.structures import Transition
 
 from symbolic_stochastic_domains.symbolic_classes import Example, Outcome, ExampleSet, RuleSet, Rule, OutcomeSet
-from symbolic_stochastic_domains.learn_ruleset import learn_ruleset
 from symbolic_stochastic_domains.learn_ruleset_outcomes import learn_ruleset_outcomes
 from symbolic_stochastic_domains.symbolic_utils import context_matches
 
@@ -41,7 +41,10 @@ class SymbolicModel(TransitionModel):
 
         # Currently, update the model on every step. I wonder how it would work to update it based
         # on the existing ruleset
+        start_time = time.perf_counter()
         self.ruleset = learn_ruleset_outcomes(self.examples)
+        end_time = time.perf_counter()
+        print(f"Ruleset learning took {end_time - start_time:.3f} (# of examples {len(self.examples.examples)})")
 
         print("New model:")
         self.print_model()

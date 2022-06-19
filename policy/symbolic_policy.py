@@ -16,12 +16,12 @@ class SymbolicPolicy(Policy):
         # (state with the max reward). If we can't make it, take a random action.
 
         # Search for a way to the goal. If one exists, execute the first action (the path is reversed)
-        path = self.breadth_first_search_to_goal(curr_state)
-        if len(path) > 0:
-            print(f"Found path taking action {path[-1]}, {path}")
-            return path[-1]
+        # path = self.breadth_first_search_to_goal(curr_state)
+        # if len(path) > 0:
+        #     print(f"Found path taking action {path[-1]}, {path}")
+        #     return path[-1]
 
-        print("Couldn't find path")
+        # print("Couldn't find path")
         # If we couldn't find a path, choose a random action
         return random.randint(0, self.num_actions-1)
 

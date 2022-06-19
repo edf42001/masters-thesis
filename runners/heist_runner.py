@@ -24,7 +24,7 @@ class HeistRunner(Runner):
         self.max_steps = 100
         self.num_episodes = 1
         self.stochastic = False
-        self.visualize = True
+        self.visualize = False
 
         # For testing (I think I have to set both or the keys spawn in different areas)
         random.seed(1)
