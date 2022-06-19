@@ -34,7 +34,7 @@ class SymbolicModel(TransitionModel):
 
         # Convert the observation to an outcome, combine with the set of literals to get an example to add to memory
         outcome = Outcome(obs)
-        literals = self.env.get_literals(state)
+        literals, groundings = self.env.get_literals(state)
         example = Example(action, literals, outcome)
         self.examples.add_example(example)
 
@@ -44,6 +44,7 @@ class SymbolicModel(TransitionModel):
 
         print("New model:")
         self.print_model()
+        print()
 
     def compute_possible_transitions(self, state: int, action: int) -> List[Transition]:
         """
@@ -51,7 +52,7 @@ class SymbolicModel(TransitionModel):
         If unknown, return None
         """
 
-        literals = self.env.get_literals(state)
+        literals, groundings = self.env.get_literals(state)
 
         transitions = []
 
@@ -64,7 +65,41 @@ class SymbolicModel(TransitionModel):
                     sys.exit(1)
 
                 # Assume discrete
-                transitions.append(Transition(rule.outcomes.outcomes[0].outcome, 1.0))
+                effect = rule.outcomes.outcomes[0].outcome
+                # convert back to ints # TODO: This doesn't really just work, you need the grounding to know what
+                # attribute goes to which object. Also, what if there's a key to the top and bottom?
+                # Then you need deictic references. Or, we could assume that doesn't happen for now and see what happens
+                # AS a hack, yeah lets try that first
+                atts = []
+                outcomes = []
+                # Need mapping from object id and variable name to att value
+                # Lets do this manually for now, because I am confused
+                for att_str, outcome in effect.value.items():
+                    # Convert string to class id and which attribute of that class it is
+                    class_str, att_idx_str = att_str.split(".")
+                    class_idx = self.env.OB_NAMES.index(class_str)
+                    att_idx_str = self.env.ATT_NAMES[class_idx].index(att_idx_str)
+
+                    att = -1
+                    if class_str == "taxi":
+                        att = 0 if att_idx_str == "x" else 1
+                    else:
+                        print("I do not know what to do with this class ")
+                        import sys
+                        sys.exit(1)
+                    # print(self.env.instance_index_map)
+                    # print(self.env.state_index_class_map)
+                    # print(self.env.state_index_class_index_map)
+                    # print(class_str, att_idx_str, class_idx, att_idx_str)
+
+                    atts.append(att)
+                    outcomes.append(outcome)
+
+                # Only create new effect if it isn't a JointNoEffect
+                if len(atts) > 0:
+                    effect = JointEffect(atts, outcomes)
+
+                transitions.append(Transition(effect, 1.0))
 
         return transitions
 

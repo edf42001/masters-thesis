@@ -32,6 +32,11 @@ def find_greedy_rule_by_removing_lits(examples: ExampleSet, relevant_examples: L
     # In the case where only one action causes an effect, we can just get it from the relavant examples
     action = relevant_examples[0].action
 
+    # FInd the list of objects referred to in the outcomes that we must have deictic references for
+    # In order for an object ot be in outcomes, MUST be in either action or conditions
+    objects_in_outcome = set([key.split(".")[0] for key in relevant_examples[0].outcome.outcome.value.keys()])
+    # print(f"Objects referenced in outcomes: {objects_in_outcome}")
+
     # Try to explain each example
     for example in relevant_examples:
         rule = Rule(action=action, context=[], outcomes=OutcomeSet())
@@ -52,9 +57,21 @@ def find_greedy_rule_by_removing_lits(examples: ExampleSet, relevant_examples: L
             # Update outcomes for the new rule:
             learn_outcomes(rule, examples)
 
-            # TODO: this is innefecient, let's give up on the first false positive, instead of calling learn_outcomes
             # Ensure it only covers these outcomes, and not any in irrelevant examples
-            if rule.outcomes == valid_outcomes and not any([applicable(rule, example) for example in irrelevant_examples]):
+            # The second object is relavant, first is just taxi. Will need to find some other way to refer to taxi
+            objects_in_context = set([pred.object2 for pred in rule.context])
+            # print(f"Objects in context: {objects_in_context}")
+
+            # Make sure we have a reference to each object, but ignore taxi for now, that is referenced in the action
+            # technically, like MoveLeft(taxi1)
+            have_correct_deictic_references = all([(obj == "taxi" or obj in objects_in_context) for obj in objects_in_outcome])
+
+            # TODO: this is inefficient, let's give up on the first false positive, instead of calling learn_outcomes
+            if (
+                have_correct_deictic_references and
+                rule.outcomes == valid_outcomes and not
+                any([applicable(rule, example) for example in irrelevant_examples])
+            ):
                 i = 0
                 # Score is number of examples in relevant set this applies to.
                 score = sum([examples.examples[example] for example in relevant_examples if applicable(rule, example)])

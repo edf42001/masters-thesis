@@ -1,6 +1,6 @@
 import numpy as np
 import cv2
-from typing import List, Tuple, Union
+from typing import List, Tuple, Union, Dict
 
 from effects.utils import eff_joint
 from effects.effect import JointEffect, EffectType, Effect, JointNoEffect
@@ -167,13 +167,13 @@ class SymbolicHeist(Environment):
 
         return objects
 
-    def get_literals(self, state: int) -> Tuple[List[Predicate], List[int]]:
+    def get_literals(self, state: int) -> Tuple[List[Predicate], Dict[Predicate, int]]:
         """Converts state to the literals from that state"""
 
         # Get object list from the current state
         objects = self.get_object_list(state)
 
-        bindings = []  # List of dynamic object bindings ungrounded variable to grounded
+        bindings = dict()  # Dictionary that for each predicate that references an object, which object?
 
         predicates = []
 
@@ -191,13 +191,12 @@ class SymbolicHeist(Environment):
                         pred = Predicate.create(p_type, objects[ob_idx], objects[ob_idx])
                         if pred.value:
                             predicates.append(pred)
-                            bindings.append(ob_idx)
+                            bindings[pred] = ob_idx
                             found = True
                             break
                     if not found:
                         # Any will do
                         predicates.append(Predicate.create(p_type, objects[ob_idx], objects[ob_idx]))  # note duplicate
-                        bindings.append(-1)
             else:
                 # Create predicates combining every object in the first list with every object from the second
                 objects1 = mappings[0]
@@ -212,19 +211,17 @@ class SymbolicHeist(Environment):
                             pred = Predicate.create(p_type, objects[ob1_id], objects[ob2_idx])
                             if pred.value:
                                 predicates.append(pred)
-                                bindings.append(ob2_idx)
+                                bindings[pred] = ob2_idx
                                 found = True
                                 break
                         if not found:
                             # Any will do
                             predicates.append(Predicate.create(p_type, objects[ob1_id], objects[ob2_idx]))
-                            bindings.append(-1)
 
         # TODO: Do walls need to be handled separately. Also technically this needs all the types, including on and in
         for p_type in [PredicateType.TOUCH_LEFT2D, PredicateType.TOUCH_RIGHT2D,
                        PredicateType.TOUCH_UP2D, PredicateType.TOUCH_DOWN2D]:
             predicates.append(Predicate.create(p_type, objects[self.OB_TAXI], objects[-1]))  # Objects -1 is the wall
-            bindings.append(-1)
 
         return predicates, bindings
 
@@ -502,7 +499,7 @@ class SymbolicHeist(Environment):
             return state
 
     def visualize(self):
-        pass
+        self.draw_world(self.get_flat_state(self.curr_state), delay=1)
 
     def draw_world(self, state: int, delay=100):
         state = self.get_factored_state(state)
