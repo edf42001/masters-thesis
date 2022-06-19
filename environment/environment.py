@@ -139,7 +139,7 @@ class Environment:
         # Iteration variables
         instance_num = 0
         base_idx, next_base_idx = 0, instance_arities[0]
-        self.instance_index_map[0] = base_idx
+        self.instance_index_map[0] = (base_idx, next_base_idx)  # This used to be not a tuple, seemed like a bug
 
         for idx in range(self.NUM_ATT):
             # print(f"Instance num: {instance_num}, base_idx: {base_idx}, next_base_idx: {next_base_idx}, idx: {idx}")

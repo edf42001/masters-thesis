@@ -20,6 +20,17 @@ def print_examples_rule_covers(rule: Rule, examples: ExampleSet):
         print(f"Outcome: {outcome}: {applicable}")
 
 
+# Perhaps I need to remake the rules but in this manner
+# What is the best way to figure out the minimal set that covers the maximum examples?
+# Structure learning, multiple instance learning?
+def find_greedy_rule_by_adding_lits(examples: ExampleSet, relevant_examples: List[Example], irrelevant_examples: List[Example]):
+    valid_outcomes = OutcomeSet()
+    valid_outcomes.add_outcome(relevant_examples[0].outcome, 1.0)
+
+    new_rules = []
+    scores = []
+
+
 def find_greedy_rule_by_removing_lits(examples: ExampleSet, relevant_examples: List[Example], irrelevant_examples: List[Example]):
     valid_outcomes = OutcomeSet()
     valid_outcomes.add_outcome(relevant_examples[0].outcome, 1.0)
@@ -59,7 +70,10 @@ def find_greedy_rule_by_removing_lits(examples: ExampleSet, relevant_examples: L
 
             # Ensure it only covers these outcomes, and not any in irrelevant examples
             # The second object is relavant, first is just taxi. Will need to find some other way to refer to taxi
-            objects_in_context = set([pred.object2 for pred in rule.context])
+            # TODO and think about: Does the predicate have to be true? i.e, the agent is "interacting" with the object?
+            # Yup, this definetly seems to lead to better rules. For Action 4, it replaced:
+            # [~TouchDown2D(taxi, wall), TouchUp2D(taxi, wall), ~In(taxi, key)] with [On2D(taxi, key)]
+            objects_in_context = set([lit.object2 for lit in rule.context if lit.value])
             # print(f"Objects in context: {objects_in_context}")
 
             # Make sure we have a reference to each object, but ignore taxi for now, that is referenced in the action

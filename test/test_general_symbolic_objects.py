@@ -7,7 +7,12 @@ import numpy as np
 
 from environment.symbolic_heist import SymbolicHeist
 from symbolic_stochastic_domains.learn_ruleset_outcomes import learn_ruleset_outcomes
-from symbolic_stochastic_domains.symbolic_classes import ExampleSet, Outcome, Example
+from symbolic_stochastic_domains.symbolic_classes import ExampleSet, Outcome, Example, Rule, OutcomeSet
+from symbolic_stochastic_domains.predicates_and_objects import On2D, PredicateType
+from symbolic_stochastic_domains.symbolic_utils import applicable
+from symbolic_stochastic_domains.learn_outcomes import learn_outcomes
+
+from effects.effect import JointNoEffect
 
 
 if __name__ == "__main__":
@@ -15,18 +20,7 @@ if __name__ == "__main__":
     np.random.seed(1)
 
     env = SymbolicHeist(stochastic=False, use_outcomes=False)
-    env.restart()  # The env is being restarted twice in the runner, which means my random key arrangements were different
-
-    # curr_state = env.get_state()
-    # print(f"Current state: {env.get_factored_state(curr_state)}")
-    # objects = env.get_object_list(curr_state)
-    # print(f"Current objects: {objects}")
-    # literals, bindings = env.get_literals(curr_state)
-    # print(f"Literals: {literals}")
-    # print(f"Len = {len(literals)}")
-    # print(f"Num states: {env.get_num_states()}")
-    #
-    # env.draw_world(curr_state, delay=500)
+    env.restart()  # The env is being restarted twice in the runner, which means random key arrangements were different
 
     # actions = [env.A_NORTH, env.A_SOUTH, env.A_EAST, env.A_WEST, env.A_NORTH, env.A_PICKUP, env.A_UNLOCK,
     #            env.A_SOUTH, env.A_EAST, env.A_NORTH, env.A_NORTH, env.A_WEST, env.A_WEST,
@@ -40,11 +34,6 @@ if __name__ == "__main__":
         curr_state = env.get_state()
         observation = env.step(action)
         literals, bindings = env.get_literals(curr_state)
-        # print(f"Observation: {observation}")
-        # print(f"Literals: {literals}")
-        # print(f"Bindings: {bindings}")
-        # print()
-        # env.draw_world(curr_state, delay=10)
 
         outcome = Outcome(observation)
         example = Example(action, literals, outcome)
@@ -54,17 +43,18 @@ if __name__ == "__main__":
     print("Resulting ruleset:")
     print(ruleset)
 
-    # examples = set()
-    # for state in range(env.get_num_states()):
-    #     literals, bindings = env.get_literals(state)
-    #     examples.add(str(literals))
+    relevant_examples = [example for example in example_set.examples.keys() if example.action == 4 and type(example.outcome.outcome) is JointNoEffect]
 
-    # Predicates need to know that touchleft(key1) and touchLeft(key2) will have the same effect (dynamic objects)
-    # Perhaps the object class and the object id can be stored differently? How will that effect hashing?
-    # Making it so all the keys have the same name reduces the number of states from 13568 to only 232
-    # Also reduces the len of the literal list from 58 to 22
-    # Update: now that I have fixed the predicates, there are 328 unique states. Still pretty small.
-    # TODO: expand further. For example, taxi touching a block touching a door which is open. Limit to depth of three
-    # This will cause exponential growth, and will increase the space again, but hopefully not more than the 13568
-    # Perhaps run the code I have that generates literals, recursively replacing the source object, for each object.
-    # print(f"Different states: {len(examples)}")
+    print("Relevant examples:")
+    for example in relevant_examples:
+        print(example)
+
+    test_rule = Rule(action=4, context=[On2D(PredicateType.ON2D, "taxi", "key", False)], outcomes=OutcomeSet())
+
+    learn_outcomes(test_rule, example_set)
+    print("Resulting test rule:")
+    print(test_rule)
+
+    # best_rule = find_greedy_rule_by_removing_lits(example_set, relevant_examples, [])
+    # print("Best rule: ")
+    # print(best_rule)

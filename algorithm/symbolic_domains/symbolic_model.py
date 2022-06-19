@@ -1,6 +1,7 @@
 from typing import List
 import logging
 import pickle
+import sys
 
 from effects.effect import JointEffect
 from algorithm.transition_model import TransitionModel
@@ -61,7 +62,6 @@ class SymbolicModel(TransitionModel):
             if rule.action == action and context_matches(rule.context, literals):
                 if len(rule.outcomes.outcomes) > 1:
                     print("Rule had too many outcomes")
-                    import sys
                     sys.exit(1)
 
                 # Assume discrete
@@ -80,20 +80,37 @@ class SymbolicModel(TransitionModel):
                     class_idx = self.env.OB_NAMES.index(class_str)
                     att_idx_str = self.env.ATT_NAMES[class_idx].index(att_idx_str)
 
-                    att = -1
                     if class_str == "taxi":
                         att = 0 if att_idx_str == "x" else 1
                     else:
-                        print("I do not know what to do with this class ")
-                        import sys
-                        sys.exit(1)
-                    # print(self.env.instance_index_map)
-                    # print(self.env.state_index_class_map)
-                    # print(self.env.state_index_class_index_map)
-                    # print(class_str, att_idx_str, class_idx, att_idx_str)
+                        # print("I do not know what to do with this class ")
+                        # print(rule)
+                        # print(class_str, att_idx_str)
+                        # print([literal for literal in literals if literal.value])
+                        # print(groundings)
+
+                        # First, find how the key is referred to.
+                        references = [lit for lit in rule.context if lit.object2 == class_str]
+                        if len(references) == 0 or len(references) == 2:
+                            print(f"Whoops, how can we refer to the object if the references are {references}")
+                            sys.exit(1)
+
+                        # Get the referring literal, and
+                        # Use the dict to convert that reference to the object it refers to
+                        reference = references[0]
+                        grounding = groundings[reference]
+
+                        # Convert the grounding to the indecies of it's state variables
+                        att_range = self.env.instance_index_map[grounding]
+                        # The attribute to change is the start of this objects attribute in the global list,
+                        # plus which attribute it is in that object specifically
+                        # Note this only works if the objects in the grounding from get_literals are in the same
+                        # order as the objects attributes order is considered
+                        att = att_range[0] + int(att_idx_str)
 
                     atts.append(att)
                     outcomes.append(outcome)
+
 
                 # Only create new effect if it isn't a JointNoEffect
                 if len(atts) > 0:
