@@ -40,5 +40,5 @@ def learn_outcomes(rule: Rule, examples: ExampleSet):
     rule.outcomes.probabilities = learn_params(rule, examples)
 
     # print(f"Final probabilities: {rule.outcomes.probabilities}")
-    score = rule_score(rule, examples)
+    # score = rule_score(rule, examples)
     # print(f"Rule score: {score:0.4}")

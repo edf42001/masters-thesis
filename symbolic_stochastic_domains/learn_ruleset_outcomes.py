@@ -8,6 +8,21 @@ from symbolic_stochastic_domains.learn_outcomes import learn_outcomes
 from effects.effect import JointNoEffect
 
 
+def only_applies_to_outcome(rule: Rule, examples: ExampleSet):
+    """
+    Checks that a rule only covers examples with the one outcome in the rule's outcome set
+    For example, if we're trying to find a rule that says when the taxi moves down, we don't want to also
+    cover examples where we don't move
+    """
+    outcome = rule.outcomes.outcomes[0]  # Only one outcome allowed
+    for example in examples.examples.keys():
+        # Is the outcome different? And if so, is this a rule we cover? If so, that is bad, return False
+        if example.outcome != outcome and rule.action == example.action and context_matches(rule.context, example.state_set):
+            return False
+
+    return True
+
+
 def applicable_by_outcome(rule: Rule, example: Example, outcome: Outcome):
     return (
             rule.action == example.action and
@@ -43,9 +58,6 @@ def get_all_literals(example: Example):
 # What is the best way to figure out the minimal set that covers the maximum examples?
 # Structure learning, multiple instance learning?
 def find_greedy_rule_by_adding_lits(examples: ExampleSet, relevant_examples: List[Example], irrelevant_examples: List[Example]):
-    valid_outcomes = OutcomeSet()
-    valid_outcomes.add_outcome(relevant_examples[0].outcome, 1.0)
-
     # In the case where only one action causes an effect, we can just get it from the relevant examples
     action = relevant_examples[0].action
 
@@ -64,8 +76,9 @@ def find_greedy_rule_by_adding_lits(examples: ExampleSet, relevant_examples: Lis
         best_rule = None
         for context in test_contexts:  # Iterate over each context
             # Make a rule with that context
-            rule = Rule(action=action, context=context, outcomes=OutcomeSet())
-            learn_outcomes(rule, examples)
+            outcomes = OutcomeSet()
+            outcomes.add_outcome(relevant_examples[0].outcome, 1.0)
+            rule = Rule(action=action, context=context, outcomes=outcomes)
 
             # Make sure we have a reference to each object, but ignore taxi for now, that is referenced in the action
             objects_in_context = set([lit.object2 for lit in rule.context if lit.value])
@@ -74,7 +87,7 @@ def find_greedy_rule_by_adding_lits(examples: ExampleSet, relevant_examples: Lis
             # TODO: this is inefficient, let's give up on the first false positive, instead of calling learn_outcomes
             if (
                 have_correct_deictic_references and
-                rule.outcomes == valid_outcomes and not
+                only_applies_to_outcome(rule, examples) and not
                 any([applicable(rule, example) for example in irrelevant_examples])
             ):
                 # if action == 2:  # Ok, looks like there are some issues with my method.
@@ -120,9 +133,6 @@ def find_greedy_rule_by_adding_lits(examples: ExampleSet, relevant_examples: Lis
 
 
 def find_greedy_rule_by_removing_lits(examples: ExampleSet, relevant_examples: List[Example], irrelevant_examples: List[Example]):
-    valid_outcomes = OutcomeSet()
-    valid_outcomes.add_outcome(relevant_examples[0].outcome, 1.0)
-
     # print("Finding rule by removing lits")
 
     new_rules = []  # Could probably remove these by keeping only the best rule, but what if there is a tie?
@@ -138,7 +148,9 @@ def find_greedy_rule_by_removing_lits(examples: ExampleSet, relevant_examples: L
 
     # Try to explain each example
     for example in relevant_examples:
-        rule = Rule(action=action, context=[], outcomes=OutcomeSet())
+        outcomes = OutcomeSet()
+        outcomes.add_outcome(relevant_examples[0].outcome, 1.0)
+        rule = Rule(action=action, context=[], outcomes=outcomes)
         rule.context = [lit.copy() for lit in example.state]  # Start by fully describing the example
         # print(example)
 
@@ -152,9 +164,6 @@ def find_greedy_rule_by_removing_lits(examples: ExampleSet, relevant_examples: L
         while i < len(rule.context):
             literal = rule.context.pop(i)
             # print(f"Trying to remove {literal}")
-
-            # Update outcomes for the new rule:
-            learn_outcomes(rule, examples)
 
             # Ensure it only covers these outcomes, and not any in irrelevant examples
             # The second object is relavant, first is just taxi. Will need to find some other way to refer to taxi
@@ -171,7 +180,7 @@ def find_greedy_rule_by_removing_lits(examples: ExampleSet, relevant_examples: L
             # TODO: this is inefficient, let's give up on the first false positive, instead of calling learn_outcomes
             if (
                 have_correct_deictic_references and
-                rule.outcomes == valid_outcomes and not
+                only_applies_to_outcome(rule, examples) and not
                 any([applicable(rule, example) for example in irrelevant_examples])
             ):
                 i = 0
