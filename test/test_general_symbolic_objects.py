@@ -29,11 +29,13 @@ if __name__ == "__main__":
     example_set = ExampleSet()
 
     # for action in actions:
-    for i in range(54):
+    for i in range(1120):  # This breaks at 1130, due to trying to go down while touching a door
         action = random.randint(0, env.get_num_actions()-1)
         curr_state = env.get_state()
         observation = env.step(action)
         literals, bindings = env.get_literals(curr_state)
+
+        # env.draw_world(curr_state, delay=1)
 
         outcome = Outcome(observation)
         example = Example(action, literals, outcome)

@@ -403,7 +403,7 @@ class AddLits:
             # Go through, make each of these false, and add a copy that is true
             # Found a bug where copied_literal was from i instead of l, which is why don't use that as iteration counter
             # However it didn't seem to affect anything?
-            for l in range(num_literals):
+            for l in range(num_literals):  # Need to use num literals because we append lits to the list as we go
                 literals[l].value = False
                 # TODO: Same here
                 literals[l].hash = hash((literals[l].type, literals[l].value, literals[l].object1, literals[l].object2))
@@ -525,5 +525,3 @@ def learn_ruleset(examples: ExampleSet, init_ruleset=None) -> RuleSet:
     print(ruleset)
 
     return ruleset
-
-

@@ -22,6 +22,23 @@ def print_examples_rule_covers(rule: Rule, examples: ExampleSet):
         print(f"Outcome: {outcome}: {applicable}")
 
 
+def get_all_literals(example: Example):
+    # Using the literals from an example (which always contains all literals),
+    # duplicates them to generate all combinations of literals
+    literals = [lit.copy() for lit in example.state]
+    num_literals = len(literals)
+
+    for l in range(num_literals):  # Need to use num literals because we append lits to the list as we go
+        literals[l].value = False
+        literals[l].hash = hash((literals[l].type, literals[l].value, literals[l].object1, literals[l].object2))
+        copied_literal = literals[l].copy()
+        copied_literal.value = True
+        copied_literal.hash = hash((copied_literal.type, copied_literal.value, copied_literal.object1, copied_literal.object2))
+        literals.append(copied_literal)
+
+    return literals
+
+
 # Perhaps I need to remake the rules but in this manner
 # What is the best way to figure out the minimal set that covers the maximum examples?
 # Structure learning, multiple instance learning?
@@ -29,8 +46,77 @@ def find_greedy_rule_by_adding_lits(examples: ExampleSet, relevant_examples: Lis
     valid_outcomes = OutcomeSet()
     valid_outcomes.add_outcome(relevant_examples[0].outcome, 1.0)
 
-    new_rules = []
-    scores = []
+    # In the case where only one action causes an effect, we can just get it from the relevant examples
+    action = relevant_examples[0].action
+
+    # FInd the list of objects referred to in the outcomes that we must have deictic references for
+    # In order for an object ot be in outcomes, MUST be in either action or conditions
+    objects_in_outcome = set([key.split(".")[0] for key in relevant_examples[0].outcome.outcome.value.keys()])
+
+    # List of test contexts to try
+    test_contexts = [[]]
+
+    level = 0  # Current level of # literals in context
+
+    # For now, only try up to two literals in the context
+    while level < 3:
+        best_score = -1
+        best_rule = None
+        for context in test_contexts:  # Iterate over each context
+            # Make a rule with that context
+            rule = Rule(action=action, context=context, outcomes=OutcomeSet())
+            learn_outcomes(rule, examples)
+
+            # Make sure we have a reference to each object, but ignore taxi for now, that is referenced in the action
+            objects_in_context = set([lit.object2 for lit in rule.context if lit.value])
+            have_correct_deictic_references = all([(obj == "taxi" or obj in objects_in_context) for obj in objects_in_outcome])
+
+            # TODO: this is inefficient, let's give up on the first false positive, instead of calling learn_outcomes
+            if (
+                have_correct_deictic_references and
+                rule.outcomes == valid_outcomes and not
+                any([applicable(rule, example) for example in irrelevant_examples])
+            ):
+                # if action == 2:  # Ok, looks like there are some issues with my method.
+                    # It's not just ~TouchDown(taxi, wall), because there's also the issue of when the taxi runs into
+                    # an open door. So ~touchDown covers most, but not all scenarios.
+                    # Yup, if you look at the ratios, ~TouchDown2D(taxi, wall) as 99% increment, 0.0099 no effect
+                    # TODO: This implies a tree learning method is still the best
+                    # print()
+                    # print("Action 2:")
+                    # print(rule)
+                    # for ex in relevant_examples:
+                    #     print(ex)
+                    # print(irrelevant_examples)
+                # If the rule is good, record its score. Score is number of examples in relevant set this applies to.
+                score = sum([examples.examples[example] for example in relevant_examples if applicable(rule, example)])
+                # print(score, best_score)
+                if score >= best_score:
+                    best_score = score
+                    best_rule = rule
+
+        # If we found a valid rule, this will be the best, adding any more context will make it cover less
+        if best_rule is not None:
+            return best_rule
+
+        # Otherwise, try adding every literal to every literal in the context and trying again
+        level += 1
+        new_contexts = []
+        all_literals = get_all_literals(relevant_examples[0])
+        for context in test_contexts:
+            for literal in all_literals:
+                if literal not in context:
+                    new_context = context.copy()
+                    new_context.append(literal)
+                    new_contexts.append(new_context)
+
+        test_contexts = new_contexts
+    # If we get down here, we weren't able to do it with only two literals
+    # TODO: for the case of Action 5: {[In(taxi, key), TouchDown2D(taxi, lock)]}, we should see if it is faster
+    # to do additive or subtractive
+    print("No rule found :(")
+    # TODO: could try using subtraction method in this instance only
+    return None
 
 
 def find_greedy_rule_by_removing_lits(examples: ExampleSet, relevant_examples: List[Example], irrelevant_examples: List[Example]):
@@ -39,10 +125,10 @@ def find_greedy_rule_by_removing_lits(examples: ExampleSet, relevant_examples: L
 
     # print("Finding rule by removing lits")
 
-    new_rules = []
+    new_rules = []  # Could probably remove these by keeping only the best rule, but what if there is a tie?
     scores = []
 
-    # In the case where only one action causes an effect, we can just get it from the relavant examples
+    # In the case where only one action causes an effect, we can just get it from the relevant examples
     action = relevant_examples[0].action
 
     # FInd the list of objects referred to in the outcomes that we must have deictic references for
@@ -141,7 +227,8 @@ def learn_minimal_ruleset_for_outcome(examples: ExampleSet, outcome: Outcome) ->
         # best_rule = find_optimal_greedy_rule(examples, relevant_examples)
         # rules.append(best_rule)
 
-        best_rule = find_greedy_rule_by_removing_lits(examples, relevant_examples, irrelevant_examples)
+        # best_rule = find_greedy_rule_by_removing_lits(examples, relevant_examples, irrelevant_examples)
+        best_rule = find_greedy_rule_by_adding_lits(examples, relevant_examples, irrelevant_examples)
         rules.append(best_rule)
 
         # Update relevant examples
@@ -169,7 +256,7 @@ def learn_ruleset_outcomes(examples: ExampleSet) -> RuleSet:
     For each outcome, finds the minimal set of rules that explains that and only that (for deterministic world)
     """
 
-    # RUleset for an example form a if (A ^ B) v (~C) v (D) structure where the rules are or'd.
+    # Ruleset for an example form a if (A ^ B) v (~C) v (D) structure where the rules are or'd.
 
     # First, get a list of every unique outcome
     unique_outcomes = []
