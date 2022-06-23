@@ -35,7 +35,7 @@ class SymbolicModel(TransitionModel):
 
         # Convert the observation to an outcome, combine with the set of literals to get an example to add to memory
         outcome = Outcome(obs)
-        literals, groundings = self.env.get_literals(state)
+        literals, groundings, properties = self.env.get_literals(state)
         example = Example(action, literals, outcome)
         self.examples.add_example(example)
 
@@ -56,7 +56,7 @@ class SymbolicModel(TransitionModel):
         If unknown, return None
         """
 
-        literals, groundings = self.env.get_literals(state)
+        literals, groundings, properties = self.env.get_literals(state)
 
         transitions = []
 

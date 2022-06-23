@@ -72,7 +72,7 @@ def find_greedy_rule_by_adding_lits(examples: ExampleSet, relevant_examples: Lis
 
     # For now, only try up to two literals in the context
     while level < 3:
-        best_score = -1
+        best_score = 1  # Start at 1 to fix a bug where it sometimes chose rules that covered 0 examples
         best_rule = None
         for context in test_contexts:  # Iterate over each context
             # Make a rule with that context
@@ -103,13 +103,15 @@ def find_greedy_rule_by_adding_lits(examples: ExampleSet, relevant_examples: Lis
                     # print(irrelevant_examples)
                 # If the rule is good, record its score. Score is number of examples in relevant set this applies to.
                 score = sum([examples.examples[example] for example in relevant_examples if applicable(rule, example)])
-                # print(score, best_score)
                 if score >= best_score:
                     best_score = score
                     best_rule = rule
 
         # If we found a valid rule, this will be the best, adding any more context will make it cover less
         if best_rule is not None:
+            # print(f"Returning best rule: score = {best_score}")
+            # print(best_rule)
+            # print()
             return best_rule
 
         # Otherwise, try adding every literal to every literal in the context and trying again
@@ -186,7 +188,7 @@ def find_greedy_rule_by_removing_lits(examples: ExampleSet, relevant_examples: L
                 i = 0
                 # Score is number of examples in relevant set this applies to.
                 score = sum([examples.examples[example] for example in relevant_examples if applicable(rule, example)])
-                # print(f"Current score: {score}")
+                # print(f"Current score: {score}, best_score: {best_score}")
                 if score >= best_score:
                     # TODO: Is this the most effecient way of calculating?
                     i = 0  # We actually want to keep going in this case, the ones that were bad are at the front
@@ -224,8 +226,9 @@ def learn_minimal_ruleset_for_outcome(examples: ExampleSet, outcome: Outcome) ->
 
     relevant_examples = [ex for ex in examples.examples.keys() if ex.outcome == outcome]
     irrelevant_examples = []
-
+    i = 6
     while len(relevant_examples) > 0:
+        i-=1
         # print("Relevant examples:")
         # for ex in relevant_examples:
         #     print(ex)
@@ -240,17 +243,24 @@ def learn_minimal_ruleset_for_outcome(examples: ExampleSet, outcome: Outcome) ->
         best_rule = find_greedy_rule_by_adding_lits(examples, relevant_examples, irrelevant_examples)
         rules.append(best_rule)
 
-        # Update relevant examples
-        irrelevant_examples = [example for example in relevant_examples if applicable(best_rule, example)]
+        # Update relevant examples by removing ones the new rule didn't apply to, add those ones to irrelevant examples
+        irrelevant_examples.extend([example for example in relevant_examples if applicable(best_rule, example)])
         relevant_examples = [example for example in relevant_examples if not applicable(best_rule, example)]
         # print("Remaining relevant examples")
         # for ex in relevant_examples:
+        #     print(ex)
+        # print()
+        # print("irrelevant examples")
+        # for ex in irrelevant_examples:
         #     print(ex)
         # print()
 
         # Somehow we need to learn that the thing that explains this example is
         # TouchRight(taxi, door), Open(door, door), and
         # not any of the other things.
+
+        if i == 0:
+            break
 
     # print("Final ruleset:")
     # for rule in rules:
@@ -282,6 +292,7 @@ def learn_ruleset_outcomes(examples: ExampleSet) -> RuleSet:
     # print(unique_outcomes)
 
     # Learn the rules for each outcome
+    # unique_outcomes = [unique_outcomes[1]]  # Testing outcome
     rules = []
     for outcome in unique_outcomes:
         new_rules = learn_minimal_ruleset_for_outcome(examples, outcome)

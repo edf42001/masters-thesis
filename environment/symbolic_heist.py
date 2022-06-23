@@ -73,7 +73,7 @@ class SymbolicHeist(Environment):
         PredicateType.TOUCH_DOWN2D: [[OB_TAXI], [OB_KEY, OB_LOCK, OB_GEM]],
         PredicateType.ON2D: [[OB_TAXI], [OB_KEY, OB_LOCK, OB_GEM]],
         PredicateType.IN: [[OB_TAXI], [OB_KEY, OB_GEM]],
-        PredicateType.OPEN: [[OB_LOCK]]
+        # PredicateType.OPEN: [[OB_LOCK]]
     }
 
     # Conditions
@@ -174,6 +174,7 @@ class SymbolicHeist(Environment):
         objects = self.get_object_list(state)
 
         bindings = dict()  # Dictionary that for each predicate that references an object, which object?
+        properties = dict()  # Dictionary for object properties. Basically, if we have a lock that is open, which lock?
 
         predicates = []
 
@@ -181,49 +182,55 @@ class SymbolicHeist(Environment):
         ob_index_range_map = np.cumsum(self.OB_COUNT)
 
         for p_type, mappings in self.PREDICATE_MAPPINGS.items():
-            if len(mappings) == 1:
-                # One arity predicate
-                objects1 = mappings[0]
-                for ob_id in objects1:
-                    # This is duplicate code. Anything we can do about that?
+            # if len(mappings) == 1:
+            #     # One arity predicate
+            #     objects1 = mappings[0]
+            #     for ob_id in objects1:
+            #         # This is duplicate code. Anything we can do about that?
+            #         found = False
+            #         for ob_idx in range(ob_index_range_map[ob_id-1], ob_index_range_map[ob_id]):
+            #             pred = Predicate.create(p_type, objects[ob_idx], objects[ob_idx])
+            #             if pred.value:
+            #                 predicates.append(pred)
+            #                 bindings[pred] = ob_idx
+            #                 found = True
+            #                 break
+            #         if not found:
+            #             # Any will do
+            #             predicates.append(Predicate.create(p_type, objects[ob_idx], objects[ob_idx]))  # note duplicate
+            # else:
+            # Create predicates combining every object in the first list with every object from the second
+            objects1 = mappings[0]
+            objects2 = mappings[1]
+            for ob1_id in objects1:  # Could do the same here only have single taxi for now though
+                for ob2_id in objects2:
+                    # Find if any object makes the condition true. Return true then, otherwise, false
+                    # TODO: But wait, what about the fact that multiple locks can be open at once? Does
+                    # it not matter because they can't be in the same place at once? I think that might be it
                     found = False
-                    for ob_idx in range(ob_index_range_map[ob_id-1], ob_index_range_map[ob_id]):
-                        pred = Predicate.create(p_type, objects[ob_idx], objects[ob_idx])
+                    for ob2_idx in range(ob_index_range_map[ob2_id-1], ob_index_range_map[ob2_id]):
+                        pred = Predicate.create(p_type, objects[ob1_id], objects[ob2_idx])
                         if pred.value:
                             predicates.append(pred)
-                            bindings[pred] = ob_idx
+                            bindings[pred] = ob2_idx
                             found = True
+
+                            # If we found a valid predicate and it has an object with a property in it, record it
+                            # mapping from predicate referencing the object to the other predicate
+                            # Would it be easier for predicate objects to have ids for each object as well as names?
+                            if type(objects[ob2_idx]) is Lock2D:
+                                properties[pred] = Predicate.create(PredicateType.OPEN, objects[ob2_idx], objects[ob2_idx])
                             break
                     if not found:
-                        # Any will do
-                        predicates.append(Predicate.create(p_type, objects[ob_idx], objects[ob_idx]))  # note duplicate
-            else:
-                # Create predicates combining every object in the first list with every object from the second
-                objects1 = mappings[0]
-                objects2 = mappings[1]
-                for ob1_id in objects1:  # Could do the same here only have single taxi for now though
-                    for ob2_id in objects2:
-                        # Find if any object makes the condition true. Return true then, otherwise, false
-                        # TODO: But wait, what about the fact that multiple locks can be open at once? Does
-                        # it not matter because they can't be in the same place at once? I think that might be it
-                        found = False
-                        for ob2_idx in range(ob_index_range_map[ob2_id-1], ob_index_range_map[ob2_id]):
-                            pred = Predicate.create(p_type, objects[ob1_id], objects[ob2_idx])
-                            if pred.value:
-                                predicates.append(pred)
-                                bindings[pred] = ob2_idx
-                                found = True
-                                break
-                        if not found:
-                            # Any will do
-                            predicates.append(Predicate.create(p_type, objects[ob1_id], objects[ob2_idx]))
+                        # Any will do. Will always be false.
+                        predicates.append(Predicate.create(p_type, objects[ob1_id], objects[ob2_idx]))
 
         # TODO: Do walls need to be handled separately. Also technically this needs all the types, including on and in
         for p_type in [PredicateType.TOUCH_LEFT2D, PredicateType.TOUCH_RIGHT2D,
                        PredicateType.TOUCH_UP2D, PredicateType.TOUCH_DOWN2D]:
             predicates.append(Predicate.create(p_type, objects[self.OB_TAXI], objects[-1]))  # Objects -1 is the wall
 
-        return predicates, bindings
+        return predicates, bindings, properties
 
     def get_condition(self, state: int):
         """Convert state vars to O-O conditions, return grounded instances for each True condition"""
@@ -575,5 +582,5 @@ class SymbolicHeist(Environment):
                 cv2.circle(img, (int((taxi_x + 0.5) * GRID_SIZE), int((HEIGHT - (taxi_y + 0.5)) * GRID_SIZE)), int(GRID_SIZE * 0.2),
                            thickness=-1, color=[0, 0.7, 0.7])
 
-        cv2.imshow("Taxi World", img)
+        cv2.imshow("Heist World", img)
         cv2.waitKey(delay)
