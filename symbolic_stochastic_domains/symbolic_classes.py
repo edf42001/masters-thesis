@@ -1,4 +1,4 @@
-from typing import List, Dict
+from typing import List, Dict, Tuple
 
 from effects.effect import JointEffect
 from symbolic_stochastic_domains.predicates_and_objects import Predicate
@@ -95,7 +95,7 @@ class Example:
 
     def __str__(self):
         # Only show true literals in the example
-        return f"Action {self.action}: {[lit for lit in self.state if lit.value]} --> {self.outcome}"
+        return f"Action {self.action}: {self.state} --> {self.outcome}"
 
     def __repr__(self):
         return self.__str__()

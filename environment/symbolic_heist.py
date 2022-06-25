@@ -168,145 +168,100 @@ class SymbolicHeist(Environment):
         return objects
 
     def get_literals(self, state: int) -> Tuple[List[Predicate], Dict[Predicate, int]]:
-        """Converts state to the literals from that state"""
+        """Converts state to the literals from that state using variables to refer to objects"""
 
         # Get object list from the current state
         objects = self.get_object_list(state)
 
-        bindings = dict()  # Dictionary that for each predicate that references an object, which object?
-        properties = dict()  # Dictionary for object properties. Basically, if we have a lock that is open, which lock?
-
         predicates = []
 
-        # Find the start and end indices for each object type
+        # To create unique ids for each object, but that don't depend on which object is which
+        object_reference_counts = {name: 0 for name in self.OB_NAMES}  # Like {'taxi': 0, 'key': 1, 'lock': 0, 'gem': 0}
+
+        # Object id to it's name in this state, i.e {3: key0, 4: key2, 0: taxi0}
+        ob_index_name_map = dict()
+
+        # predicate_to_referenced_ob_map = dict()  # {TouchUp2D(taxi, key): [taxi0, key1]} So we know which refer to which
+
+        # Find the start and end indices for each object type, so we can iterate over all objects of a type
         ob_index_range_map = np.cumsum(self.OB_COUNT)
 
         for p_type, mappings in self.PREDICATE_MAPPINGS.items():
-            # if len(mappings) == 1:
-            #     # One arity predicate
-            #     objects1 = mappings[0]
-            #     for ob_id in objects1:
-            #         # This is duplicate code. Anything we can do about that?
-            #         found = False
-            #         for ob_idx in range(ob_index_range_map[ob_id-1], ob_index_range_map[ob_id]):
-            #             pred = Predicate.create(p_type, objects[ob_idx], objects[ob_idx])
-            #             if pred.value:
-            #                 predicates.append(pred)
-            #                 bindings[pred] = ob_idx
-            #                 found = True
-            #                 break
-            #         if not found:
-            #             # Any will do
-            #             predicates.append(Predicate.create(p_type, objects[ob_idx], objects[ob_idx]))  # note duplicate
-            # else:
-            # Create predicates combining every object in the first list with every object from the second
-            objects1 = mappings[0]
+            objects1 = mappings[0]  # The mappings define which objects can be together
             objects2 = mappings[1]
             for ob1_id in objects1:  # Could do the same here only have single taxi for now though
                 for ob2_id in objects2:
-                    # Find if any object makes the condition true. Return true then, otherwise, false
-                    # TODO: But wait, what about the fact that multiple locks can be open at once? Does
-                    # it not matter because they can't be in the same place at once? I think that might be it
-                    found = False
+                    # Find if any object makes the condition true. Only add predicates for true values
+                    # Check every object of that type
                     for ob2_idx in range(ob_index_range_map[ob2_id-1], ob_index_range_map[ob2_id]):
                         pred = Predicate.create(p_type, objects[ob1_id], objects[ob2_idx])
                         if pred.value:
+                            # Convert the objects to unique variable names
+                            # If we have already encountered this object, reuse the name
+                            if ob1_id in ob_index_name_map:
+                                new_name1 = ob_index_name_map[ob1_id]
+                            else:
+                                # Extract the class name, and append the id to the end of it
+                                ob_name = objects[ob1_id].name
+                                new_name1 = ob_name + str(object_reference_counts[ob_name])
+                                object_reference_counts[ob_name] += 1  # So the next will have a new name
+                                # Store this in the name map so if we encounter it again we can refer to it
+                                ob_index_name_map[ob1_id] = new_name1
+
+                            if ob2_idx in ob_index_name_map:
+                                new_name2 = ob_index_name_map[ob2_idx]
+                            else:
+                                # Extract the class name, and append the id to the end of it
+                                ob_name = objects[ob2_idx].name
+                                new_name2 = ob_name + str(object_reference_counts[ob_name])
+                                object_reference_counts[ob_name] += 1  # So the next will have a new name
+                                # Store this in the name map so if we encounter it again we can refer to it
+                                ob_index_name_map[ob2_idx] = new_name2
+
+                            # Recreate the object, but swap the names out for the variables
+                            pred = type(pred)(pred.type, new_name1, new_name2, pred.value)
+                            # predicate_to_referenced_ob_map[pred] = [new_name1, new_name2]
+
                             predicates.append(pred)
-                            bindings[pred] = ob2_idx
-                            found = True
 
-                            # If we found a valid predicate and it has an object with a property in it, record it
-                            # mapping from predicate referencing the object to the other predicate
-                            # Would it be easier for predicate objects to have ids for each object as well as names?
+                            # Handle properties separately
                             if type(objects[ob2_idx]) is Lock2D:
-                                properties[pred] = Predicate.create(PredicateType.OPEN, objects[ob2_idx], objects[ob2_idx])
-                            break
-                    if not found:
-                        # Any will do. Will always be false.
-                        predicates.append(Predicate.create(p_type, objects[ob1_id], objects[ob2_idx]))
+                                pred = Predicate.create(PredicateType.OPEN, objects[ob2_idx], objects[ob2_idx])
+                                if pred.value:
+                                    pred = type(pred)(pred.type, new_name2, new_name2, pred.value)
+                                    predicates.append(pred)
 
+                            # Only one object can satisfy the condition at a time, so no need to keep searching
+                            break
+
+        # Walls are currently handled separately because they are static
         # TODO: Do walls need to be handled separately. Also technically this needs all the types, including on and in
+
         for p_type in [PredicateType.TOUCH_LEFT2D, PredicateType.TOUCH_RIGHT2D,
                        PredicateType.TOUCH_UP2D, PredicateType.TOUCH_DOWN2D]:
-            predicates.append(Predicate.create(p_type, objects[self.OB_TAXI], objects[-1]))  # Objects -1 is the wall
+            pred = Predicate.create(p_type, objects[self.OB_TAXI], objects[-1])  # Objects -1 is the wall
+            if pred.value:
+                # This is very hacky, lets just assume one taxi and wall for now
+                ob_index_name_map[-1] = "wall0"
+                pred = type(pred)(pred.type, "taxi0", "wall0", pred.value)
+                predicates.append(pred)
+                # predicate_to_referenced_ob_map[pred] = ["taxi0", "wall0"]
 
-        return predicates, bindings, properties
+        # Note: The taxi is referenced by the action (MoveLeft(taxi0)) for example. We need to add this in or
+        # it won't be able to refer to the taxi in instances when there are no other predicates
+        if 0 not in ob_index_name_map:  # Manually put the taxi in there if it is not
+            ob_index_name_map[0] = "taxi0"
 
-    def get_condition(self, state: int):
-        """Convert state vars to O-O conditions, return grounded instances for each True condition"""
-        # Convert flat state to factored state
-        if isinstance(state, (int, np.integer)):
-            state = self.get_factored_state(state)
+        # TODO: Could also have the predicates just use "taxi" instead of "taxi0", but then have a dict for
+        # each predicate to it's mappings: {Predicate: ["taxi0", "key1"]}, which might help with hashing
 
-        conditions = [False] * self.NUM_COND
-        groundings = [None] * self.NUM_COND
+        return predicates, ob_index_name_map #, predicate_to_referenced_ob_map
 
-        pos = (state[self.S_X], state[self.S_Y])
+        # # If we found a valid predicate and it has an object with a property in it, record it
+        # # mapping from predicate referencing the object to the other predicate
+        # # Would it be easier for predicate objects to have ids for each object as well as names?
 
-        # touch(N/E/S/W wall): indexes 0 through 3
-        conditions[0] = pos in self.walls['N']
-        conditions[1] = pos in self.walls['E']
-        conditions[2] = pos in self.walls['S']
-        conditions[3] = pos in self.walls['W']
-
-        # Get the status of each key/lock/gem
-        keys = state[self.S_KEY_1: self.S_KEY_5 + 1]
-        locks = state[self.S_LOCK_1: self.S_LOCK_3 + 1]
-        gem = state[self.S_GEM]
-
-        # Get the (possibly illegal) surrounding locations
-        surroundings = [(pos[0], pos[1] - 1),
-                        (pos[0] + 1, pos[1]),
-                        (pos[0], pos[1] + 1),
-                        (pos[0] - 1, pos[1])]
-
-        # touch(N/E/S/W lock): indexes 4 through 7
-        touch_lock_base_idx = 4
-        # Check if a lock exists at surrounding locations
-        for i, s in enumerate(surroundings):
-            try:
-                # Check that a locked lock (value 1) exists at s
-                lock_idx = self.locks.index(s)
-                if locks[lock_idx] == 1:
-                    lock_state_idx = self.S_LOCK_1 + lock_idx
-                    conditions[touch_lock_base_idx + i] = True
-                    groundings[touch_lock_base_idx + i] = self.state_index_instance_map[lock_state_idx]
-                    break
-            except ValueError:
-                # s is not a valid location for a lock
-                pass
-
-        # on(key): index 8
-        try:
-            # Check that an available key (value 1) exists at pos
-            key_idx = self.keys.index(pos)
-            if keys[key_idx] == 1:
-                key_state_idx = self.S_KEY_1 + key_idx
-                conditions[8] = True
-                groundings[8] = self.state_index_instance_map[key_state_idx]
-        except ValueError:
-            # pos is not a valid location for a key
-            pass
-
-        # on(gem): index 9
-        conditions[9] = pos == self.gem and gem == 0  # There is only one gem so we don't really need to ground it
-
-        # hold(key): index 10
-        try:
-            key_idx = keys.index(2)
-            key_state_idx = self.S_KEY_1 + key_idx
-            conditions[10] = True
-            groundings[10] = self.state_index_instance_map[key_state_idx]
-        except ValueError:
-            # There are no held keys
-            pass
-
-        # hold(gem): index 11
-        conditions[11] = gem == 1  # There is only one gem so we don't really need to ground it
-
-        return conditions, groundings
-
-    def step(self, action: int) -> List[JointEffect]:
+    def step(self, action: int) -> JointEffect:
         """Stochastically apply action to environment"""
         state = self.curr_state
         x, y, keys, locks, gem = \
@@ -382,55 +337,43 @@ class SymbolicHeist(Environment):
         else:
             self.last_reward = self.R_DEFAULT
 
-        # Calculate outcome or effect
-        if self.use_outcomes:
-            observation = [self.O_NO_CHANGE] * self.NUM_ATT
+        # Get the correct effect type for each attribute. This is pretty good, but it would be better if it
+        # was on a per class basis, that is then mapped. So lets map the attribute to a class,
+        # and then we can reverse it using the groundings
 
-            # Movement and picking up the gem can only affect one attribute
-            # Keys and locks can change at the same time, but only one of each
-            if x != next_x:
-                observation[self.S_X] = self.A_WEST if next_x < x else self.A_EAST
-            elif y != next_y:
-                observation[self.S_Y] = self.A_NORTH if next_y < y else self.A_SOUTH
-            elif gem != next_gem:
-                observation[self.S_GEM] = self.A_PICKUP
-            else:
-                for i, (key, next_key) in enumerate(zip(keys, next_keys)):
-                    if key != next_key:
-                        observation[self.S_KEY_1 + i] = self.A_PICKUP if next_key == 2 else self.A_UNLOCK
-                        break
-                for i, (lock, next_lock) in enumerate(zip(locks, next_locks)):
-                    if lock != next_lock:
-                        observation[self.S_LOCK_1 + i] = self.A_UNLOCK
-                        break
+        # In order to specify which object's attributes are changing, we need to know the variable groundings
+        # for this state. Thus, we get the literals in here, and return them from the step function
+        # As part of the observation
+        literals, ob_id_name_map = self.get_literals(self.get_flat_state(self.curr_state)) # predicate_to_ob_map
+
+        correct_types = [EffectType.INCREMENT] * 2 + [EffectType.SET_TO_NUMBER] * 8
+        effects = []
+        atts = []
+        obs_grounding = dict()  # class name to class unique identifier
+        for att, e_type in enumerate(correct_types):
+            if self.curr_state[att] != next_state[att]:
+                effects.append(Effect.create(e_type, self.curr_state[att], next_state[att]))
+
+                #  Whoops, this doesn't take into account the taxi has two variables
+                class_id = self.state_index_class_map[att]  # This one maps the att to the type of object
+                class_instance_id = self.state_index_instance_map[att]  # This one maps the att to the specific object
+                class_att_idx = self.state_index_class_index_map[att]  # If an object has many atts, this is which one
+
+                # Convert the class and att idx to a string. (For viewing only, this probably makes the code slower)
+                identifier = f"{ob_id_name_map[class_instance_id]}.{self.ATT_NAMES[class_id][class_att_idx]}"
+                # obs_grounding[self.OB_NAMES[class_id]] = ob_id_name_map[class_instance_id]
+
+                atts.append(identifier)
+
+        if len(effects) == 0:
+            observation = JointNoEffect()
         else:
-            # Get the correct effect type for each attribute. This is pretty good, but it would be better if it
-            # was on a per class basis, that is then mapped. So lets map the attribute to a class,
-            # and then we can reverse it using the groundings
-
-            correct_types = [EffectType.INCREMENT] * 2 + [EffectType.SET_TO_NUMBER] * 8
-            effects = []
-            atts = []
-            for att, e_type in enumerate(correct_types):
-                if self.curr_state[att] != next_state[att]:
-                    effects.append(Effect.create(e_type, self.curr_state[att], next_state[att]))
-
-                    class_id = self.state_index_class_map[att]  #  Whoops, this doesn't take into account the taxi has two variables
-                    class_att_idx = self.state_index_class_index_map[att]
-                    # Convert the class and att idx to a string. (For viewing only, this probably makes the code slower)
-                    identifier = f"{self.OB_NAMES[class_id]}.{self.ATT_NAMES[class_id][class_att_idx]}"
-
-                    atts.append(identifier)
-
-            if len(effects) == 0:
-                observation = JointNoEffect()
-            else:
-                observation = JointEffect(atts, effects)
+            observation = JointEffect(atts, effects)
 
         # Update current state
         self.curr_state = next_state
 
-        return observation
+        return observation, literals, ob_id_name_map #, predicate_to_ob_map, obs_grounding
 
     def compute_next_loc(self, x: int, y: int, locks: List[int], action: int) -> Tuple[int, int]:
         """Deterministically return the result of taking an action"""

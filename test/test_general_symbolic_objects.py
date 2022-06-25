@@ -4,12 +4,13 @@ Currently am testing with the taxi world
 """
 import random
 import numpy as np
+import time
 
 from environment.symbolic_heist import SymbolicHeist
 from symbolic_stochastic_domains.learn_ruleset_outcomes import learn_ruleset_outcomes
 from symbolic_stochastic_domains.symbolic_classes import ExampleSet, Outcome, Example, Rule, OutcomeSet
-from symbolic_stochastic_domains.predicates_and_objects import In, Open, TouchDown2D, PredicateType
-from symbolic_stochastic_domains.symbolic_utils import applicable
+from symbolic_stochastic_domains.predicates_and_objects import In, Open, TouchDown2D, PredicateType, On2D
+from symbolic_stochastic_domains.symbolic_utils import applicable, context_matches, applies_with_deictic
 from symbolic_stochastic_domains.learn_outcomes import learn_outcomes
 
 from effects.effect import JointNoEffect
@@ -22,29 +23,41 @@ if __name__ == "__main__":
     env = SymbolicHeist(stochastic=False, use_outcomes=False)
     env.restart()  # The env is being restarted twice in the runner, which means random key arrangements were different
 
-    # actions = [env.A_NORTH, env.A_SOUTH, env.A_EAST, env.A_WEST, env.A_NORTH, env.A_PICKUP, env.A_UNLOCK,
-    #            env.A_SOUTH, env.A_EAST, env.A_NORTH, env.A_NORTH, env.A_WEST, env.A_WEST,
-    #            env.A_SOUTH, env.A_UNLOCK, env.A_SOUTH]
+    examples = ExampleSet()
 
-    example_set = ExampleSet()
-
+    actions = [env.A_PICKUP, env.A_WEST, env.A_PICKUP]
     # for action in actions:
-    for i in range(1120):  # This breaks at 1130, due to trying to go down while touching a door
+    for i in range(1130):  # This breaks at 1130, due to trying to go down while touching a door
         action = random.randint(0, env.get_num_actions()-1)
         curr_state = env.get_state()
-        observation = env.step(action)
-        literals, bindings, properties = env.get_literals(curr_state)
+        observation, literals, ob_id_name_map = env.step(action) # , predicate_to_ob_map, obs_grounding
 
-        # if i > 1120:
-        #     print(f"Literals: {literals}")
-        #     print(f"Bindings: {bindings}")
-        #     print(f"Properties: {properties}")
-        #     print()
-            # env.draw_world(curr_state, delay=1000)
+        if i > 1120:
+            print(literals)
+            print(ob_id_name_map)
+            print(observation)
+            print()
+            # env.draw_world(curr_state, delay=700)
 
         outcome = Outcome(observation)
         example = Example(action, literals, outcome)
-        example_set.add_example(example)
+        examples.add_example(example)
+
+    print("Examples")
+    print(examples)
+    print()
+    # Rule: if a positive literal is in the context, it must be referred to in the deictic references
+    # But wait, aren't the references kindof similar to the context itself? They force matches to be found,
+    # If you put something in there it acts as context. Maybe I should just make my graph? Might be hard to learn
+    deictic_references = {"key3": On2D(PredicateType.ON2D, "taxi0", "key3", True)}
+    context = [In(PredicateType.IN, "taxi0", "key4", False)]
+
+    print("Applicable to:")
+    for example in examples.examples:
+        if applies_with_deictic(deictic_references, context, example.state):
+            print(f"Was applicable to {example}")
+        # else:
+            # print(f"Context did not match {example}")
 
     # The issue is that the taxi can not learn the correct ruleset, because we just have Open(lock, lock)
     # so when it touches the nonopen lock and tries to go down it doesn't, which means there's a conflict, because
@@ -58,9 +71,13 @@ if __name__ == "__main__":
     # I think I like the idea of predicates refering to specific object ids, as well as the class
     # for ex in example_set.examples:
     #     print(ex)
-    ruleset = learn_ruleset_outcomes(example_set)
-    print("Resulting ruleset:")
-    print(ruleset)
+    # start_time = time.perf_counter()
+    # # for i in range(10):
+    # ruleset = learn_ruleset_outcomes(example_set)
+    # end_time = time.perf_counter()
+    # print(f"Took {end_time-start_time}")
+    # print("Resulting ruleset:")
+    # print(ruleset)
     #
     # relevant_examples = [example for example in example_set.examples.keys() if example.action == 4 and type(example.outcome.outcome) is JointNoEffect]
     #
@@ -71,11 +88,3 @@ if __name__ == "__main__":
     # test_rule = Rule(action=2, references={TouchDown2D(PredicateType.TOUCH_DOWN2D, "taxi", "door", True): Open(PredicateType.OPEN, "door", "door", True)},
     #                  context=[TouchDown2D(PredicateType.TOUCH_DOWN2D, "taxi", "door", True),
     #                           Open(PredicateType.OPEN, "door", "door", True)], outcomes=OutcomeSet())
-    # print(test_rule)
-    # learn_outcomes(test_rule, example_set)
-    # print("Resulting test rule:")
-    # print(test_rule)
-
-    # best_rule = find_greedy_rule_by_removing_lits(example_set, relevant_examples, [])
-    # print("Best rule: ")
-    # print(best_rule)
