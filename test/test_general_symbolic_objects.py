@@ -10,8 +10,8 @@ from environment.symbolic_heist import SymbolicHeist
 from symbolic_stochastic_domains.learn_ruleset_outcomes import learn_ruleset_outcomes
 from symbolic_stochastic_domains.symbolic_classes import ExampleSet, Outcome, Example, Rule, OutcomeSet
 from symbolic_stochastic_domains.predicates_and_objects import In, Open, TouchDown2D, PredicateType, On2D
-from symbolic_stochastic_domains.symbolic_utils import applicable, context_matches, applies_with_deictic
-from symbolic_stochastic_domains.learn_outcomes import learn_outcomes
+from symbolic_stochastic_domains.symbolic_utils import applicable, context_matches
+from symbolic_stochastic_domains.predicate_tree import PredicateTree, Edge, Node
 
 from effects.effect import JointNoEffect
 
@@ -27,7 +27,7 @@ if __name__ == "__main__":
 
     actions = [env.A_PICKUP, env.A_WEST, env.A_PICKUP]
     # for action in actions:
-    for i in range(5):  # This breaks at 1130, due to trying to go down while touching a door
+    for i in range(40):  # This breaks at 1130, due to trying to go down while touching a door
         action = random.randint(0, env.get_num_actions()-1)
         curr_state = env.get_state()
         literals = env.get_literals(curr_state)
@@ -56,15 +56,17 @@ if __name__ == "__main__":
     # Rule: if a positive literal is in the context, it must be referred to in the deictic references
     # But wait, aren't the references kindof similar to the context itself? They force matches to be found,
     # If you put something in there it acts as context. Maybe I should just make my graph? Might be hard to learn
-    # deictic_references = {"key3": On2D(PredicateType.ON2D, "taxi0", "key3", True)}
-    # context = [In(PredicateType.IN, "taxi0", "key4", False)]
-    #
-    # print("Applicable to:")
-    # for example in examples.examples:
-    #     if applies_with_deictic(deictic_references, context, example.state):
-    #         print(f"Was applicable to {example}")
+    context = PredicateTree()
+    context.base_object.add_edge(Edge(PredicateType.ON2D, Node("key")))
+    context.base_object.add_negative_edge(Edge(PredicateType.IN, Node("key")))
+
+    print(f"Context: {context}")
+
+    for example in examples.examples:
+        if context_matches(context, example.state):
+            print(f"Context matched {example}")
         # else:
-            # print(f"Context did not match {example}")
+        #     print(f"Context did not match {example}")
 
     # The issue is that the taxi can not learn the correct ruleset, because we just have Open(lock, lock)
     # so when it touches the nonopen lock and tries to go down it doesn't, which means there's a conflict, because

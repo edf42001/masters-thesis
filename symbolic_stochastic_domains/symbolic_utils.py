@@ -4,89 +4,79 @@ import math
 from effects.effect import NoiseEffect
 from symbolic_stochastic_domains.symbolic_classes import Outcome, Example, ExampleSet, Rule, RuleSet
 from symbolic_stochastic_domains.predicates_and_objects import Predicate
+from symbolic_stochastic_domains.predicate_tree import PredicateTree
 
 
-def applies_with_deictic(deictic_references: Dict[str, Predicate], context: List[Predicate], state: List[Predicate]):
+# def applies_with_deictic(deictic_references: Dict[str, Predicate], context: List[Predicate], state: List[Predicate]):
+#
+#     bindings = dict()
+#
+#     # If we can't find a binding, this is not applicable
+#     for var, literal in deictic_references.items():
+#         # Check if there is some variable binding that would make this true.
+#         found = False
+#         for state_literal in state:
+#             # Removing the last char from the string gives the class name (taxi0 -> taxi), the class types need to match
+#             if (
+#                 state_literal.type == literal.type and
+#                 state_literal.object1[:-1] == literal.object1[:-1] and
+#                 state_literal.object2[:-1] == literal.object2[:-1]
+#             ):
+#
+#                 # If we find it, update the bindings
+#                 bindings[literal.object1] = state_literal.object1
+#                 bindings[literal.object2] = state_literal.object2
+#
+#                 found = True
+#                 break  # There should be only one in our world. In general, if you find two, it fails to apply
+#
+#         if not found:
+#             return False
+#
+#     # Now, try to use those bindings in the context, to find a matching literal
+#     for literal in context:
+#         if literal.value:  # If true, looking for a true match
+#             found = False
+#             for state_literal in state:
+#                 # Use the bindings to convert the context to the grounded variable here to check the var is the same
+#                 if (
+#                     state_literal.type == literal.type and  # Still needs to be the same type
+#                     state_literal.object1 == bindings[literal.object1] and
+#                     state_literal.object2 == bindings[literal.object2]
+#                 ):
+#                     found = True
+#                     break  # There should be only one in our world. In general, if you find two, it fails to apply
+#
+#             if not found:
+#                 return False
+#         else:
+#             # Otherwise, make sure there are no matches
+#             # I don't have a proof, but I believe the grounded part will always be object1. Perhaps because
+#             # this is sortof the "root" from which the graph grows? So we can check for any object two,
+#             # but specifically the bound object 1.
+#
+#             for state_literal in state:
+#                 # Use the bindings to convert the context to the grounded variable here to check the var is the same
+#                 if (
+#                     state_literal.type == literal.type and  # Still needs to be the same type
+#                     state_literal.object1 == bindings[literal.object1] and
+#                     state_literal.object2[:-1] == literal.object2[:-1]
+#                 ):
+#                     return False
+#
+#     return True
 
-    bindings = dict()
 
-    # If we can't find a binding, this is not applicable
-    for var, literal in deictic_references.items():
-        # Check if there is some variable binding that would make this true.
-        found = False
-        for state_literal in state:
-            # Removing the last char from the string gives the class name (taxi0 -> taxi), the class types need to match
-            if (
-                state_literal.type == literal.type and
-                state_literal.object1[:-1] == literal.object1[:-1] and
-                state_literal.object2[:-1] == literal.object2[:-1]
-            ):
+def context_matches(context: PredicateTree, state: PredicateTree) -> bool:
+    """
+    A context holds in a state if there is a match for all of the edges/nodes in the context
+    and no negative edges match (A negative edge is like a false literal)
+    """
 
-                # If we find it, update the bindings
-                bindings[literal.object1] = state_literal.object1
-                bindings[literal.object2] = state_literal.object2
-
-                found = True
-                break  # There should be only one in our world. In general, if you find two, it fails to apply
-
-        if not found:
-            return False
-
-    # Now, try to use those bindings in the context, to find a matching literal
-    for literal in context:
-        if literal.value:  # If true, looking for a true match
-            found = False
-            for state_literal in state:
-                # Use the bindings to convert the context to the grounded variable here to check the var is the same
-                if (
-                    state_literal.type == literal.type and  # Still needs to be the same type
-                    state_literal.object1 == bindings[literal.object1] and
-                    state_literal.object2 == bindings[literal.object2]
-                ):
-                    found = True
-                    break  # There should be only one in our world. In general, if you find two, it fails to apply
-
-            if not found:
-                return False
-        else:
-            # Otherwise, make sure there are no matches
-            # I don't have a proof, but I believe the grounded part will always be object1. Perhaps because
-            # this is sortof the "root" from which the graph grows? So we can check for any object two,
-            # but specifically the bound object 1.
-
-            for state_literal in state:
-                # Use the bindings to convert the context to the grounded variable here to check the var is the same
-                if (
-                    state_literal.type == literal.type and  # Still needs to be the same type
-                    state_literal.object1 == bindings[literal.object1] and
-                    state_literal.object2[:-1] == literal.object2[:-1]
-                ):
-                    return False
-
-    return True
-
-
-def context_matches(context: List[Predicate], state: List[Predicate]) -> bool:
-    """A context holds in a state if for every literal in the context, that literal has the same value in the state"""
-
-    for literal in context:
-        found = False
-        for state_literal in state:
-            # In order to match the context it has to have the same type,
-            # and same variable types which are the string except the last part.
-            # But what if we have to refer to the same object twice?, like with doors?
-            if (
-                state_literal.type == literal.type and
-                state_literal.object1[:-1] == literal.object1[:-1] and
-                state_literal.object2[:-1] == literal.object2[:-1]
-            ):
-                found = True
-                break
-
-        if not found:
-            return False
-
-    return True
+    # Need to check that there exists the context tree contained in the state tree
+    # This could be framed recursively by saying there is a node in the context, and all of it's edges
+    # are in the state, and all of the edges nodes are contained in the state's edges' nodes
+    return state.base_object.contains(context.base_object)
 
 
 def covers(outcome: Outcome, example: Example) -> bool:

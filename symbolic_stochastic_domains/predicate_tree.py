@@ -35,8 +35,50 @@ class Node:
 
         self.edges = []  # List of edges
 
+        # These aren't used in representing state, as the closed world assumption says anything not mentioned
+        # is assumed False. These are used for rule contexts, to represent (~TouchLeft(taxi, wall))
+        self.negative_edges = []
+
     def add_edge(self, edge):
         self.edges.append(edge)
+
+    def add_negative_edge(self, edge):
+        self.negative_edges.append(edge)
+
+    def no_negative_edges_match(self, node):
+        """Checks that this tree does not have any of the negative edges stored in node"""
+        for negative_edge in node.negative_edges:
+            # If there are any matches, that is failure, return false
+            for edge in self.edges:
+                if negative_edge.type == edge.type and negative_edge.to_node.object_name == edge.to_node.object_name:
+                    return False
+
+        return True
+
+    def contains(self, node):
+        """
+        Returns true if the tree represented by the node is a subgraph of this node tree
+        And, there are no matches for negative edges
+        """
+        for edge in node.edges:  # For every edge, we need to find a matching edge
+            found = False
+            for edge2 in self.edges:
+                # A matching edge is defined as same predicate type and end object. Furthermore,
+                # The node at the end's graph must also be contained
+                if (
+                    edge.type == edge2.type and
+                    edge.to_node.object_name == edge2.to_node.object_name and
+                    self.no_negative_edges_match(node) and  # Ensure none of the negative literals are in the state
+                    edge2.to_node.contains(edge.to_node)
+                ):
+                    found = True  # TODO: Could put a break here?
+
+            # If we couldn't find anything, return failure. Otherwise, keep checking
+            if not found:
+                return False
+
+        # Success if we get down here
+        return True
 
     def copy(self, node):
         # Copy node into ourself
@@ -45,14 +87,28 @@ class Node:
             to_node.copy(edge.to_node)  # Recursively copy that node to match our copy
             self.add_edge(Edge(edge.type, to_node))  # Add that edge
 
+        for edge in node.negative_edges:
+            # No need for recursion, as negative edges can't recurse because they mean "there is NOT an object there"
+            self.add_negative_edge(Edge(edge.type, Node(edge.to_node.object_name)))
+
     def str_helper(self):
         ret = ""
 
         for edge in self.edges:
             ret += f"{self.object_name}-{edge}"
             ret += "," if len(edge.to_node.edges) == 0 else ""  # Indicate the ends of chains of objects
+            # Add in negative edges here. There is no recursion, because they represent not interacting with an object
+            if len(self.negative_edges) > 0:
+                # Extra dot on end for same reason, otherwise it gets chopped
+                ret += " " + "".join([f"~{self.object_name}-{edge}" for edge in self.negative_edges]) + "."
             ret += " "
             ret += edge.to_node.str_helper()
+
+        # We needed to put negative edges in the for loop so they'd appear in the right place, but that doesn't
+        # work if there are no edges, so include them here in that case
+        if len(self.negative_edges) > 0 and len(self.edges) == 0:
+            # Have to add two dots at the end because we chop two off because of trailing commas. May need to rethink
+            ret += "".join([f"~{self.object_name}-{edge}" for edge in self.negative_edges]) + ".."
 
         return ret
 
