@@ -27,28 +27,29 @@ if __name__ == "__main__":
 
     actions = [env.A_PICKUP, env.A_WEST, env.A_PICKUP]
     # for action in actions:
-    for i in range(40):  # This breaks at 1130, due to trying to go down while touching a door
+    for i in range(1120):  # This breaks at 1130, due to trying to go down while touching a door
         action = random.randint(0, env.get_num_actions()-1)
         curr_state = env.get_state()
         literals = env.get_literals(curr_state)
         observation = env.step(action)  # , predicate_to_ob_map, obs_grounding
 
-        if i > 1120:
-            print(literals)
-            print(literals.copy())
-            print(literals.copy() == literals)
-            # print(ob_id_name_map)
-            print(observation)
-            print()
+        # if i > 1120:
+        #     print(literals)
+        #     print(literals.copy())
+        #     print(literals.copy() == literals)
+        #     # print(ob_id_name_map)
+        #     print(observation)
+        #     print()
         # env.draw_world(curr_state, delay=700)
 
         outcome = Outcome(observation)
         example = Example(action, literals, outcome)
         examples.add_example(example)
 
-    print("Examples")
-    print(examples)
-    print()
+    # print("Examples")
+    # print(examples)
+    # print()
+
     # Why don't I just literally represent them as graphs? It wouldn't be that hard.
     # I could even do just a bunch of nested dictionaries. I think I want to try that next.
     # Object are the nodes, predicates are the edges, and objects have properties.
@@ -60,11 +61,14 @@ if __name__ == "__main__":
     context.base_object.add_edge(Edge(PredicateType.ON2D, Node("key")))
     context.base_object.add_negative_edge(Edge(PredicateType.IN, Node("key")))
 
-    print(f"Context: {context}")
+    # outcomes = OutcomeSet()
+    # outcomes.add_outcome(Outcome(JointNoEffect()), 1.0)
+    # test_rule = Rule(action=5, context=context, outcomes=outcomes)
 
-    for example in examples.examples:
-        if context_matches(context, example.state):
-            print(f"Context matched {example}")
+    # print(f"Context: {context}")
+    # for example in examples.examples:
+    #     if context_matches(context, example.state):
+    #         print(f"Context matched {example}")
         # else:
         #     print(f"Context did not match {example}")
 
@@ -78,22 +82,10 @@ if __name__ == "__main__":
     # Then I would need a full list of all potential literals in a state somewhere.
     # Avoid infinite cycles by making sure an object can reference an object that references it.
     # I think I like the idea of predicates refering to specific object ids, as well as the class
-    # for ex in example_set.examples:
-    #     print(ex)
-    # start_time = time.perf_counter()
-    # # for i in range(10):
-    # ruleset = learn_ruleset_outcomes(example_set)
-    # end_time = time.perf_counter()
-    # print(f"Took {end_time-start_time}")
-    # print("Resulting ruleset:")
-    # print(ruleset)
-    #
-    # relevant_examples = [example for example in example_set.examples.keys() if example.action == 4 and type(example.outcome.outcome) is JointNoEffect]
-    #
-    # print("Relevant examples:")
-    # for example in relevant_examples:
-    #     print(example)
-    #
-    # test_rule = Rule(action=2, references={TouchDown2D(PredicateType.TOUCH_DOWN2D, "taxi", "door", True): Open(PredicateType.OPEN, "door", "door", True)},
-    #                  context=[TouchDown2D(PredicateType.TOUCH_DOWN2D, "taxi", "door", True),
-    #                           Open(PredicateType.OPEN, "door", "door", True)], outcomes=OutcomeSet())
+    start_time = time.perf_counter()
+    # for i in range(10):
+    ruleset = learn_ruleset_outcomes(examples)
+    end_time = time.perf_counter()
+    print(f"Took {end_time-start_time}")
+    print("Resulting ruleset:")
+    print(ruleset)

@@ -4,8 +4,32 @@ import numpy as np
 from symbolic_stochastic_domains.symbolic_classes import ExampleSet, RuleSet, Rule, OutcomeSet, Outcome, Example
 from symbolic_stochastic_domains.symbolic_utils import context_matches, covers, applicable
 from symbolic_stochastic_domains.learn_outcomes import learn_outcomes
+from symbolic_stochastic_domains.predicate_tree import PredicateTree, Edge, Node
+from symbolic_stochastic_domains.predicates_and_objects import TouchLeft2D, TouchRight2D, TouchUp2D, TouchDown2D, Open, On2D, In, PredicateType
 
 from effects.effect import JointNoEffect
+
+
+def create_new_contexts_from_context(context: PredicateTree) -> List[PredicateTree]:
+    new_contexts = []
+
+    p_types = [PredicateType.TOUCH_LEFT2D, PredicateType.TOUCH_RIGHT2D, PredicateType.TOUCH_DOWN2D,
+               PredicateType.TOUCH_UP2D, PredicateType.ON2D, PredicateType.IN]
+    object_names = ["key", "lock", "gem", "wall"]
+    for p_type in p_types:
+        for object_name in object_names:
+            if not context.base_object.has_edge_with(p_type, object_name):  # Don't make duplicate edge (Hash table from CSDS 233)?
+                copy1 = context.copy()
+                copy2 = context.copy()
+
+                # Need to test both positive and negative version of the literal
+                copy1.base_object.add_edge(Edge(p_type, Node(object_name)))  # Feel like these should just be nodes
+                copy2.base_object.add_negative_edge(Edge(p_type, Node(object_name)))
+
+                new_contexts.append(copy1)
+                new_contexts.append(copy2)
+
+    return new_contexts
 
 
 def only_applies_to_outcome(rule: Rule, examples: ExampleSet):
@@ -17,7 +41,7 @@ def only_applies_to_outcome(rule: Rule, examples: ExampleSet):
     outcome = rule.outcomes.outcomes[0]  # Only one outcome allowed
     for example in examples.examples.keys():
         # Is the outcome different? And if so, is this a rule we cover? If so, that is bad, return False
-        if example.outcome != outcome and rule.action == example.action and context_matches(rule.context, example.state_set):
+        if example.outcome != outcome and rule.action == example.action and context_matches(rule.context, example.state):
             return False
 
     return True
@@ -26,7 +50,7 @@ def only_applies_to_outcome(rule: Rule, examples: ExampleSet):
 def applicable_by_outcome(rule: Rule, example: Example, outcome: Outcome):
     return (
             rule.action == example.action and
-            context_matches(rule.context, example.state_set) and
+            context_matches(rule.context, example.state) and
             covers(outcome, example)
     )
 
@@ -37,21 +61,23 @@ def print_examples_rule_covers(rule: Rule, examples: ExampleSet):
         print(f"Outcome: {outcome}: {applicable}")
 
 
-def get_all_literals(example: Example):
-    # Using the literals from an example (which always contains all literals),
-    # duplicates them to generate all combinations of literals
-    literals = [lit.copy() for lit in example.state]
-    num_literals = len(literals)
-
-    for l in range(num_literals):  # Need to use num literals because we append lits to the list as we go
-        literals[l].value = False
-        literals[l].hash = hash((literals[l].type, literals[l].value, literals[l].object1, literals[l].object2))
-        copied_literal = literals[l].copy()
-        copied_literal.value = True
-        copied_literal.hash = hash((copied_literal.type, copied_literal.value, copied_literal.object1, copied_literal.object2))
-        literals.append(copied_literal)
-
-    return literals
+# def get_all_literals(example: Example):
+#     # Using the literals from an example (which always contains all literals),
+#     # duplicates them to generate all combinations of literals
+#     literals = []
+#     ob1 = "taxi"
+#
+#     pred_types = [TouchLeft2D, TouchRight2D, TouchUp2D, TouchDown2D, Open, On2D, In]
+#     pred_types2 = [Pre]
+#     ob_names = ["key", "lock", "gem", "wall"]
+#
+#     for pred_type in pred_types:
+#         for ob_name in ob_names:
+#             literals.append(pred_type(PredicateType.TOUCH_LEFT2D, PredicateType.))
+#
+#
+#
+#     return literals
 
 
 # Perhaps I need to remake the rules but in this manner
@@ -66,7 +92,7 @@ def find_greedy_rule_by_adding_lits(examples: ExampleSet, relevant_examples: Lis
     objects_in_outcome = set([key.split(".")[0] for key in relevant_examples[0].outcome.outcome.value.keys()])
 
     # List of test contexts to try
-    test_contexts = [[]]
+    test_contexts = [PredicateTree()]
 
     level = 0  # Current level of # literals in context
 
@@ -81,26 +107,21 @@ def find_greedy_rule_by_adding_lits(examples: ExampleSet, relevant_examples: Lis
             rule = Rule(action=action, context=context, outcomes=outcomes)
 
             # Make sure we have a reference to each object, but ignore taxi for now, that is referenced in the action
-            objects_in_context = set([lit.object2 for lit in rule.context if lit.value])
-            have_correct_deictic_references = all([(obj == "taxi" or obj in objects_in_context) for obj in objects_in_outcome])
-
-            # TODO: this is inefficient, let's give up on the first false positive, instead of calling learn_outcomes
+            have_correct_deictic_references = all(
+                (obj == "taxi" or obj in context.base_object.referenced_objects) for obj in objects_in_outcome
+            )
             if (
                 have_correct_deictic_references and
                 only_applies_to_outcome(rule, examples) and not
-                any([applicable(rule, example) for example in irrelevant_examples])
+                # Simply be removing the [] around the list comprehension, we turn it to a generator
+                # That means instead of creating the whole list and then iterating through it to search for trues,
+                # any() will now stop upon the first true it finds.
+                any(applicable(rule, example) for example in irrelevant_examples)
             ):
-                # if action == 2:  # Ok, looks like there are some issues with my method.
-                    # It's not just ~TouchDown(taxi, wall), because there's also the issue of when the taxi runs into
-                    # an open door. So ~touchDown covers most, but not all scenarios.
-                    # Yup, if you look at the ratios, ~TouchDown2D(taxi, wall) as 99% increment, 0.0099 no effect
-                    # TODO: This implies a tree learning method is still the best
-                    # print()
-                    # print("Action 2:")
-                    # print(rule)
-                    # for ex in relevant_examples:
-                    #     print(ex)
-                    # print(irrelevant_examples)
+                # Ok, looks like there are some issues with my method.
+                # It's not just ~TouchDown(taxi, wall), because there's also the issue of when the taxi runs into
+                # an open door. So ~touchDown covers most, but not all scenarios.
+                # Yup, if you look at the ratios, ~TouchDown2D(taxi, wall) as 99% increment, 0.0099 no effect
                 # If the rule is good, record its score. Score is number of examples in relevant set this applies to.
                 score = sum([examples.examples[example] for example in relevant_examples if applicable(rule, example)])
                 if score >= best_score:
@@ -109,21 +130,15 @@ def find_greedy_rule_by_adding_lits(examples: ExampleSet, relevant_examples: Lis
 
         # If we found a valid rule, this will be the best, adding any more context will make it cover less
         if best_rule is not None:
-            # print(f"Returning best rule: score = {best_score}")
-            # print(best_rule)
-            # print()
             return best_rule
 
         # Otherwise, try adding every literal to every literal in the context and trying again
+        # This process could produce duplicates. I.e, if you have 1 then add 2, or 2 then add 1.
+        # The hashes will be different because the order was different
         level += 1
         new_contexts = []
-        all_literals = get_all_literals(relevant_examples[0])
         for context in test_contexts:
-            for literal in all_literals:
-                if literal not in context:
-                    new_context = context.copy()
-                    new_context.append(literal)
-                    new_contexts.append(new_context)
+            new_contexts.extend(create_new_contexts_from_context(context))
 
         test_contexts = new_contexts
     # If we get down here, we weren't able to do it with only two literals
@@ -226,9 +241,8 @@ def learn_minimal_ruleset_for_outcome(examples: ExampleSet, outcome: Outcome) ->
 
     relevant_examples = [ex for ex in examples.examples.keys() if ex.outcome == outcome]
     irrelevant_examples = []
-    i = 6
+
     while len(relevant_examples) > 0:
-        i-=1
         # print("Relevant examples:")
         # for ex in relevant_examples:
         #     print(ex)
@@ -258,9 +272,6 @@ def learn_minimal_ruleset_for_outcome(examples: ExampleSet, outcome: Outcome) ->
         # Somehow we need to learn that the thing that explains this example is
         # TouchRight(taxi, door), Open(door, door), and
         # not any of the other things.
-
-        if i == 0:
-            break
 
     # print("Final ruleset:")
     # for rule in rules:
@@ -292,7 +303,6 @@ def learn_ruleset_outcomes(examples: ExampleSet) -> RuleSet:
     # print(unique_outcomes)
 
     # Learn the rules for each outcome
-    # unique_outcomes = [unique_outcomes[1]]  # Testing outcome
     rules = []
     for outcome in unique_outcomes:
         new_rules = learn_minimal_ruleset_for_outcome(examples, outcome)

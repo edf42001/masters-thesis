@@ -140,16 +140,14 @@ class ExampleSet:
 
 
 class Rule:
-    """A rule consists of a action, set of deictic references, context, and outcome set"""
-    # Deictic references are a todo
-
+    """A rule consists of a action, set of deictic references?, context, and outcome set"""
     def __init__(self, action, context, outcomes):
         self.action: int = action
-        self.context: List[Predicate] = context
+        self.context: PredicateTree = context
         self.outcomes: OutcomeSet = outcomes
 
     def copy(self):
-        return Rule(self.action, [literal.copy() for literal in self.context], self.outcomes.copy())
+        return Rule(self.action, self.context.copy(), self.outcomes.copy())
 
     def __str__(self):
         ret = ""

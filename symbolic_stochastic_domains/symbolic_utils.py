@@ -104,7 +104,7 @@ def applicable(rule: Rule, example: Example) -> bool:
     return (
         rule.action == example.action and
         # By switching the order of the last two here, we can cause one or other other to run more or less
-        context_matches(rule.context, example.state_set) and
+        context_matches(rule.context, example.state) and
         any([covers(outcome, example) for outcome in rule.outcomes.outcomes])
     )
 

@@ -39,11 +39,15 @@ class Node:
         # is assumed False. These are used for rule contexts, to represent (~TouchLeft(taxi, wall))
         self.negative_edges = []
 
+        self.referenced_objects = set()  # Set of object names for nodes in this tree. TODO: What about nodes at different levels?
+
     def add_edge(self, edge):
         self.edges.append(edge)
+        self.referenced_objects.add(edge.to_node.object_name)
 
     def add_negative_edge(self, edge):
         self.negative_edges.append(edge)
+        self.referenced_objects.add(edge.to_node.object_name)
 
     def no_negative_edges_match(self, node):
         """Checks that this tree does not have any of the negative edges stored in node"""
@@ -54,6 +58,18 @@ class Node:
                     return False
 
         return True
+
+    def has_edge_with(self, type, name: str):
+        """Checks if there is a positive or negative edge of the specified type and to object"""
+        for edge in self.edges:
+            if edge.type == type and edge.to_node.object_name == name:
+                return True
+
+        for edge in self.negative_edges:
+            if edge.type == type and edge.to_node.object_name == name:
+                return True
+
+        return False
 
     def contains(self, node):
         """
@@ -68,7 +84,6 @@ class Node:
                 if (
                     edge.type == edge2.type and
                     edge.to_node.object_name == edge2.to_node.object_name and
-                    self.no_negative_edges_match(node) and  # Ensure none of the negative literals are in the state
                     edge2.to_node.contains(edge.to_node)
                 ):
                     found = True  # TODO: Could put a break here?
@@ -77,7 +92,11 @@ class Node:
             if not found:
                 return False
 
-        # Success if we get down here
+        # Next, verify there are no negative edge matches
+        if not self.no_negative_edges_match(node):
+            return False
+
+        # Otherwise, success if we get down here
         return True
 
     def copy(self, node):
