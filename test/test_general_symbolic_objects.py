@@ -15,6 +15,9 @@ from symbolic_stochastic_domains.predicate_tree import PredicateTree, Edge, Node
 
 from effects.effect import JointNoEffect
 
+# import cProfile
+# import pstats
+
 
 if __name__ == "__main__":
     random.seed(1)
@@ -84,7 +87,12 @@ if __name__ == "__main__":
     # I think I like the idea of predicates refering to specific object ids, as well as the class
     start_time = time.perf_counter()
     # for i in range(10):
+    # profiler = cProfile.Profile()
+    # profiler.enable()
     ruleset = learn_ruleset_outcomes(examples)
+    # profiler.disable()
+    # stats = pstats.Stats(profiler)
+    # stats.dump_stats('stats.prof')
     end_time = time.perf_counter()
     print(f"Took {end_time-start_time}")
     print("Resulting ruleset:")

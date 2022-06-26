@@ -9,6 +9,10 @@ from symbolic_stochastic_domains.predicates_and_objects import TouchLeft2D, Touc
 
 from effects.effect import JointNoEffect
 
+# Mapping from level to possible contexts, so we don't have to regenerate them each time
+# What is the memory usage of this?
+NEW_CONTEXTS = dict()  # Disable it for now
+
 
 def create_new_contexts_from_context(context: PredicateTree) -> List[PredicateTree]:
     new_contexts = []
@@ -41,7 +45,7 @@ def only_applies_to_outcome(rule: Rule, examples: ExampleSet):
     outcome = rule.outcomes.outcomes[0]  # Only one outcome allowed
     for example in examples.examples.keys():
         # Is the outcome different? And if so, is this a rule we cover? If so, that is bad, return False
-        if example.outcome != outcome and rule.action == example.action and context_matches(rule.context, example.state):
+        if rule.action == example.action and example.outcome != outcome and context_matches(rule.context, example.state):
             return False
 
     return True
@@ -59,25 +63,6 @@ def print_examples_rule_covers(rule: Rule, examples: ExampleSet):
     for outcome in rule.outcomes.outcomes:
         applicable = [example for example in examples.examples.keys() if applicable_by_outcome(rule, example, outcome)]
         print(f"Outcome: {outcome}: {applicable}")
-
-
-# def get_all_literals(example: Example):
-#     # Using the literals from an example (which always contains all literals),
-#     # duplicates them to generate all combinations of literals
-#     literals = []
-#     ob1 = "taxi"
-#
-#     pred_types = [TouchLeft2D, TouchRight2D, TouchUp2D, TouchDown2D, Open, On2D, In]
-#     pred_types2 = [Pre]
-#     ob_names = ["key", "lock", "gem", "wall"]
-#
-#     for pred_type in pred_types:
-#         for ob_name in ob_names:
-#             literals.append(pred_type(PredicateType.TOUCH_LEFT2D, PredicateType.))
-#
-#
-#
-#     return literals
 
 
 # Perhaps I need to remake the rules but in this manner
@@ -136,11 +121,18 @@ def find_greedy_rule_by_adding_lits(examples: ExampleSet, relevant_examples: Lis
         # This process could produce duplicates. I.e, if you have 1 then add 2, or 2 then add 1.
         # The hashes will be different because the order was different
         level += 1
-        new_contexts = []
-        for context in test_contexts:
-            new_contexts.extend(create_new_contexts_from_context(context))
+
+        # If we've already encountered this level before, just reread the saved contexts instead of recalculating them
+        if level not in NEW_CONTEXTS:
+            new_contexts = []
+            for context in test_contexts:
+                new_contexts.extend(create_new_contexts_from_context(context))
+            NEW_CONTEXTS[level] = new_contexts
+        else:
+            new_contexts = NEW_CONTEXTS[level]
 
         test_contexts = new_contexts
+
     # If we get down here, we weren't able to do it with only two literals
     # TODO: for the case of Action 5: {[In(taxi, key), TouchDown2D(taxi, lock)]}, we should see if it is faster
     # to do additive or subtractive
