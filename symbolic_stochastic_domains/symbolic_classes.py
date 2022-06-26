@@ -2,6 +2,7 @@ from typing import List, Dict, Tuple
 
 from effects.effect import JointEffect
 from symbolic_stochastic_domains.predicates_and_objects import Predicate
+from symbolic_stochastic_domains.predicate_tree import PredicateTree
 
 
 class Outcome:
@@ -75,13 +76,13 @@ class Example:
     """
     An example consists of all the literals in the starting state, the action taken, and the outcomes
     """
-    def __init__(self, action: int, state: List[Predicate], outcome: Outcome):
+    def __init__(self, action: int, state: PredicateTree, outcome: Outcome):
         self.action = action
         self.state = state
         self.outcome = outcome
 
         # Convert state to a set, so we can also have easy lookup with hashes
-        self.state_set = set(self.state)
+        # self.state_set = set(self.state)
 
         # Examples are used in a lookup dictionary so they need to be hashed, I believe each one has a unique string
         # so we can use that as the hash. This might not be the most efficient way, but make sure to calculate it
@@ -89,8 +90,8 @@ class Example:
         self.hash = hash(self.__str__())
 
     def copy(self):
-        ret = Example(self.action, [literal.copy() for literal in self.state], self.outcome.copy())
-        ret.hash = self.hash
+        ret = Example(self.action, self.state.copy(), self.outcome.copy())
+        # ret.hash = self.hash  # I don't think we need this because it is created upon init
         return ret
 
     def __str__(self):
@@ -101,6 +102,7 @@ class Example:
         return self.__str__()
 
     def __eq__(self, other):
+        # TODO: Need to rewrite equals
         return self.action == other.action and self.state == other.state and self.outcome == other.outcome
 
     def __hash__(self):

@@ -168,7 +168,7 @@ class SymbolicHeist(Environment):
 
         return objects
 
-    def get_literals(self, state: int) -> Tuple[List[Predicate], Dict[Predicate, int]]:
+    def get_literals(self, state: int) -> PredicateTree:
         """Converts state to the literals from that state using variables to refer to objects"""
 
         # Get object list from the current state

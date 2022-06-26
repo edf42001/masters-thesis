@@ -27,26 +27,28 @@ if __name__ == "__main__":
 
     actions = [env.A_PICKUP, env.A_WEST, env.A_PICKUP]
     # for action in actions:
-    for i in range(1130):  # This breaks at 1130, due to trying to go down while touching a door
+    for i in range(5):  # This breaks at 1130, due to trying to go down while touching a door
         action = random.randint(0, env.get_num_actions()-1)
         curr_state = env.get_state()
         literals = env.get_literals(curr_state)
         observation = env.step(action)  # , predicate_to_ob_map, obs_grounding
 
-        # if i > 1120:
-        literals.print()
-        # print(ob_id_name_map)
-        print(observation)
-        print()
+        if i > 1120:
+            print(literals)
+            print(literals.copy())
+            print(literals.copy() == literals)
+            # print(ob_id_name_map)
+            print(observation)
+            print()
         # env.draw_world(curr_state, delay=700)
 
-    #     outcome = Outcome(observation)
-    #     example = Example(action, literals, outcome)
-    #     examples.add_example(example)
-    #
-    # print("Examples")
-    # print(examples)
-    # print()
+        outcome = Outcome(observation)
+        example = Example(action, literals, outcome)
+        examples.add_example(example)
+
+    print("Examples")
+    print(examples)
+    print()
     # Why don't I just literally represent them as graphs? It wouldn't be that hard.
     # I could even do just a bunch of nested dictionaries. I think I want to try that next.
     # Object are the nodes, predicates are the edges, and objects have properties.
@@ -54,13 +56,13 @@ if __name__ == "__main__":
     # Rule: if a positive literal is in the context, it must be referred to in the deictic references
     # But wait, aren't the references kindof similar to the context itself? They force matches to be found,
     # If you put something in there it acts as context. Maybe I should just make my graph? Might be hard to learn
-    deictic_references = {"key3": On2D(PredicateType.ON2D, "taxi0", "key3", True)}
-    context = [In(PredicateType.IN, "taxi0", "key4", False)]
-
-    print("Applicable to:")
-    for example in examples.examples:
-        if applies_with_deictic(deictic_references, context, example.state):
-            print(f"Was applicable to {example}")
+    # deictic_references = {"key3": On2D(PredicateType.ON2D, "taxi0", "key3", True)}
+    # context = [In(PredicateType.IN, "taxi0", "key4", False)]
+    #
+    # print("Applicable to:")
+    # for example in examples.examples:
+    #     if applies_with_deictic(deictic_references, context, example.state):
+    #         print(f"Was applicable to {example}")
         # else:
             # print(f"Context did not match {example}")
 
