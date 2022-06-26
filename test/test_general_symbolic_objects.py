@@ -30,22 +30,27 @@ if __name__ == "__main__":
     for i in range(1130):  # This breaks at 1130, due to trying to go down while touching a door
         action = random.randint(0, env.get_num_actions()-1)
         curr_state = env.get_state()
-        observation, literals, ob_id_name_map = env.step(action) # , predicate_to_ob_map, obs_grounding
+        literals = env.get_literals(curr_state)
+        observation = env.step(action)  # , predicate_to_ob_map, obs_grounding
 
-        if i > 1120:
-            print(literals)
-            print(ob_id_name_map)
-            print(observation)
-            print()
-            # env.draw_world(curr_state, delay=700)
+        # if i > 1120:
+        literals.print()
+        # print(ob_id_name_map)
+        print(observation)
+        print()
+        # env.draw_world(curr_state, delay=700)
 
-        outcome = Outcome(observation)
-        example = Example(action, literals, outcome)
-        examples.add_example(example)
+    #     outcome = Outcome(observation)
+    #     example = Example(action, literals, outcome)
+    #     examples.add_example(example)
+    #
+    # print("Examples")
+    # print(examples)
+    # print()
+    # Why don't I just literally represent them as graphs? It wouldn't be that hard.
+    # I could even do just a bunch of nested dictionaries. I think I want to try that next.
+    # Object are the nodes, predicates are the edges, and objects have properties.
 
-    print("Examples")
-    print(examples)
-    print()
     # Rule: if a positive literal is in the context, it must be referred to in the deictic references
     # But wait, aren't the references kindof similar to the context itself? They force matches to be found,
     # If you put something in there it acts as context. Maybe I should just make my graph? Might be hard to learn

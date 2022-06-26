@@ -5,6 +5,7 @@ from effects.effect import NoiseEffect
 from symbolic_stochastic_domains.symbolic_classes import Outcome, Example, ExampleSet, Rule, RuleSet
 from symbolic_stochastic_domains.predicates_and_objects import Predicate
 
+
 def applies_with_deictic(deictic_references: Dict[str, Predicate], context: List[Predicate], state: List[Predicate]):
 
     bindings = dict()
