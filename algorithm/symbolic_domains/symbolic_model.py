@@ -34,7 +34,7 @@ class SymbolicModel(TransitionModel):
 
         # Convert the observation to an outcome, combine with the set of literals to get an example to add to memory
         outcome = Outcome(obs)
-        literals, groundings, properties = self.env.get_literals(state)
+        literals, instance_name_map = self.env.get_literals(state)
         example = Example(action, literals, outcome)
         self.examples.add_example(example)
 
@@ -55,70 +55,49 @@ class SymbolicModel(TransitionModel):
         If unknown, return None
         """
 
-        literals, groundings, properties = self.env.get_literals(state)
+        literals, instance_name_map = self.env.get_literals(state)
 
         transitions = []
 
+        # Find a rule that is applicable to the current state and action. There should only be one
+
         # Check for rules that are applicable to the current state and action
-        for rule in self.ruleset.rules:
-            if rule.action == action and context_matches(rule.context, literals):
-                if len(rule.outcomes.outcomes) > 1:
+        rule = None
+        for test_rule in self.ruleset.rules:
+            if test_rule.action == action and context_matches(test_rule.context, literals):
+                rule = test_rule
+                if len(test_rule.outcomes.outcomes) > 1:
                     print("Rule had too many outcomes")
                     sys.exit(1)
 
-                # Assume discrete
-                effect = rule.outcomes.outcomes[0].outcome
-                # convert back to ints # TODO: This doesn't really just work, you need the grounding to know what
-                # attribute goes to which object. Also, what if there's a key to the top and bottom?
-                # Then you need deictic references. Or, we could assume that doesn't happen for now and see what happens
-                # AS a hack, yeah lets try that first
-                atts = []
-                outcomes = []
-                # Need mapping from object id and variable name to att value
-                # Lets do this manually for now, because I am confused
-                for att_str, outcome in effect.value.items():
-                    # Convert string to class id and which attribute of that class it is
-                    class_str, att_idx_str = att_str.split(".")
-                    class_idx = self.env.OB_NAMES.index(class_str)
-                    att_idx_str = self.env.ATT_NAMES[class_idx].index(att_idx_str)
+        if rule is None:
+            return transitions
 
-                    if class_str == "taxi":
-                        att = 0 if att_idx_str == "x" else 1
-                    else:
-                        # print("I do not know what to do with this class ")
-                        # print(rule)
-                        # print(class_str, att_idx_str)
-                        # print([literal for literal in literals if literal.value])
-                        # print(groundings)
+        effect = rule.outcomes.outcomes[0].outcome
 
-                        # First, find how the key is referred to.
-                        references = [lit for lit in rule.context if lit.object2 == class_str]
-                        if len(references) == 0 or len(references) == 2:
-                            print(f"Whoops, how can we refer to the object if the references are {references}")
-                            sys.exit(1)
+        atts = []
+        outcomes = []
 
-                        # Get the referring literal, and
-                        # Use the dict to convert that reference to the object it refers to
-                        reference = references[0]
-                        grounding = groundings[reference]
+        name_instance_map = {v: k for k, v in instance_name_map.items()}
 
-                        # Convert the grounding to the indecies of it's state variables
-                        att_range = self.env.instance_index_map[grounding]
-                        # The attribute to change is the start of this objects attribute in the global list,
-                        # plus which attribute it is in that object specifically
-                        # Note this only works if the objects in the grounding from get_literals are in the same
-                        # order as the objects attributes order is considered
-                        att = att_range[0] + int(att_idx_str)
+        for ob_att_str, outcome in effect.value.items():
+            name_str, att_name_str = ob_att_str.split(".")
+            class_name, id_str = name_str[:-1], name_str[-1]
+            class_idx = self.env.OB_NAMES.index(class_name)
+            att_idx = self.env.ATT_NAMES[class_idx].index(att_name_str)
+            instance_id = name_instance_map[name_str]
 
-                    atts.append(att)
-                    outcomes.append(outcome)
+            att_range = self.env.instance_index_map[instance_id]
+            att = att_range[0] + att_idx
 
+            atts.append(att)
+            outcomes.append(outcome)
 
-                # Only create new effect if it isn't a JointNoEffect
-                if len(atts) > 0:
-                    effect = JointEffect(atts, outcomes)
+        # Only create new effect if it isn't a JointNoEffect
+        if len(atts) > 0:
+            effect = JointEffect(atts, outcomes)
 
-                transitions.append(Transition(effect, 1.0))
+        transitions.append(Transition(effect, 1.0))
 
         return transitions
 

@@ -1,13 +1,13 @@
-from typing import List, Union
+from typing import List, Union, Tuple, Dict
 import numpy as np
 import logging
 
+from symbolic_stochastic_domains.predicate_tree import PredicateTree
 from effects.effect import JointEffect
 
 
 class Environment:
     """Base class for any environment the agent could be working in"""
-    # TODO: Figure this stuff out
     # From https://github.com/rail-cwru/hoomdp
 
     stochastic = None
@@ -28,6 +28,7 @@ class Environment:
     state_index_instance_map = {}
     state_index_class_map = {}
     state_index_class_index_map = {}
+    instance_class_map = {}
 
     eval_states = []
 
@@ -56,7 +57,7 @@ class Environment:
     def unreachable_state(self, from_state, to_state) -> bool:
         raise NotImplementedError()
 
-    def visualize(self):
+    def visualize(self, delay=100):
         pass
 
     def get_eval_states(self):
@@ -117,13 +118,11 @@ class Environment:
         state_index_instance_map: map state variable to instance number of object that it belongs to
         state_index_class_map: map state variable to class of object that it belongs to
         state_index_class_index_map:  map state variable to index in corresponding class definition
+        instance_class_map: map instance number (unique object ID) to class of object that it is
         """
         # Expand object arities to list of arities for each object instance in env
         instance_arities = [arity for arity, count in zip(self.OB_ARITIES, self.OB_COUNT) for _ in range(count)]
         instance_classes = [cl for cl, count in enumerate(self.OB_COUNT) for _ in range(count)]
-
-        # print(f"Instance arities: {instance_arities}")
-        # print(f"Instance classes: {instance_classes}")
 
         # Iteration variables
         instance_num = 0
@@ -142,3 +141,8 @@ class Environment:
             self.state_index_instance_map[idx] = instance_num
             self.state_index_class_map[idx] = instance_classes[instance_num]
             self.state_index_class_index_map[idx] = (idx - base_idx)
+
+        self.instance_class_map = {i: c for i, c in enumerate(instance_classes)}
+
+    def get_literals(self, state: int) -> Tuple[PredicateTree, Dict]:
+        pass

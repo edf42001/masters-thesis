@@ -1,8 +1,7 @@
 import numpy as np
 import cv2
-from typing import List, Tuple, Union, Dict
+from typing import List, Tuple, Dict
 
-from effects.utils import eff_joint
 from effects.effect import JointEffect, EffectType, Effect, JointNoEffect
 from environment.environment import Environment
 from symbolic_stochastic_domains.predicates_and_objects import Taxi2D, Key2D, Lock2D, Wall2D,\
@@ -188,36 +187,34 @@ class SymbolicHeist(Environment):
                             # Convert the objects to unique variable names
                             # If we have already encountered this object, reuse the name
                             if ob1_id in ob_index_name_map:
-                                ob1_inc_id = ob_index_name_map[ob1_id]
+                                new_name1 = ob_index_name_map[ob1_id]
                             else:
-                                # Increment the current counter and save the id mapping
+                                # Extract the class name, and append the id to the end of it
                                 ob_name = objects[ob1_id].name
-                                ob1_inc_id = object_reference_counts[ob_name]
+                                new_name1 = ob_name + str(object_reference_counts[ob_name])
                                 object_reference_counts[ob_name] += 1  # So the next will have a new name
                                 # Store this in the name map so if we encounter it again we can refer to it
-                                ob_index_name_map[ob1_id] = ob1_inc_id
+                                ob_index_name_map[ob1_id] = new_name1
 
                             if ob2_idx in ob_index_name_map:
-                                ob2_inc_id = ob_index_name_map[ob2_idx]
+                                new_name2 = ob_index_name_map[ob2_idx]
                             else:
                                 # Extract the class name, and append the id to the end of it
                                 ob_name = objects[ob2_idx].name
-                                ob2_inc_id = object_reference_counts[ob_name]
+                                new_name2 = ob_name + str(object_reference_counts[ob_name])
                                 object_reference_counts[ob_name] += 1  # So the next will have a new name
                                 # Store this in the name map so if we encounter it again we can refer to it
-                                ob_index_name_map[ob2_idx] = ob2_inc_id
+                                ob_index_name_map[ob2_idx] = new_name2
 
                             # Recreate the object, but swap the names out for the variables
-                            # pred = type(pred)(pred.type, new_name1, new_name2, pred.value)
-                            # predicate_to_referenced_ob_map[pred] = [new_name1, new_name2]
-                            node = Node(self.OB_NAMES[ob2_id], ob2_inc_id)
+                            node = Node(self.OB_NAMES[ob2_id], new_name2[-1])  # Extract just the id for the node
                             tree.base_object.add_edge(Edge(p_type, node))
 
                             # Handle properties separately
                             if type(objects[ob2_idx]) is Lock2D:
                                 pred = Predicate.create(PredicateType.OPEN, objects[ob2_idx], objects[ob2_idx])
                                 if pred.value:
-                                    node.add_edge(Edge(PredicateType.OPEN, Node("lock", ob2_inc_id)))
+                                    node.add_edge(Edge(PredicateType.OPEN, Node("lock", new_name2[-1])))
 
                             # Only one object can satisfy the condition at a time, so no need to keep searching
                             break
@@ -235,7 +232,7 @@ class SymbolicHeist(Environment):
         # # Note: The taxi is referenced by the action (MoveLeft(taxi0)) for example. We need to add this in or
         # # it won't be able to refer to the taxi in instances when there are no other predicates
         if 0 not in ob_index_name_map:  # Manually put the taxi in there if it is not
-            ob_index_name_map[0] = 0  # Taxi is object 0
+            ob_index_name_map[0] = "taxi0"  # Taxi is object 0
 
         # TODO: Could also have the predicates just use "taxi" instead of "taxi0", but then have a dict for
         # each predicate to it's mappings: {Predicate: ["taxi0", "key1"]}, which might help with hashing
@@ -345,10 +342,10 @@ class SymbolicHeist(Environment):
                 class_att_idx = self.state_index_class_index_map[att]  # If an object has many atts, this is which one
 
                 # Convert the class and att idx to a string. (For viewing only, this probably makes the code slower)
-                # identifier = f"{ob_id_name_map[class_instance_id]}.{self.ATT_NAMES[class_id][class_att_idx]}"
-                identifier = f"{self.OB_NAMES[class_id]}{ob_id_name_map[class_instance_id]}.{self.ATT_NAMES[class_id][class_att_idx]}"
+                identifier = f"{ob_id_name_map[class_instance_id]}.{self.ATT_NAMES[class_id][class_att_idx]}"
+                # identifier = f"{self.OB_NAMES[class_id]}{ob_id_name_map[class_instance_id]}.{self.ATT_NAMES[class_id][class_att_idx]}"
                 # obs_grounding[self.OB_NAMES[class_id]] = ob_id_name_map[class_instance_id]
-                unique_name_to_ob_id[self.OB_NAMES[class_id] + str(ob_id_name_map[class_instance_id])] = class_instance_id
+                unique_name_to_ob_id[ob_id_name_map[class_instance_id]] = class_instance_id
 
                 atts.append(identifier)
 
@@ -396,8 +393,8 @@ class SymbolicHeist(Environment):
         else:
             return self.R_DEFAULT
 
-    def visualize(self):
-        self.draw_world(self.get_flat_state(self.curr_state), delay=1)
+    def visualize(self, delay=100):
+        self.draw_world(self.get_flat_state(self.curr_state), delay=delay)
 
     def draw_world(self, state: int, delay=100):
         state = self.get_factored_state(state)

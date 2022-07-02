@@ -5,12 +5,13 @@ from policy.policy import Policy
 
 
 class SymbolicLearner(Simulator):
-    def __init__(self, env: Environment, model: TransitionModel, planner: Policy, visualize: bool = False):
+    def __init__(self, env: Environment, model: TransitionModel, planner: Policy, visualize: bool = False, delay: int = 100):
         self.env = env
         self.model = model
         self.planner = planner
 
         self.visualize = visualize
+        self.delay = delay
 
         self.curr_state = self.env.get_state()
         self.last_episode_steps = -1
@@ -27,13 +28,13 @@ class SymbolicLearner(Simulator):
             print(f"Step {steps} taking action {action}")
 
             # Perform action and observe the effects / get next state
-            observation = self.env.step(action)
+            _, observation, _ = self.env.step(action)
             reward = self.env.get_last_reward()
             next_state = self.env.get_state()
 
             # Display environment if need be
             if self.visualize:
-                self.env.visualize()
+                self.env.visualize(delay=self.delay)
 
             # TODO: for consistency, this should take in state instead of literals
             if is_learning:

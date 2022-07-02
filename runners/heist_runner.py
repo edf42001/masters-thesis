@@ -21,10 +21,10 @@ class HeistRunner(Runner):
         self.exp_num = exp_num
 
         # Experiment parameters
-        self.max_steps = 5
+        self.max_steps = 80
         self.num_episodes = 1
         self.stochastic = False
-        self.visualize = False
+        self.visualize = True
 
         # For testing (I think I have to set both or the keys spawn in different areas)
         random.seed(1)
@@ -34,7 +34,7 @@ class HeistRunner(Runner):
 
         self.model = SymbolicModel(self.env)
         self.planner = SymbolicPolicy(self.env.get_num_actions(), self.model)
-        self.learner = SymbolicLearner(self.env, self.model, self.planner, visualize=self.visualize)
+        self.learner = SymbolicLearner(self.env, self.model, self.planner, visualize=self.visualize, delay=10)
         self.plot = Plot(self, self.eval_episodes, self.eval_timer)
 
 
