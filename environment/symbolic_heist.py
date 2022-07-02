@@ -325,7 +325,7 @@ class SymbolicHeist(Environment):
         # In order to specify which object's attributes are changing, we need to know the variable groundings
         # for this state. Thus, we get the literals in here, and return them from the step function
         # As part of the observation
-        tree, ob_id_name_map = self.get_literals(self.get_flat_state(self.curr_state)) # predicate_to_ob_map
+        tree, ob_id_name_map = self.get_literals(self.get_flat_state(self.curr_state))  # predicate_to_ob_map
 
         correct_types = [EffectType.INCREMENT] * 2 + [EffectType.SET_TO_NUMBER] * 8
         effects = []

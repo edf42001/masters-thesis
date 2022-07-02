@@ -6,17 +6,56 @@ class PredicateTree:
     This can be continued for each object in the chain
     """
     def __init__(self):
-        self.base_object = Node("taxi", 0)
+        self.nodes = []  # List of nodes
+        self.node_lookup = dict()  # Dictionary mapping string ids to nodes
 
-        # I believe strings are always unique and identifiable to to the order we add nodes to the tree
-        # Thus, we use this for hashing and equality. We save it because it is expensive to create strings
-        self.str_repr = self.__str__()
+        self.base_object = None
+
+    def add_node(self, name):
+        # Check for duplicates
+        assert name not in self.node_lookup
+
+        new_node = Node(name, 0)
+        self.nodes.append(new_node)
+        self.node_lookup[name] = new_node
+
+        # If this was the first, store it as the base.
+        if len(self.nodes) == 1:
+            self.base_object = new_node
+
+    def add_edge(self, from_name, to_name, type, negative=False):
+        # Check values are there
+        assert from_name in self.node_lookup and to_name in self.node_lookup
+
+        from_node = self.node_lookup[from_name]
+        to_node = self.node_lookup[to_name]
+
+        edge = Edge(type)
+
+        edge.to_node = to_node
+
+        if negative:
+            from_node.negative_edges.append(edge)
+        else:
+            from_node.edges.append(edge)
 
     def copy(self):
         """Create a copy of this tree"""
         ret = PredicateTree()
         ret.base_object.copy(self.base_object)
         return ret
+
+    def print_tree(self):
+        for node in self.nodes:
+            ret = ""
+            ret += node.object_name + ": "
+
+            for edge in node.edges:
+                ret += f"{edge} "
+            for edge in node.negative_edges:
+                ret += f"{edge} {edge.to_node.object_name}"
+
+            print(ret)
 
     def __str__(self):
         return str(self.base_object)
@@ -41,14 +80,6 @@ class Node:
         self.negative_edges = []
 
         self.referenced_objects = set()  # Set of object names for nodes in this tree. TODO: What about nodes at different levels?
-
-    def add_edge(self, edge):
-        self.edges.append(edge)
-        self.referenced_objects.add(edge.to_node.object_name)
-
-    def add_negative_edge(self, edge):
-        self.negative_edges.append(edge)
-        self.referenced_objects.add(edge.to_node.object_name)
 
     def no_negative_edges_match(self, node):
         """Checks that this tree does not have any of the negative edges stored in node"""
@@ -140,9 +171,9 @@ class Node:
 
 class Edge:
     """An edge consists of a predicate type and an end node"""
-    def __init__(self, type, to_node):
-        self.type = type
-        self.to_node = to_node
+    def __init__(self, type):
+        self.type = type  # Predicate type of the edge (TOUCH_DOWN, IN, etc)
+        self.to_node = None  # Pointer to the node this edge is connected to
 
     def __str__(self):
         return f"{str(self.type)[14:]}-{self.to_node.object_name}{self.to_node.object_id}"  # Remove the PredicateType. prefix from the enum

@@ -30,17 +30,17 @@ if __name__ == "__main__":
 
     actions = [env.A_PICKUP, env.A_WEST, env.A_PICKUP]
     # for action in actions:
-    for i in range(1130):  # This breaks at 1130, due to trying to go down while touching a door
+    for i in range(3061):  # This breaks at 1130, due to trying to go down while touching a door
         action = random.randint(0, env.get_num_actions()-1)
         curr_state = env.get_state()
         # literals = env.get_literals(curr_state)
         literals, observation, name_id_map = env.step(action)  # , predicate_to_ob_map, obs_grounding
 
-        # if i > 0:
-            # print(literals)
-            # print(ob_id_name_map)
-            # print(observation)
-            # print()
+        if i > 3058:
+            print(literals)
+            print(name_id_map)
+            print(observation)
+            print()
         # env.draw_world(curr_state, delay=5)
 
         outcome = Outcome(observation)
@@ -91,11 +91,11 @@ if __name__ == "__main__":
     # for i in range(10):
     # profiler = cProfile.Profile()
     # profiler.enable()
-    ruleset = learn_ruleset_outcomes(examples)
+    # ruleset = learn_ruleset_outcomes(examples)
     # profiler.disable()
     # stats = pstats.Stats(profiler)
     # stats.dump_stats('stats.prof')
     end_time = time.perf_counter()
     print(f"Took {end_time-start_time}")
     print("Resulting ruleset:")
-    print(ruleset)
+    # print(ruleset)
