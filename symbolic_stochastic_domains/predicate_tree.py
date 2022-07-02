@@ -6,7 +6,7 @@ class PredicateTree:
     This can be continued for each object in the chain
     """
     def __init__(self):
-        self.base_object = Node("taxi")
+        self.base_object = Node("taxi", 0)
 
         # I believe strings are always unique and identifiable to to the order we add nodes to the tree
         # Thus, we use this for hashing and equality. We save it because it is expensive to create strings
@@ -30,8 +30,9 @@ class PredicateTree:
 
 class Node:
     """A node in the tree is an object, connected one-directionally to other objects via predicate edges"""
-    def __init__(self, object_name):
+    def __init__(self, object_name, object_id):
         self.object_name = object_name
+        self.object_id = object_id
 
         self.edges = []  # List of edges
 
@@ -102,31 +103,31 @@ class Node:
     def copy(self, node):
         # Copy node into ourself
         for edge in node.edges:
-            to_node = Node(edge.to_node.object_name)  # Create a copy of the end node
+            to_node = Node(edge.to_node.object_name, edge.to_node.object_id)  # Create a copy of the end node
             to_node.copy(edge.to_node)  # Recursively copy that node to match our copy
             self.add_edge(Edge(edge.type, to_node))  # Add that edge
 
         for edge in node.negative_edges:
             # No need for recursion, as negative edges can't recurse because they mean "there is NOT an object there"
-            self.add_negative_edge(Edge(edge.type, Node(edge.to_node.object_name)))
+            self.add_negative_edge(Edge(edge.type, Node(edge.to_node.object_name, edge.to_node.object_id)))
 
     def str_helper(self):
         ret = ""
 
         for edge in self.edges:
-            ret += f"{self.object_name}-{edge}"
+            ret += f"{self.object_name}{self.object_id}-{edge}"
             ret += "," if len(edge.to_node.edges) == 0 else ""  # Indicate the ends of chains of objects
             # Add in negative edges here. There is no recursion, because they represent not interacting with an object
             if len(self.negative_edges) > 0:
                 # Extra dot on end for same reason, otherwise it gets chopped
-                ret += ", ".join(f"~{self.object_name}-{edge}" for edge in self.negative_edges) + ","
+                ret += ", ".join(f"~{self.object_name}{self.object_id}-{edge}" for edge in self.negative_edges) + ","
             ret += " " + edge.to_node.str_helper()
 
         # We needed to put negative edges in the for loop so they'd appear in the right place, but that doesn't
         # work if there are no edges, so include them here in that case
         if len(self.negative_edges) > 0 and len(self.edges) == 0:
             # Have to add two dots at the end because we chop two off because of trailing commas. May need to rethink
-            ret += ", ".join([f"~{self.object_name}-{edge}" for edge in self.negative_edges]) + ".."
+            ret += ", ".join([f"~{self.object_name}{self.object_id}-{edge}" for edge in self.negative_edges]) + ".."
 
         return ret
 
@@ -144,7 +145,7 @@ class Edge:
         self.to_node = to_node
 
     def __str__(self):
-        return f"{str(self.type)[14:]}-{self.to_node.object_name}"  # Remove the PredicateType. prefix from the enum
+        return f"{str(self.type)[14:]}-{self.to_node.object_name}{self.to_node.object_id}"  # Remove the PredicateType. prefix from the enum
 
     def __repr__(self):
         return self.__str__()

@@ -168,7 +168,7 @@ class SymbolicHeist(Environment):
 
         return objects
 
-    def get_literals(self, state: int) -> PredicateTree:
+    def get_literals(self, state: int) -> Tuple[PredicateTree, Dict]:
         """Converts state to the literals from that state using variables to refer to objects"""
 
         # Get object list from the current state
@@ -180,7 +180,7 @@ class SymbolicHeist(Environment):
         # To create unique ids for each object, but that don't depend on which object is which
         object_reference_counts = {name: 0 for name in self.OB_NAMES}  # Like {'taxi': 0, 'key': 1, 'lock': 0, 'gem': 0}
 
-        # Object id to it's name in this state, i.e {3: key0, 4: key2, 0: taxi0}
+        # Object id to incremental id, i.e {3: 0, 4: 1, 0: 0} (3 and 4 are both keys, so one is key0 and one is key2)
         ob_index_name_map = dict()
 
         # Find the start and end indices for each object type, so we can iterate over all objects of a type
@@ -196,39 +196,39 @@ class SymbolicHeist(Environment):
                     for ob2_idx in range(ob_index_range_map[ob2_id-1], ob_index_range_map[ob2_id]):
                         pred = Predicate.create(p_type, objects[ob1_id], objects[ob2_idx])
                         if pred.value:
-                            # # Convert the objects to unique variable names
-                            # # If we have already encountered this object, reuse the name
-                            # if ob1_id in ob_index_name_map:
-                            #     new_name1 = ob_index_name_map[ob1_id]
-                            # else:
-                            #     # Extract the class name, and append the id to the end of it
-                            #     ob_name = objects[ob1_id].name
-                            #     new_name1 = ob_name + str(object_reference_counts[ob_name])
-                            #     object_reference_counts[ob_name] += 1  # So the next will have a new name
-                            #     # Store this in the name map so if we encounter it again we can refer to it
-                            #     ob_index_name_map[ob1_id] = new_name1
-                            #
-                            # if ob2_idx in ob_index_name_map:
-                            #     new_name2 = ob_index_name_map[ob2_idx]
-                            # else:
-                            #     # Extract the class name, and append the id to the end of it
-                            #     ob_name = objects[ob2_idx].name
-                            #     new_name2 = ob_name + str(object_reference_counts[ob_name])
-                            #     object_reference_counts[ob_name] += 1  # So the next will have a new name
-                            #     # Store this in the name map so if we encounter it again we can refer to it
-                            #     ob_index_name_map[ob2_idx] = new_name2
+                            # Convert the objects to unique variable names
+                            # If we have already encountered this object, reuse the name
+                            if ob1_id in ob_index_name_map:
+                                ob1_inc_id = ob_index_name_map[ob1_id]
+                            else:
+                                # Increment the current counter and save the id mapping
+                                ob_name = objects[ob1_id].name
+                                ob1_inc_id = object_reference_counts[ob_name]
+                                object_reference_counts[ob_name] += 1  # So the next will have a new name
+                                # Store this in the name map so if we encounter it again we can refer to it
+                                ob_index_name_map[ob1_id] = ob1_inc_id
+
+                            if ob2_idx in ob_index_name_map:
+                                ob2_inc_id = ob_index_name_map[ob2_idx]
+                            else:
+                                # Extract the class name, and append the id to the end of it
+                                ob_name = objects[ob2_idx].name
+                                ob2_inc_id = object_reference_counts[ob_name]
+                                object_reference_counts[ob_name] += 1  # So the next will have a new name
+                                # Store this in the name map so if we encounter it again we can refer to it
+                                ob_index_name_map[ob2_idx] = ob2_inc_id
 
                             # Recreate the object, but swap the names out for the variables
                             # pred = type(pred)(pred.type, new_name1, new_name2, pred.value)
                             # predicate_to_referenced_ob_map[pred] = [new_name1, new_name2]
-                            node = Node(self.OB_NAMES[ob2_id])
+                            node = Node(self.OB_NAMES[ob2_id], ob2_inc_id)
                             tree.base_object.add_edge(Edge(p_type, node))
 
                             # Handle properties separately
                             if type(objects[ob2_idx]) is Lock2D:
                                 pred = Predicate.create(PredicateType.OPEN, objects[ob2_idx], objects[ob2_idx])
                                 if pred.value:
-                                    node.add_edge(Edge(PredicateType.OPEN, Node("lock")))
+                                    node.add_edge(Edge(PredicateType.OPEN, Node("lock", ob2_inc_id)))
 
                             # Only one object can satisfy the condition at a time, so no need to keep searching
                             break
@@ -240,24 +240,23 @@ class SymbolicHeist(Environment):
                        PredicateType.TOUCH_UP2D, PredicateType.TOUCH_DOWN2D]:
             pred = Predicate.create(p_type, objects[self.OB_TAXI], objects[-1])  # Objects -1 is the wall
             if pred.value:
-                node = Node("wall")
+                node = Node("wall", 0)
                 tree.base_object.add_edge(Edge(p_type, node))
 
         # # Note: The taxi is referenced by the action (MoveLeft(taxi0)) for example. We need to add this in or
         # # it won't be able to refer to the taxi in instances when there are no other predicates
-        # if 0 not in ob_index_name_map:  # Manually put the taxi in there if it is not
-        #     ob_index_name_map[0] = "taxi0"
+        if 0 not in ob_index_name_map:  # Manually put the taxi in there if it is not
+            ob_index_name_map[0] = 0  # Taxi is object 0
 
         # TODO: Could also have the predicates just use "taxi" instead of "taxi0", but then have a dict for
         # each predicate to it's mappings: {Predicate: ["taxi0", "key1"]}, which might help with hashing
-
-        return tree
+        return tree, ob_index_name_map
 
         # # If we found a valid predicate and it has an object with a property in it, record it
         # # mapping from predicate referencing the object to the other predicate
         # # Would it be easier for predicate objects to have ids for each object as well as names?
 
-    def step(self, action: int) -> JointEffect:
+    def step(self, action: int) -> Tuple[PredicateTree, JointEffect]:
         """Stochastically apply action to environment"""
         state = self.curr_state
         x, y, keys, locks, gem = \
@@ -340,12 +339,13 @@ class SymbolicHeist(Environment):
         # In order to specify which object's attributes are changing, we need to know the variable groundings
         # for this state. Thus, we get the literals in here, and return them from the step function
         # As part of the observation
-        # literals, ob_id_name_map = self.get_literals(self.get_flat_state(self.curr_state)) # predicate_to_ob_map
+        tree, ob_id_name_map = self.get_literals(self.get_flat_state(self.curr_state)) # predicate_to_ob_map
 
         correct_types = [EffectType.INCREMENT] * 2 + [EffectType.SET_TO_NUMBER] * 8
         effects = []
         atts = []
         obs_grounding = dict()  # class name to class unique identifier
+        unique_name_to_ob_id = dict()
         for att, e_type in enumerate(correct_types):
             if self.curr_state[att] != next_state[att]:
                 effects.append(Effect.create(e_type, self.curr_state[att], next_state[att]))
@@ -357,8 +357,9 @@ class SymbolicHeist(Environment):
 
                 # Convert the class and att idx to a string. (For viewing only, this probably makes the code slower)
                 # identifier = f"{ob_id_name_map[class_instance_id]}.{self.ATT_NAMES[class_id][class_att_idx]}"
-                identifier = f"{self.OB_NAMES[class_id]}.{self.ATT_NAMES[class_id][class_att_idx]}"
+                identifier = f"{self.OB_NAMES[class_id]}{ob_id_name_map[class_instance_id]}.{self.ATT_NAMES[class_id][class_att_idx]}"
                 # obs_grounding[self.OB_NAMES[class_id]] = ob_id_name_map[class_instance_id]
+                unique_name_to_ob_id[self.OB_NAMES[class_id] + str(ob_id_name_map[class_instance_id])] = class_instance_id
 
                 atts.append(identifier)
 
@@ -369,8 +370,7 @@ class SymbolicHeist(Environment):
 
         # Update current state
         self.curr_state = next_state
-
-        return observation  #, predicate_to_ob_map, obs_grounding
+        return tree, observation, unique_name_to_ob_id
 
     def compute_next_loc(self, x: int, y: int, locks: List[int], action: int) -> Tuple[int, int]:
         """Deterministically return the result of taking an action"""

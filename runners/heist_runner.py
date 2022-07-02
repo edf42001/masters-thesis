@@ -21,7 +21,7 @@ class HeistRunner(Runner):
         self.exp_num = exp_num
 
         # Experiment parameters
-        self.max_steps = 100
+        self.max_steps = 5
         self.num_episodes = 1
         self.stochastic = False
         self.visualize = False
@@ -36,8 +36,6 @@ class HeistRunner(Runner):
         self.planner = SymbolicPolicy(self.env.get_num_actions(), self.model)
         self.learner = SymbolicLearner(self.env, self.model, self.planner, visualize=self.visualize)
         self.plot = Plot(self, self.eval_episodes, self.eval_timer)
-
-        # TODO: Come up with better way of doing self.model.next_state with the strings / groundings
 
 
 if __name__ == '__main__':

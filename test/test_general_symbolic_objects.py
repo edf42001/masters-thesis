@@ -30,20 +30,18 @@ if __name__ == "__main__":
 
     actions = [env.A_PICKUP, env.A_WEST, env.A_PICKUP]
     # for action in actions:
-    for i in range(1120):  # This breaks at 1130, due to trying to go down while touching a door
+    for i in range(1130):  # This breaks at 1130, due to trying to go down while touching a door
         action = random.randint(0, env.get_num_actions()-1)
         curr_state = env.get_state()
-        literals = env.get_literals(curr_state)
-        observation = env.step(action)  # , predicate_to_ob_map, obs_grounding
+        # literals = env.get_literals(curr_state)
+        literals, observation, name_id_map = env.step(action)  # , predicate_to_ob_map, obs_grounding
 
-        # if i > 1120:
-        #     print(literals)
-        #     print(literals.copy())
-        #     print(literals.copy() == literals)
-        #     # print(ob_id_name_map)
-        #     print(observation)
-        #     print()
-        # env.draw_world(curr_state, delay=700)
+        # if i > 0:
+            # print(literals)
+            # print(ob_id_name_map)
+            # print(observation)
+            # print()
+        # env.draw_world(curr_state, delay=5)
 
         outcome = Outcome(observation)
         example = Example(action, literals, outcome)
@@ -60,9 +58,13 @@ if __name__ == "__main__":
     # Rule: if a positive literal is in the context, it must be referred to in the deictic references
     # But wait, aren't the references kindof similar to the context itself? They force matches to be found,
     # If you put something in there it acts as context. Maybe I should just make my graph? Might be hard to learn
-    context = PredicateTree()
-    context.base_object.add_edge(Edge(PredicateType.ON2D, Node("key")))
-    context.base_object.add_negative_edge(Edge(PredicateType.IN, Node("key")))
+    # context = PredicateTree()
+    # context.base_object.add_edge(Edge(PredicateType.ON2D, Node("key")))
+    # context.base_object.add_negative_edge(Edge(PredicateType.IN, Node("key")))
+
+    # Use tree learning. When in env, only need to update the outcome that was changed.
+    # Hm, actually I don't know if that's true. Perhaps save the values for each thing, and update like that?
+    # Also, run only on certain action.
 
     # outcomes = OutcomeSet()
     # outcomes.add_outcome(Outcome(JointNoEffect()), 1.0)

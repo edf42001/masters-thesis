@@ -27,8 +27,10 @@ def create_new_contexts_from_context(context: PredicateTree) -> List[PredicateTr
                 copy2 = context.copy()
 
                 # Need to test both positive and negative version of the literal
-                copy1.base_object.add_edge(Edge(p_type, Node(object_name)))  # Feel like these should just be nodes
-                copy2.base_object.add_negative_edge(Edge(p_type, Node(object_name)))
+                # TODO: Should the tree handle the node ids? Or can they all be 0? No, because there is on key and in key
+                # Thus, the tree should handle the node ids. FOr now lets try making them all 0?
+                copy1.base_object.add_edge(Edge(p_type, Node(object_name, 0)))  # Feel like these should just be nodes
+                copy2.base_object.add_negative_edge(Edge(p_type, Node(object_name, 0)))
 
                 new_contexts.append(copy1)
                 new_contexts.append(copy2)
@@ -44,8 +46,8 @@ def create_new_contexts_from_context(context: PredicateTree) -> List[PredicateTr
                 copy2 = context.copy()
 
                 # Need to test both positive and negative version of the literal
-                copy1.base_object.edges[e].to_node.add_edge(Edge(PredicateType.OPEN, Node("lock")))
-                copy2.base_object.edges[e].to_node.add_negative_edge(Edge(PredicateType.OPEN, Node("lock")))
+                copy1.base_object.edges[e].to_node.add_edge(Edge(PredicateType.OPEN, Node("lock", 0)))
+                copy2.base_object.edges[e].to_node.add_negative_edge(Edge(PredicateType.OPEN, Node("lock", 0)))
 
                 new_contexts.append(copy1)
                 new_contexts.append(copy2)
@@ -76,82 +78,6 @@ def applicable_by_outcome(rule: Rule, example: Example, outcome: Outcome):
     )
 
 
-# Perhaps I need to remake the rules but in this manner
-# What is the best way to figure out the minimal set that covers the maximum examples?
-# Structure learning, multiple instance learning?
-def find_greedy_rule_by_adding_lits(examples: ExampleSet, relevant_examples: List[Example], irrelevant_examples: List[Example]):
-    # In the case where only one action causes an effect, we can just get it from the relevant examples
-    action = relevant_examples[0].action
-
-    # FInd the list of objects referred to in the outcomes that we must have deictic references for
-    # In order for an object ot be in outcomes, MUST be in either action or conditions
-    objects_in_outcome = set([key.split(".")[0] for key in relevant_examples[0].outcome.outcome.value.keys()])
-
-    # List of test contexts to try
-    test_contexts = [PredicateTree()]
-
-    level = 0  # Current level of # literals in context
-
-    # For now, only try up to two literals in the context
-    while level < 3:
-        best_score = 1  # Start at 1 to fix a bug where it sometimes chose rules that covered 0 examples
-        best_rule = None
-        for context in test_contexts:  # Iterate over each context
-            # Make a rule with that context
-            outcomes = OutcomeSet()
-            outcomes.add_outcome(relevant_examples[0].outcome, 1.0)
-            rule = Rule(action=action, context=context, outcomes=outcomes)
-
-            # Make sure we have a reference to each object, but ignore taxi for now, that is referenced in the action
-            have_correct_deictic_references = all(
-                (obj == "taxi" or obj in context.base_object.referenced_objects) for obj in objects_in_outcome
-            )
-            if (
-                have_correct_deictic_references and
-                only_applies_to_outcome(rule, examples) and not
-                # Simply be removing the [] around the list comprehension, we turn it to a generator
-                # That means instead of creating the whole list and then iterating through it to search for trues,
-                # any() will now stop upon the first true it finds.
-                any(applicable(rule, example) for example in irrelevant_examples)
-            ):
-                # Ok, looks like there are some issues with my method.
-                # It's not just ~TouchDown(taxi, wall), because there's also the issue of when the taxi runs into
-                # an open door. So ~touchDown covers most, but not all scenarios.
-                # Yup, if you look at the ratios, ~TouchDown2D(taxi, wall) as 99% increment, 0.0099 no effect
-                # If the rule is good, record its score. Score is number of examples in relevant set this applies to.
-                score = sum([examples.examples[example] for example in relevant_examples if applicable(rule, example)])
-                if score >= best_score:
-                    best_score = score
-                    best_rule = rule
-
-        # If we found a valid rule, this will be the best, adding any more context will make it cover less
-        if best_rule is not None:
-            return best_rule
-
-        # Otherwise, try adding every literal to every literal in the context and trying again
-        # This process could produce duplicates. I.e, if you have 1 then add 2, or 2 then add 1.
-        # The hashes will be different because the order was different
-        level += 1
-
-        # If we've already encountered this level before, just reread the saved contexts instead of recalculating them
-        if level not in NEW_CONTEXTS:
-            new_contexts = []
-            for context in test_contexts:
-                new_contexts.extend(create_new_contexts_from_context(context))
-            NEW_CONTEXTS[level] = new_contexts
-        else:
-            new_contexts = NEW_CONTEXTS[level]
-
-        test_contexts = new_contexts
-
-    # If we get down here, we weren't able to do it with only two literals
-    # TODO: for the case of Action 5: {[In(taxi, key), TouchDown2D(taxi, lock)]}, we should see if it is faster
-    # to do additive or subtractive
-    print("No rule found :(")
-    # TODO: could try using subtraction method in this instance only
-    return None
-
-
 def find_rule_by_first_order_inductive_logic(examples: ExampleSet, relevant_examples: List[Example], irrelevant_examples: List[Example]):
     # See https://www.geeksforgeeks.org/first-order-inductive-learner-foil-algorithm/
     # relevant_examples is our positive examples
@@ -165,11 +91,13 @@ def find_rule_by_first_order_inductive_logic(examples: ExampleSet, relevant_exam
 
     # Find the list of objects referred to in the outcomes that we must have deictic references for
     # In order for an object ot be in outcomes, MUST be in either action or conditions
-    objects_in_outcome = set([key.split(".")[0] for key in relevant_examples[0].outcome.outcome.value.keys()])
+    # Due to how we now implement outcomes with the digit appended to them, we need to remove that
+    objects_in_outcome = set([key.split(".")[0][:-1] for key in relevant_examples[0].outcome.outcome.value.keys()])
 
+    # print("Relevent")
     # for example in relevant_examples:
     #     print(example)
-    # print()
+    # print("Irrelevent")
     # for example in irrelevant_examples:
     #     print(example)
     # print()
@@ -283,13 +211,8 @@ def learn_minimal_ruleset_for_outcome(examples: ExampleSet, outcome: Outcome) ->
         # best_rule = find_optimal_greedy_rule(examples, relevant_examples)
         # rules.append(best_rule)
 
-        # best_rule = find_optimal_first_lit(examples, relevant_examples, irrelevant_examples)
+        # For rules, can have decitic reference checks combining tree and outcome.
         best_rule = find_rule_by_first_order_inductive_logic(examples, relevant_examples, irrelevant_examples)
-        # import sys
-        # sys.exit(0)
-
-        # best_rule = find_greedy_rule_by_removing_lits(examples, relevant_examples, irrelevant_examples)
-        # best_rule = find_greedy_rule_by_adding_lits(examples, relevant_examples, irrelevant_examples)
         rules.append(best_rule)
 
         # Update relevant examples by removing ones the new rule didn't apply to, add those ones to irrelevant examples
