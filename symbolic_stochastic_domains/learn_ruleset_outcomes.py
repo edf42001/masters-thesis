@@ -33,6 +33,23 @@ def create_new_contexts_from_context(context: PredicateTree) -> List[PredicateTr
                 new_contexts.append(copy1)
                 new_contexts.append(copy2)
 
+    # Manually handle the addition of variables for locks being open. In the future, this should be done automatically
+    len_contexts = len(new_contexts)  # Store length since we will be appending
+    for i in range(len_contexts):
+        # Check if the context has a lock being mentioned
+        for e, edge in enumerate(context.base_object.edges):
+            if edge.to_node.object_name == "lock":
+                # Add positive and negative values
+                copy1 = context.copy()
+                copy2 = context.copy()
+
+                # Need to test both positive and negative version of the literal
+                copy1.base_object.edges[e].to_node.add_edge(Edge(PredicateType.OPEN, Node("lock")))
+                copy2.base_object.edges[e].to_node.add_negative_edge(Edge(PredicateType.OPEN, Node("lock")))
+
+                new_contexts.append(copy1)
+                new_contexts.append(copy2)
+
     return new_contexts
 
 
@@ -57,12 +74,6 @@ def applicable_by_outcome(rule: Rule, example: Example, outcome: Outcome):
             context_matches(rule.context, example.state) and
             covers(outcome, example)
     )
-
-
-def print_examples_rule_covers(rule: Rule, examples: ExampleSet):
-    for outcome in rule.outcomes.outcomes:
-        applicable = [example for example in examples.examples.keys() if applicable_by_outcome(rule, example, outcome)]
-        print(f"Outcome: {outcome}: {applicable}")
 
 
 # Perhaps I need to remake the rules but in this manner
@@ -141,86 +152,89 @@ def find_greedy_rule_by_adding_lits(examples: ExampleSet, relevant_examples: Lis
     return None
 
 
-def find_greedy_rule_by_removing_lits(examples: ExampleSet, relevant_examples: List[Example], irrelevant_examples: List[Example]):
-    # print("Finding rule by removing lits")
+def find_rule_by_first_order_inductive_logic(examples: ExampleSet, relevant_examples: List[Example], irrelevant_examples: List[Example]):
+    # See https://www.geeksforgeeks.org/first-order-inductive-learner-foil-algorithm/
+    # relevant_examples is our positive examples
+    # irrelevant_examples is our negative examples
+    # Both of these lists are constrained to examples that match the action
 
-    new_rules = []  # Could probably remove these by keeping only the best rule, but what if there is a tie?
-    scores = []
-
-    # In the case where only one action causes an effect, we can just get it from the relevant examples
+    # This information is static throughout the learning process
     action = relevant_examples[0].action
+    outcomes = OutcomeSet()
+    outcomes.add_outcome(relevant_examples[0].outcome, 1.0)
 
-    # FInd the list of objects referred to in the outcomes that we must have deictic references for
-    # In order for an object ot be in outcomes, MUST be in either action or conditions
-    objects_in_outcome = set([key.split(".")[0] for key in relevant_examples[0].outcome.outcome.value.keys()])
-    # print(f"Objects referenced in outcomes: {objects_in_outcome}")
+    # for example in relevant_examples:
+    #     print(example)
+    # print()
+    # for example in irrelevant_examples:
+    #     print(example)
+    # print()
 
-    # Try to explain each example
-    for example in relevant_examples:
-        outcomes = OutcomeSet()
-        outcomes.add_outcome(relevant_examples[0].outcome, 1.0)
-        rule = Rule(action=action, context=[], outcomes=outcomes)
-        rule.context = [lit.copy() for lit in example.state]  # Start by fully describing the example
-        # print(example)
+    # Initial rule with empty context. Initialize how many negative examples it covers
+    contexts = [PredicateTree()]
+    rule = Rule(action=action, context=contexts[0], outcomes=outcomes)
+    new_rule_negatives = [example for example in irrelevant_examples if context_matches(rule.context, example.state)]
 
-        learn_outcomes(rule, examples)
-        # print("Rule:")
-        # print(rule)
+    # Wait, could I replace rule.context with just context?
 
-        # Greedily try removing all literals until score doesn't improve
-        i = 0
-        best_score = 0
-        while i < len(rule.context):
-            literal = rule.context.pop(i)
-            # print(f"Trying to remove {literal}")
+    # Our goal is learn the best rule that covers the most of the positive examples, and none of the negative examples
+    while len(new_rule_negatives) > 0:
+        # Generate all candidate literals to add to the new rule
+        new_contexts = create_new_contexts_from_context(rule.context)
 
-            # Ensure it only covers these outcomes, and not any in irrelevant examples
-            # The second object is relavant, first is just taxi. Will need to find some other way to refer to taxi
-            # TODO and think about: Does the predicate have to be true? i.e, the agent is "interacting" with the object?
-            # Yup, this definetly seems to lead to better rules. For Action 4, it replaced:
-            # [~TouchDown2D(taxi, wall), TouchUp2D(taxi, wall), ~In(taxi, key)] with [On2D(taxi, key)]
-            objects_in_context = set([lit.object2 for lit in rule.context if lit.value])
-            # print(f"Objects in context: {objects_in_context}")
+        # Pick the best one based on the FOIL gain metric
+        # L is the candidate literal to add to rule R. p0 = number of positive bindings of R
+        # n0 = number of negative bindings of R. p1 = number of positive binding of R + L
+        # n1 = number of negative bindings of R + L. t  = number of positive bindings of R also covered by R + L
+        p0 = sum([examples.examples[ex] for ex in relevant_examples if context_matches(rule.context, ex.state)])
+        n0 = sum([examples.examples[ex] for ex in irrelevant_examples if context_matches(rule.context, ex.state)])
 
-            # Make sure we have a reference to each object, but ignore taxi for now, that is referenced in the action
-            # technically, like MoveLeft(taxi1)
-            have_correct_deictic_references = all([(obj == "taxi" or obj in objects_in_context) for obj in objects_in_outcome])
+        scores = []
+        for context in new_contexts:
+            new_rule = Rule(action=action, context=context, outcomes=outcomes)
 
-            # TODO: this is inefficient, let's give up on the first false positive, instead of calling learn_outcomes
-            if (
-                have_correct_deictic_references and
-                only_applies_to_outcome(rule, examples) and not
-                any([applicable(rule, example) for example in irrelevant_examples])
-            ):
-                i = 0
-                # Score is number of examples in relevant set this applies to.
-                score = sum([examples.examples[example] for example in relevant_examples if applicable(rule, example)])
-                # print(f"Current score: {score}, best_score: {best_score}")
-                if score >= best_score:
-                    # TODO: Is this the most effecient way of calculating?
-                    i = 0  # We actually want to keep going in this case, the ones that were bad are at the front
-                    best_score = score
-                else:
-                    # print("Not better score")
-                    i += 1
-                    rule.context.insert(0, literal)
+            p1 = sum([examples.examples[ex] for ex in relevant_examples if context_matches(new_rule.context, ex.state)])
+            n1 = sum([examples.examples[ex] for ex in irrelevant_examples if context_matches(new_rule.context, ex.state)])
+
+            # t = number of positive bindings of R also covered by R + L. TODO: how to reduce duplicate calculations
+            t = sum([examples.examples[ex] for ex in relevant_examples if context_matches(new_rule.context, ex.state) and context_matches(rule.context, ex.state)])
+
+            best_context = None  # TODO
+
+            if p1 != 0:  # If the new rule covers no examples that leads to invalid value in log2
+                gain = t * (np.log2(p1 / (p1 + n1)) - np.log2(p0 / (p0 + n0)))
             else:
-                i += 1
-                rule.context.insert(0, literal)
-                # print("Not applicable")
+                gain = -10
+            # print(f"{context}, {p0}, {n0}, {p1}, {n1}, {t} {gain:.4f}")
 
-        learn_outcomes(rule, examples)
-        # print("Final rule:")
-        # print(rule)
-        new_rules.append(rule)
-        scores.append(best_score)
+            scores.append(gain)
 
-    # print("Final new rules:")
-    # for rule, score in zip(new_rules, scores):
-    #     print(rule, score)
+        idxs = np.argsort(scores)
+        scores = [scores[i] for i in idxs]
+        new_contexts = [new_contexts[i] for i in idxs]
+        # print()
+        # for score, context in zip(scores[-5:], new_contexts[-5:]):
+        #     print(f"{context}: {score:.4f}")
 
-    best_index = np.argmax(scores)
-    return new_rules[best_index]
+        best_context = new_contexts[-1]
+        # print("Chose best context:")
+        # print(best_context)
+
+        # Create new rule from this best context
+        rule = Rule(action=action, context=best_context, outcomes=outcomes)
+
+        # Update the negative examples this still covers
+        new_rule_negatives = [example for example in new_rule_negatives if context_matches(rule.context, example.state)]
+
+        # print("New rule negatives:")
+        # for ex in new_rule_negatives:
+        #     print(ex)
+
+    # Now we found the best rule for this subset. In the outer loop, remove all positive examples and keep going
+    # print("Done, new rule:")
+    # print(rule)
+
+    return rule
 
 
 def learn_minimal_ruleset_for_outcome(examples: ExampleSet, outcome: Outcome) -> List[Rule]:
@@ -232,7 +246,10 @@ def learn_minimal_ruleset_for_outcome(examples: ExampleSet, outcome: Outcome) ->
     rules = []
 
     relevant_examples = [ex for ex in examples.examples.keys() if ex.outcome == outcome]
-    irrelevant_examples = []
+    action = relevant_examples[0].action
+
+    # All instances with the same action, but a different outcome
+    irrelevant_examples = [ex for ex in examples.examples.keys() if ex.action == action and ex.outcome != outcome]
 
     while len(relevant_examples) > 0:
         # print("Relevant examples:")
@@ -245,8 +262,13 @@ def learn_minimal_ruleset_for_outcome(examples: ExampleSet, outcome: Outcome) ->
         # best_rule = find_optimal_greedy_rule(examples, relevant_examples)
         # rules.append(best_rule)
 
+        # best_rule = find_optimal_first_lit(examples, relevant_examples, irrelevant_examples)
+        best_rule = find_rule_by_first_order_inductive_logic(examples, relevant_examples, irrelevant_examples)
+        # import sys
+        # sys.exit(0)
+
         # best_rule = find_greedy_rule_by_removing_lits(examples, relevant_examples, irrelevant_examples)
-        best_rule = find_greedy_rule_by_adding_lits(examples, relevant_examples, irrelevant_examples)
+        # best_rule = find_greedy_rule_by_adding_lits(examples, relevant_examples, irrelevant_examples)
         rules.append(best_rule)
 
         # Update relevant examples by removing ones the new rule didn't apply to, add those ones to irrelevant examples
@@ -260,10 +282,6 @@ def learn_minimal_ruleset_for_outcome(examples: ExampleSet, outcome: Outcome) ->
         # for ex in irrelevant_examples:
         #     print(ex)
         # print()
-
-        # Somehow we need to learn that the thing that explains this example is
-        # TouchRight(taxi, door), Open(door, door), and
-        # not any of the other things.
 
     # print("Final ruleset:")
     # for rule in rules:
@@ -293,6 +311,10 @@ def learn_ruleset_outcomes(examples: ExampleSet) -> RuleSet:
 
     # print("Unique outcomes:")
     # print(unique_outcomes)
+    # unique_outcomes = [unique_outcomes[4]]  # test learning issues
+    # unique_outcomes = [unique_outcomes[1]]  # test learning issues
+
+    # del unique_outcomes[1]
 
     # Learn the rules for each outcome
     rules = []

@@ -27,7 +27,7 @@ def learn_outcomes(rule: Rule, examples: ExampleSet):
         if example.outcome in unique_outcomes:
             continue
 
-        if rule.action == example.action and context_matches(rule.context, example.state_set):
+        if rule.action == example.action and context_matches(rule.context, example.state):
             unique_outcomes.append(example.outcome)
 
     # print("Unique outcomes:")
