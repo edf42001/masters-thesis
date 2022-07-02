@@ -163,6 +163,10 @@ def find_rule_by_first_order_inductive_logic(examples: ExampleSet, relevant_exam
     outcomes = OutcomeSet()
     outcomes.add_outcome(relevant_examples[0].outcome, 1.0)
 
+    # Find the list of objects referred to in the outcomes that we must have deictic references for
+    # In order for an object ot be in outcomes, MUST be in either action or conditions
+    objects_in_outcome = set([key.split(".")[0] for key in relevant_examples[0].outcome.outcome.value.keys()])
+
     # for example in relevant_examples:
     #     print(example)
     # print()
@@ -178,6 +182,7 @@ def find_rule_by_first_order_inductive_logic(examples: ExampleSet, relevant_exam
     # Wait, could I replace rule.context with just context?
 
     # Our goal is learn the best rule that covers the most of the positive examples, and none of the negative examples
+    lit_counter = 1  # How many lits have been addded, used for checking when deictic references should be used
     while len(new_rule_negatives) > 0:
         # Generate all candidate literals to add to the new rule
         new_contexts = create_new_contexts_from_context(rule.context)
@@ -189,17 +194,30 @@ def find_rule_by_first_order_inductive_logic(examples: ExampleSet, relevant_exam
         p0 = sum([examples.examples[ex] for ex in relevant_examples if context_matches(rule.context, ex.state)])
         n0 = sum([examples.examples[ex] for ex in irrelevant_examples if context_matches(rule.context, ex.state)])
 
+        # TODO: Store best in a list, or store top N in a heap, instead of storing all then sorting
+
         scores = []
         for context in new_contexts:
-            new_rule = Rule(action=action, context=context, outcomes=outcomes)
+            # Verify we have all the correct deictic references in this context.
+            # We assume there is no way to get a deictic reference later? Taxi is referenced in the action
+            # TODO: Needs to be the `exact` object referenced in the outcome, i.e. if there is a lock being unlocked
+            # below us, on lock isn't the same lock. Whoops, this fails when there are two objects mentioned, because
+            # we can't reference both of them at once. Perhaps only activate this when the number of literals is
+            # equal to the number of references? I don't know if this is a hack or valid.
+            # Could say, the rule needs to reference at least one of them? That would also speed it up
+            have_correct_deictic_references = all(
+                (obj == "taxi" or obj in context.base_object.referenced_objects) for obj in objects_in_outcome
+            )
 
-            p1 = sum([examples.examples[ex] for ex in relevant_examples if context_matches(new_rule.context, ex.state)])
-            n1 = sum([examples.examples[ex] for ex in irrelevant_examples if context_matches(new_rule.context, ex.state)])
+            if lit_counter == len(objects_in_outcome) and not have_correct_deictic_references:
+                scores.append(-10)  # Is negative 10 small enough?
+                continue
+
+            p1 = sum([examples.examples[ex] for ex in relevant_examples if context_matches(context, ex.state)])
+            n1 = sum([examples.examples[ex] for ex in irrelevant_examples if context_matches(context, ex.state)])
 
             # t = number of positive bindings of R also covered by R + L. TODO: how to reduce duplicate calculations
-            t = sum([examples.examples[ex] for ex in relevant_examples if context_matches(new_rule.context, ex.state) and context_matches(rule.context, ex.state)])
-
-            best_context = None  # TODO
+            t = sum([examples.examples[ex] for ex in relevant_examples if context_matches(context, ex.state) and context_matches(rule.context, ex.state)])
 
             if p1 != 0:  # If the new rule covers no examples that leads to invalid value in log2
                 gain = t * (np.log2(p1 / (p1 + n1)) - np.log2(p0 / (p0 + n0)))
@@ -225,6 +243,9 @@ def find_rule_by_first_order_inductive_logic(examples: ExampleSet, relevant_exam
 
         # Update the negative examples this still covers
         new_rule_negatives = [example for example in new_rule_negatives if context_matches(rule.context, example.state)]
+
+        # We've added another literal
+        lit_counter += 1
 
         # print("New rule negatives:")
         # for ex in new_rule_negatives:
@@ -313,6 +334,7 @@ def learn_ruleset_outcomes(examples: ExampleSet) -> RuleSet:
     # print(unique_outcomes)
     # unique_outcomes = [unique_outcomes[4]]  # test learning issues
     # unique_outcomes = [unique_outcomes[1]]  # test learning issues
+    # unique_outcomes = [unique_outcomes[5]]  # test learning issues
 
     # del unique_outcomes[1]
 

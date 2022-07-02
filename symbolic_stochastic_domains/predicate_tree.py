@@ -119,7 +119,7 @@ class Node:
             # Add in negative edges here. There is no recursion, because they represent not interacting with an object
             if len(self.negative_edges) > 0:
                 # Extra dot on end for same reason, otherwise it gets chopped
-                ret += ", ".join(f"~{self.object_name}-{edge}" for edge in self.negative_edges) + "...."
+                ret += ", ".join(f"~{self.object_name}-{edge}" for edge in self.negative_edges) + ","
             ret += " " + edge.to_node.str_helper()
 
         # We needed to put negative edges in the for loop so they'd appear in the right place, but that doesn't
