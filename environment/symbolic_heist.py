@@ -77,19 +77,8 @@ class SymbolicHeist(Environment):
         # PredicateType.OPEN: [[OB_LOCK]]
     }
 
-    # Conditions
-    # touch(N/E/S/W wall), touch(N/E/S/W lock), on(key/gem), hold(key/gem)
-    NUM_COND = 12
-    MAX_PARENTS = 3
-
-    # Outcomes (non-standard OO implementation)
-    O_NO_CHANGE = NUM_ACTIONS
-
-    def __init__(self, stochastic=True, use_outcomes=True):
+    def __init__(self, stochastic=True):
         self.stochastic = stochastic
-        self.use_outcomes = use_outcomes
-
-        self.dynamic_objects = True
 
         # Add walls to the map
         # For each direction, stores which positions, (x, y), have a wall in that direction
@@ -406,44 +395,6 @@ class SymbolicHeist(Environment):
             return self.R_UNLOCK
         else:
             return self.R_DEFAULT
-
-    def apply_outcome(self, state: int, outcome: List[int]) -> Union[int, np.ndarray]:
-        """Compute next state given an outcome"""
-        if all(o == self.O_NO_CHANGE for o in outcome):
-            return state
-
-        factored_s = self.get_factored_state(state)
-
-        # Movement and picking up the gem can only affect one attribute
-        # Keys and locks can change at the same time, but only one of each
-        if outcome[self.S_X] == self.A_EAST:
-            factored_s[self.S_X] += 1
-        elif outcome[self.S_X] == self.A_WEST:
-            factored_s[self.S_X] -= 1
-        elif outcome[self.S_Y] == self.A_NORTH:
-            factored_s[self.S_Y] -= 1
-        elif outcome[self.S_Y] == self.A_SOUTH:
-            factored_s[self.S_Y] += 1
-        elif outcome[self.S_GEM] == self.A_PICKUP:
-            factored_s[self.S_GEM] = 1
-        else:
-            for key_idx in range(self.S_KEY_1, self.S_KEY_5 + 1):
-                if outcome[key_idx] == self.A_PICKUP:
-                    factored_s[key_idx] = 2
-                    break
-                elif outcome[key_idx] == self.A_UNLOCK:
-                    factored_s[key_idx] = 0
-                    break
-            for lock_idx in range(self.S_LOCK_1, self.S_LOCK_3 + 1):
-                if outcome[lock_idx] == self.A_UNLOCK:
-                    factored_s[lock_idx] = 0
-                    break
-
-        try:
-            return self.get_flat_state(factored_s)
-        except ValueError:
-            # Outcome returned illegal state
-            return state
 
     def visualize(self):
         self.draw_world(self.get_flat_state(self.curr_state), delay=1)

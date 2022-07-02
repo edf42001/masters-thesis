@@ -19,7 +19,6 @@ class SymbolicModel(TransitionModel):
     def __init__(self, env):
         self.env = env
 
-        self.num_inputs = self.env.get_condition_size()
         self.num_actions = self.env.get_num_actions()
         self.num_atts = self.env.NUM_ATT
 

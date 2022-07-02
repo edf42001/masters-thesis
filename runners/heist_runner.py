@@ -30,7 +30,7 @@ class HeistRunner(Runner):
         random.seed(1)
         np.random.seed(1)
 
-        self.env = SymbolicHeist(stochastic=self.stochastic, use_outcomes=False)
+        self.env = SymbolicHeist(stochastic=self.stochastic)
 
         self.model = SymbolicModel(self.env)
         self.planner = SymbolicPolicy(self.env.get_num_actions(), self.model)

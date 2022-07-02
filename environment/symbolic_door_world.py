@@ -95,7 +95,6 @@ class SymbolicDoorWorld(Environment):
 
         self.curr_state: List[int] = None
         self.last_action: int = None
-        self.last_outcome: int = None
         self.last_reward: float = None
         self.restart()
 

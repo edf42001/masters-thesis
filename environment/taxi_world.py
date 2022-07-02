@@ -50,7 +50,6 @@ class TaxiWorld(Environment):
 
     # Conditions
     NUM_COND = 7  # touch_N/E/S/W, on(Agent,Passenger), in(Agent,Passenger), on(Agent,Dest)
-    MAX_PARENTS = 3
 
     # Outcomes (non-standard OO implementation)
     # All possible outcomes are results of successful actions or no change
@@ -86,7 +85,6 @@ class TaxiWorld(Environment):
 
         self.curr_state: List[int] = None
         self.last_action: int = None
-        self.last_outcome: int = None
         self.last_reward: float = None
 
         # Restart to begin episode

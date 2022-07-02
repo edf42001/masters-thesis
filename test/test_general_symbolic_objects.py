@@ -23,7 +23,7 @@ if __name__ == "__main__":
     random.seed(1)
     np.random.seed(1)
 
-    env = SymbolicHeist(stochastic=False, use_outcomes=False)
+    env = SymbolicHeist(stochastic=False)
     env.restart()  # The env is being restarted twice in the runner, which means random key arrangements were different
 
     examples = ExampleSet()

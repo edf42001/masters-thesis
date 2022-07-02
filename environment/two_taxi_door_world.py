@@ -48,7 +48,6 @@ class DoorWorld(Environment):
 
     # Conditions
     NUM_COND = 9  # touch(L/R wall), touch(L/R door), touch(L/R goal), touch(L/R switch), open(door)
-    MAX_PARENTS = 4  # This doesn't do anything but I think this number is accurate
 
     # Outcomes (non-standard OO implementation)
     # All possible outcomes are results of successful actions or no change
@@ -56,11 +55,8 @@ class DoorWorld(Environment):
 
     actions = ['Left', 'Right']
 
-    def __init__(self, stochastic=True, use_outcomes=True):
+    def __init__(self, stochastic=True):
         self.stochastic: bool = stochastic
-        self.use_outcomes: bool = use_outcomes
-
-        self.dynamic_objects = False
 
         # Add walls to the map
         # Stores x location of wall, 0 indexed, to the left of the cell
@@ -80,7 +76,6 @@ class DoorWorld(Environment):
 
         self.curr_state: List[int] = None
         self.last_action: int = None
-        self.last_outcome: int = None
         self.last_reward: float = None
         self.restart()
 

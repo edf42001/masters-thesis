@@ -11,22 +11,18 @@ class Environment:
     # From https://github.com/rail-cwru/hoomdp
 
     stochastic = None
-    use_outcomes = None
-    dynamic_objects = None
 
-    MAX_PARENTS = None
     NUM_ACTIONS = None
     NUM_ATT = None
-    NUM_COND = None
     R_SUCCESS = None
     STATE_ARITIES = None
-    O_NO_CHANGE = None
     OB_ARITIES = None
     OB_COUNT = None
 
     # Names, to help debugging
     ACTION_NAMES = None
     ATT_NAMES = None
+    OB_NAMES = None
 
     instance_index_map = {}
     state_index_instance_map = {}
@@ -37,7 +33,6 @@ class Environment:
 
     curr_state: List[int] = None
     last_action: int = None
-    last_outcome: int = None
     last_reward: float = None
 
     def end_of_episode(self, state: int = None) -> bool:
@@ -100,18 +95,12 @@ class Environment:
     def get_attribute_arities(self) -> List[int]:
         return self.STATE_ARITIES
 
-    def get_condition_size(self) -> int:
-        return self.NUM_COND
-
     def get_rmax(self) -> float:
         """The maximum reward available in the environment"""
         return self.R_SUCCESS
 
     def get_num_states(self) -> int:
         return int(np.prod(self.STATE_ARITIES))
-
-    def get_max_parents(self) -> int:
-        return self.MAX_PARENTS
 
     def get_action_name(self, action: int):
         """Maps int action to string name"""
