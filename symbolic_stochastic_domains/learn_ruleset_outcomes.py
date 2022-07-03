@@ -20,6 +20,7 @@ def create_new_contexts_from_context(context: PredicateTree) -> List[PredicateTr
     p_types = [PredicateType.TOUCH_LEFT2D, PredicateType.TOUCH_RIGHT2D, PredicateType.TOUCH_DOWN2D,
                PredicateType.TOUCH_UP2D, PredicateType.ON2D, PredicateType.IN]
     object_names = ["key", "lock", "gem", "wall"]
+
     for p_type in p_types:
         for object_name in object_names:
             if not context.base_object.has_edge_with(p_type, object_name):  # Don't make duplicate edge (Hash table from CSDS 233)?
@@ -29,28 +30,32 @@ def create_new_contexts_from_context(context: PredicateTree) -> List[PredicateTr
                 # Need to test both positive and negative version of the literal
                 # TODO: Should the tree handle the node ids? Or can they all be 0? No, because there is on key and in key
                 # Thus, the tree should handle the node ids. FOr now lets try making them all 0?
-                copy1.base_object.add_edge(Edge(p_type, Node(object_name, 0)))  # Feel like these should just be nodes
-                copy2.base_object.add_negative_edge(Edge(p_type, Node(object_name, 0)))
+                # Weird hack to get the correct unique id to work. Probably could store this somewhere
+                identifier = 0
+                while (object_name + str(identifier)) in context.node_lookup:
+                    identifier += 1
+                copy1.add_node(object_name + str(identifier))
+                copy1.add_edge("taxi0", object_name + str(identifier), p_type)
+                copy2.add_node(object_name + str(identifier))
+                copy2.add_edge("taxi0", object_name + str(identifier), p_type, negative=True)
 
                 new_contexts.append(copy1)
                 new_contexts.append(copy2)
 
     # Manually handle the addition of variables for locks being open. In the future, this should be done automatically
     len_contexts = len(new_contexts)  # Store length since we will be appending
-    for i in range(len_contexts):
-        # Check if the context has a lock being mentioned
-        for e, edge in enumerate(context.base_object.edges):
-            if edge.to_node.object_name == "lock":
-                # Add positive and negative values
-                copy1 = context.copy()
-                copy2 = context.copy()
+    # for i in range(len_contexts):
+    # Check if the context has a lock being mentioned
+    for e, edge in enumerate(context.base_object.edges):
+        if edge.to_node.object_name[:-1] == "lock":
+            copy1 = context.copy()
+            copy2 = context.copy()
 
-                # Need to test both positive and negative version of the literal
-                copy1.base_object.edges[e].to_node.add_edge(Edge(PredicateType.OPEN, Node("lock", 0)))
-                copy2.base_object.edges[e].to_node.add_negative_edge(Edge(PredicateType.OPEN, Node("lock", 0)))
+            copy1.add_property(edge.to_node.object_name, PredicateType.OPEN, True)
+            copy2.add_property(edge.to_node.object_name, PredicateType.OPEN, False)
 
-                new_contexts.append(copy1)
-                new_contexts.append(copy2)
+            new_contexts.append(copy1)
+            new_contexts.append(copy2)
 
     return new_contexts
 
@@ -103,7 +108,9 @@ def find_rule_by_first_order_inductive_logic(examples: ExampleSet, relevant_exam
     # print()
 
     # Initial rule with empty context. Initialize how many negative examples it covers
-    contexts = [PredicateTree()]
+    tree = PredicateTree()
+    tree.add_node("taxi0")
+    contexts = [tree]
     rule = Rule(action=action, context=contexts[0], outcomes=outcomes)
     new_rule_negatives = [example for example in irrelevant_examples if context_matches(rule.context, example.state)]
 
@@ -134,7 +141,7 @@ def find_rule_by_first_order_inductive_logic(examples: ExampleSet, relevant_exam
             # equal to the number of references? I don't know if this is a hack or valid.
             # Could say, the rule needs to reference at least one of them? That would also speed it up
             have_correct_deictic_references = all(
-                (obj == "taxi" or obj in context.base_object.referenced_objects) for obj in objects_in_outcome
+                (obj == "taxi" or obj in context.referenced_objects) for obj in objects_in_outcome
             )
 
             if lit_counter == len(objects_in_outcome) and not have_correct_deictic_references:

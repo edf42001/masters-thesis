@@ -5,6 +5,7 @@ Currently am testing with the taxi world
 import random
 import numpy as np
 import time
+import graphviz
 
 from environment.symbolic_heist import SymbolicHeist
 from symbolic_stochastic_domains.learn_ruleset_outcomes import learn_ruleset_outcomes
@@ -18,6 +19,8 @@ from effects.effect import JointNoEffect
 # import cProfile
 # import pstats
 
+from test.test_predicate_tree import plot_predicate_tree
+
 
 if __name__ == "__main__":
     random.seed(1)
@@ -28,20 +31,26 @@ if __name__ == "__main__":
 
     examples = ExampleSet()
 
-    actions = [env.A_PICKUP, env.A_WEST, env.A_PICKUP]
     # for action in actions:
-    for i in range(3061):  # This breaks at 1130, due to trying to go down while touching a door
+    for i in range(1130):  # This breaks at 1130, due to trying to go down while touching a door and 3061
         action = random.randint(0, env.get_num_actions()-1)
         curr_state = env.get_state()
         # literals = env.get_literals(curr_state)
         literals, observation, name_id_map = env.step(action)  # , predicate_to_ob_map, obs_grounding
 
-        if i > 3058:
-            print(literals)
-            print(name_id_map)
-            print(observation)
-            print()
-        # env.draw_world(curr_state, delay=5)
+        # if i > 3058:
+        #     print(literals)
+        #     print(name_id_map)
+        #     print(observation)
+        #     print()
+        #
+        #     graph = graphviz.Digraph(format='png')
+        #     # graph.engine = 'neato'
+        #     # graph.graph_attr.update(nodesep="5")
+        #     plot_predicate_tree(literals, graph)
+        #     graph.view()
+        #
+        #     env.draw_world(curr_state, delay=0)
 
         outcome = Outcome(observation)
         example = Example(action, literals, outcome)
@@ -55,13 +64,6 @@ if __name__ == "__main__":
     # I could even do just a bunch of nested dictionaries. I think I want to try that next.
     # Object are the nodes, predicates are the edges, and objects have properties.
 
-    # Rule: if a positive literal is in the context, it must be referred to in the deictic references
-    # But wait, aren't the references kindof similar to the context itself? They force matches to be found,
-    # If you put something in there it acts as context. Maybe I should just make my graph? Might be hard to learn
-    # context = PredicateTree()
-    # context.base_object.add_edge(Edge(PredicateType.ON2D, Node("key")))
-    # context.base_object.add_negative_edge(Edge(PredicateType.IN, Node("key")))
-
     # Use tree learning. When in env, only need to update the outcome that was changed.
     # Hm, actually I don't know if that's true. Perhaps save the values for each thing, and update like that?
     # Also, run only on certain action.
@@ -70,12 +72,25 @@ if __name__ == "__main__":
     # outcomes.add_outcome(Outcome(JointNoEffect()), 1.0)
     # test_rule = Rule(action=5, context=context, outcomes=outcomes)
 
+    # Rule: if a positive literal is in the context, it must be referred to in the deictic references
+    # But wait, aren't the references kindof similar to the context itself? They force matches to be found,
+    # If you put something in there it acts as context. Maybe I should just make my graph? Might be hard to learn
+    # context = PredicateTree()
+    # context.add_node("taxi0")
+    # context.add_node("lock0")
+    # context.add_edge("taxi0", "lock0", PredicateType.TOUCH_DOWN2D)
+    # context.add_property("lock0", PredicateType.OPEN, True)
+    # context.add_edge("taxi0", "key1", PredicateType.IN, negative=True)
+    # context.base_object.add_edge(Edge(PredicateType.ON2D, Node("key")))
+    # context.base_object.add_negative_edge(Edge(PredicateType.IN, Node("key")))
+
     # print(f"Context: {context}")
+    # print(context.node_lookup["lock0"])
     # for example in examples.examples:
     #     if context_matches(context, example.state):
     #         print(f"Context matched {example}")
         # else:
-        #     print(f"Context did not match {example}")
+            # print(f"Context did not match {example}")
 
     # The issue is that the taxi can not learn the correct ruleset, because we just have Open(lock, lock)
     # so when it touches the nonopen lock and tries to go down it doesn't, which means there's a conflict, because
@@ -91,11 +106,16 @@ if __name__ == "__main__":
     # for i in range(10):
     # profiler = cProfile.Profile()
     # profiler.enable()
-    # ruleset = learn_ruleset_outcomes(examples)
+    ruleset = learn_ruleset_outcomes(examples)
     # profiler.disable()
     # stats = pstats.Stats(profiler)
     # stats.dump_stats('stats.prof')
     end_time = time.perf_counter()
     print(f"Took {end_time-start_time}")
     print("Resulting ruleset:")
-    # print(ruleset)
+    print(ruleset)
+
+    # for i, rule in enumerate(ruleset.rules):
+    #     graph = graphviz.Digraph(name=str(rule), format='png')
+    #     plot_predicate_tree(rule.context, graph)
+    #     graph.view()

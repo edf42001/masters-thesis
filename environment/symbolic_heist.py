@@ -162,8 +162,9 @@ class SymbolicHeist(Environment):
         # Get object list from the current state
         objects = self.get_object_list(state)
 
-        # Create a tree
+        # Create a tree. Add the taxi node, as that will always exist
         tree = PredicateTree()
+        tree.add_node("taxi0")
 
         # To create unique ids for each object, but that don't depend on which object is which
         object_reference_counts = {name: 0 for name in self.OB_NAMES}  # Like {'taxi': 0, 'key': 1, 'lock': 0, 'gem': 0}
@@ -207,14 +208,19 @@ class SymbolicHeist(Environment):
                                 ob_index_name_map[ob2_idx] = new_name2
 
                             # Recreate the object, but swap the names out for the variables
-                            node = Node(self.OB_NAMES[ob2_id], new_name2[-1])  # Extract just the id for the node
-                            tree.base_object.add_edge(Edge(p_type, node))
+                            # node = Node(self.OB_NAMES[ob2_id], new_name2[-1])  # Extract just the id for the node
+                            # tree.base_object.add_edge(Edge(p_type, node))
+                            tree.add_node(new_name2)
+                            tree.add_edge("taxi0", new_name2, p_type)
 
                             # Handle properties separately
                             if type(objects[ob2_idx]) is Lock2D:
                                 pred = Predicate.create(PredicateType.OPEN, objects[ob2_idx], objects[ob2_idx])
                                 if pred.value:
-                                    node.add_edge(Edge(PredicateType.OPEN, Node("lock", new_name2[-1])))
+                                    # node.add_edge(Edge(PredicateType.OPEN, Node("lock", new_name2[-1])))
+                                    tree.add_property(new_name2, PredicateType.OPEN, True)
+                                    # tree.add_node(new_name2 + "_property")
+                                    # tree.add_edge(new_name2, new_name2 + "_property", PredicateType.OPEN)
 
                             # Only one object can satisfy the condition at a time, so no need to keep searching
                             break
@@ -226,8 +232,10 @@ class SymbolicHeist(Environment):
                        PredicateType.TOUCH_UP2D, PredicateType.TOUCH_DOWN2D]:
             pred = Predicate.create(p_type, objects[self.OB_TAXI], objects[-1])  # Objects -1 is the wall
             if pred.value:
-                node = Node("wall", 0)
-                tree.base_object.add_edge(Edge(p_type, node))
+                if "wall0" not in tree.node_lookup:
+                    tree.add_node("wall0")
+                tree.add_edge("taxi0", "wall0", p_type)
+                # tree.base_object.add_edge(Edge(p_type, node))
 
         # # Note: The taxi is referenced by the action (MoveLeft(taxi0)) for example. We need to add this in or
         # # it won't be able to refer to the taxi in instances when there are no other predicates
