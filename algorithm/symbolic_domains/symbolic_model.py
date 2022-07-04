@@ -64,10 +64,12 @@ class SymbolicModel(TransitionModel):
         # Check for rules that are applicable to the current state and action
         rule = None
         for test_rule in self.ruleset.rules:
+            # TODO I wonder if we could have context matches return the found matches? for diectic references for the rule?
             if test_rule.action == action and context_matches(test_rule.context, literals):
                 rule = test_rule
                 if len(test_rule.outcomes.outcomes) > 1:
                     print("Rule had too many outcomes")
+                    import sys
                     sys.exit(1)
 
         if rule is None:
@@ -78,14 +80,37 @@ class SymbolicModel(TransitionModel):
         atts = []
         outcomes = []
 
+        # Maps unique object name in the tree, to the real instance index in the environment
         name_instance_map = {v: k for k, v in instance_name_map.items()}
 
         for ob_att_str, outcome in effect.value.items():
-            name_str, att_name_str = ob_att_str.split(".")
-            class_name, id_str = name_str[:-1], name_str[-1]
+            # obb_att_str is formatted either `taxi.y` or `taxi-IN-key.state`. In general, `ob1-pred1-ob2-pred2...-obn`
+            identifier_str, att_name_str = ob_att_str.split(".")
+
+            # We handle the taxi case seperatley, as it isn't attached to anything
+            if identifier_str == "taxi":
+                unique_name = "taxi0"
+            else:
+                # We have to find the correct match. A dictionary would be good for this
+                # Check for the match by lookng for all of that object, and finding the one with the matching connection
+                class_name = identifier_str.split("-")[-1]  # `taxi-IN-key`, will extract `key`
+                test_id = 0
+                while True:
+                    test_name = class_name + str(test_id)
+                    node = literals.node_lookup[test_name]
+                    edge = node.to_edges[0]
+                    test_identifier_str = f"{edge.from_node.object_name[:-1]}-{str(edge)[:-1]}"  # Will be`taxi-IN-key`, maybe `taxi-ON-key`
+                    if test_identifier_str == identifier_str:  # Check for a match
+                        break
+                    test_id += 1  # Try the next object of this type
+                # This the object that was being referenced
+                unique_name = class_name + str(test_id)
+
+            # Extract the name of the object class, and the identifier number
+            class_name, id_str = unique_name[:-1], unique_name[-1]
             class_idx = self.env.OB_NAMES.index(class_name)
             att_idx = self.env.ATT_NAMES[class_idx].index(att_name_str)
-            instance_id = name_instance_map[name_str]
+            instance_id = name_instance_map[unique_name]
 
             att_range = self.env.instance_index_map[instance_id]
             att = att_range[0] + att_idx
