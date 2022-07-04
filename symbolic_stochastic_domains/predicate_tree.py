@@ -15,7 +15,7 @@ class PredicateTree:
         # Could have a "finalize" function
         self.str_repr = None
 
-        self.referenced_objects = set()  # Set of objects referred to (deictically) by this tree. TODO: use better deictic references for this
+        self.referenced_objects = set()  # Set of objects referred to (deictically) by this tree.
 
     def add_node(self, name):
         # Check for duplicates
@@ -29,8 +29,6 @@ class PredicateTree:
         if len(self.nodes) == 1:
             self.base_object = new_node
 
-        self.referenced_objects.add(name[:-1])
-
     def add_edge(self, from_name, to_name, type, negative=False):
         # Check values are there
         assert from_name in self.node_lookup and to_name in self.node_lookup
@@ -40,12 +38,18 @@ class PredicateTree:
 
         edge = Edge(type)
 
+        # Create the main pointer to the node, and the helper pointers pointing backwards
         edge.to_node = to_node
+        edge.from_node = from_node
+        to_node.to_edges.append(edge)
 
         if negative:
             from_node.negative_edges.append(edge)
         else:
             from_node.edges.append(edge)
+
+        # Now that the object is being referenced, we can add how to the list of references objects
+        self.referenced_objects.add(f"{from_name[:-1]}-{str(type)[14:]}-{to_name[:-1]}")
 
     def add_property(self, node_name, type, value):
         self.node_lookup[node_name].properties[type] = value
@@ -104,7 +108,8 @@ class Node:
         self.object_name = object_name
         self.object_id = object_id
 
-        self.edges = []  # List of edges
+        self.edges = []  # List of edges going out of this node
+        self.to_edges = []  # List of edges going into this node. Used for traveling back up the chain
 
         # These aren't used in representing state, as the closed world assumption says anything not mentioned
         # is assumed False. These are used for rule contexts, to represent (~TouchLeft(taxi, wall))
@@ -211,6 +216,7 @@ class Edge:
     def __init__(self, type):
         self.type = type  # Predicate type of the edge (TOUCH_DOWN, IN, etc)
         self.to_node = None  # Pointer to the node this edge is connected to
+        self.from_node = None  # Where this edge came from. Used for traveling backwards up the chain
 
     def __str__(self):
         return f"{str(self.type)[14:]}-{self.to_node.object_name}"  # Remove the PredicateType. prefix from the enum

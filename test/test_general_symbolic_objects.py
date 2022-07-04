@@ -32,25 +32,25 @@ if __name__ == "__main__":
     examples = ExampleSet()
 
     # for action in actions:
-    for i in range(1130):  # This breaks at 1130, due to trying to go down while touching a door and 3061
+    for i in range(3130):  # This breaks at 1130, due to trying to go down while touching a door and 3061
         action = random.randint(0, env.get_num_actions()-1)
         curr_state = env.get_state()
         # literals = env.get_literals(curr_state)
         literals, observation, name_id_map = env.step(action)  # , predicate_to_ob_map, obs_grounding
 
-        # if i > 3058:
+        # if i > 3110:
         #     print(literals)
         #     print(name_id_map)
         #     print(observation)
-        #     print()
-        #
-        #     graph = graphviz.Digraph(format='png')
-        #     # graph.engine = 'neato'
-        #     # graph.graph_attr.update(nodesep="5")
-        #     plot_predicate_tree(literals, graph)
-        #     graph.view()
-        #
-        #     env.draw_world(curr_state, delay=0)
+            # print()
+
+            # graph = graphviz.Digraph(format='png')
+            # # graph.engine = 'neato'
+            # # graph.graph_attr.update(nodesep="5")
+            # plot_predicate_tree(literals, graph)
+            # graph.view()
+            #
+            # env.draw_world(curr_state, delay=0)
 
         outcome = Outcome(observation)
         example = Example(action, literals, outcome)

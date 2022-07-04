@@ -218,10 +218,13 @@ class TouchLeft2D(Predicate):
         # The wall object refers to all walls and is handled separately
         if type(o2) is Wall2D:
             return o1.location in o2.locations['W']
-        elif type(o2) is Key2D:
+        elif type(o2) is Key2D:  # I could use an or, but for some reason the gem's state is 0 when it's on the ground
             # Key needs to be on the ground to be touching it
             x, y = o1.location
             return (x - 1, y) == o2.location and o2.state == 1
+        elif type(o2) is Gem2D:
+            x, y = o1.location
+            return (x - 1, y) == o2.location and o2.state == 0
         else:
             # If these used x and y this could work for 1D as well
             x, y = o1.location
@@ -237,6 +240,9 @@ class TouchRight2D(Predicate):
             # Key needs to be on the ground to be touching it
             x, y = o1.location
             return (x + 1, y) == o2.location and o2.state == 1
+        elif type(o2) is Gem2D:
+            x, y = o1.location
+            return (x + 1, y) == o2.location and o2.state == 0
         else:
             x, y = o1.location
             return (x + 1, y) == o2.location
@@ -251,6 +257,9 @@ class TouchUp2D(Predicate):
             # Key needs to be on the ground to be touching it
             x, y = o1.location
             return (x, y + 1) == o2.location and o2.state == 1
+        elif type(o2) is Gem2D:
+            x, y = o1.location
+            return (x, y + 1) == o2.location and o2.state == 0
         else:
             x, y = o1.location
             return (x, y + 1) == o2.location
@@ -265,6 +274,9 @@ class TouchDown2D(Predicate):
             # Key needs to be on the ground to be touching it
             x, y = o1.location
             return (x, y - 1) == o2.location and o2.state == 1
+        elif type(o2) is Gem2D:
+            x, y = o1.location
+            return (x, y - 1) == o2.location and o2.state == 0
         else:
             x, y = o1.location
             return (x, y - 1) == o2.location
@@ -278,6 +290,9 @@ class On2D(Predicate):
         elif type(o2) is Key2D:
             # We are only on it if it is on the ground, not in the taxi nor non-existent
             return o2.state == 1 and o1.location == o2.location
+        elif type(o2) is Gem2D:
+            # We can't be on the gem when it is being held
+            return o2.state == 0 and o1.location == o2.location
         else:
             return o1.location == o2.location
 

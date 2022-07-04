@@ -97,7 +97,8 @@ def find_rule_by_first_order_inductive_logic(examples: ExampleSet, relevant_exam
     # Find the list of objects referred to in the outcomes that we must have deictic references for
     # In order for an object ot be in outcomes, MUST be in either action or conditions
     # Due to how we now implement outcomes with the digit appended to them, we need to remove that
-    objects_in_outcome = set([key.split(".")[0][:-1] for key in relevant_examples[0].outcome.outcome.value.keys()])
+    # The referenced object is the one at the end of the chain
+    objects_in_outcome = set([key.split(".")[0] for key in relevant_examples[0].outcome.outcome.value.keys()])
 
     # print("Relevent")
     # for example in relevant_examples:
@@ -144,7 +145,8 @@ def find_rule_by_first_order_inductive_logic(examples: ExampleSet, relevant_exam
                 (obj == "taxi" or obj in context.referenced_objects) for obj in objects_in_outcome
             )
 
-            if lit_counter == len(objects_in_outcome) and not have_correct_deictic_references:
+            if lit_counter >= len(objects_in_outcome) and not have_correct_deictic_references:
+                # print(f"Did not have references: {objects_in_outcome}, {context.referenced_objects}")
                 scores.append(-10)  # Is negative 10 small enough?
                 continue
 
@@ -264,6 +266,7 @@ def learn_ruleset_outcomes(examples: ExampleSet) -> RuleSet:
     # print(unique_outcomes)
     # unique_outcomes = [unique_outcomes[4]]  # test learning issues
     # unique_outcomes = [unique_outcomes[1]]  # test learning issues
+    # unique_outcomes = [unique_outcomes[0]]  # test learning issues
     # unique_outcomes = [unique_outcomes[5]]  # test learning issues
 
     # del unique_outcomes[1]

@@ -335,7 +335,7 @@ class SymbolicHeist(Environment):
         # As part of the observation
         tree, ob_id_name_map = self.get_literals(self.get_flat_state(self.curr_state))  # predicate_to_ob_map
 
-        correct_types = [EffectType.INCREMENT] * 2 + [EffectType.SET_TO_NUMBER] * 8
+        correct_types = [EffectType.INCREMENT] * 2 + [EffectType.SET_TO_NUMBER] * 9
         effects = []
         atts = []
         obs_grounding = dict()  # class name to class unique identifier
@@ -350,10 +350,26 @@ class SymbolicHeist(Environment):
                 class_att_idx = self.state_index_class_index_map[att]  # If an object has many atts, this is which one
 
                 # Convert the class and att idx to a string. (For viewing only, this probably makes the code slower)
-                identifier = f"{ob_id_name_map[class_instance_id]}.{self.ATT_NAMES[class_id][class_att_idx]}"
+                # identifier = f"{ob_id_name_map[class_instance_id]}.{self.ATT_NAMES[class_id][class_att_idx]}"
                 # identifier = f"{self.OB_NAMES[class_id]}{ob_id_name_map[class_instance_id]}.{self.ATT_NAMES[class_id][class_att_idx]}"
                 # obs_grounding[self.OB_NAMES[class_id]] = ob_id_name_map[class_instance_id]
                 unique_name_to_ob_id[ob_id_name_map[class_instance_id]] = class_instance_id
+
+                # We want to use deictic references to refer to objects. First we use the unique identifier to get the
+                # corresponding node in the tree
+                unique_name = ob_id_name_map[class_instance_id]
+                node = tree.node_lookup[unique_name]
+                # For now, assume there is only one path towards every object. i.e, no loops
+                # (except for walls, but those are static so it doesn't matter, their properties will never change)
+                # Make an exception for taxi, the taxi is already at the root of the tree. So there is nothing to chain
+                # We remove the numbers ([:-1]) from here, because those are not the defining feature, the defining feature
+                # is the relationship between the objects
+                if len(node.to_edges) > 0:
+                    to_edge = node.to_edges[0]
+                    from_object_name = to_edge.from_node.object_name
+                    identifier = f"{from_object_name[:-1]}-{str(to_edge)[:-1]}.{self.ATT_NAMES[class_id][class_att_idx]}"
+                else:
+                    identifier = f"{unique_name[:-1]}.{self.ATT_NAMES[class_id][class_att_idx]}"
 
                 atts.append(identifier)
 
