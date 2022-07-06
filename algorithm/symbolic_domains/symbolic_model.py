@@ -14,7 +14,7 @@ from symbolic_stochastic_domains.symbolic_utils import context_matches
 
 
 class SymbolicModel(TransitionModel):
-    """Tracks all conditions and effects for each action/attribute pair"""
+    """Tracks interactions with the world with Examples and Experience"""
 
     def __init__(self, env):
         self.env = env
@@ -24,6 +24,9 @@ class SymbolicModel(TransitionModel):
 
         # Store memory of interactions with environment
         self.examples = ExampleSet()
+
+        # An experience dict storing specifically object, interaction, action, counts
+        self.experience = dict()
 
         # Current beleived set of rules that describe environment
         # Need to init with a default rule or we get out of bounds errors with the list
@@ -38,6 +41,8 @@ class SymbolicModel(TransitionModel):
         example = Example(action, literals, outcome)
         self.examples.add_example(example)
 
+        self.update_experience_dict(example)
+
         # Currently, update the model on every step. I wonder how it would work to update it based
         # on the existing ruleset
         start_time = time.perf_counter()
@@ -48,6 +53,25 @@ class SymbolicModel(TransitionModel):
         print("New model:")
         self.print_model()
         print()
+
+    def update_experience_dict(self, example: Example):
+        # Experience dict is a list of how many times we have tried for every object, every way to interacti with that
+        # object, for every action, how many times we've tried each
+
+        # To start with, only look at objects connected to the base object, taxi
+        for edge in example.state.base_object.edges:
+            to_object = edge.to_node.object_name[:-1]
+
+            if to_object not in self.experience:
+                self.experience[to_object] = dict()
+
+            if edge.type not in self.experience[to_object]:
+                self.experience[to_object][edge.type] = dict()
+
+            if example.action not in self.experience[to_object][edge.type]:
+                self.experience[to_object][edge.type][example.action] = 1
+            else:
+                self.experience[to_object][edge.type][example.action] += 1
 
     def compute_possible_transitions(self, state: int, action: int) -> List[Transition]:
         """

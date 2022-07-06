@@ -22,6 +22,27 @@ from effects.effect import JointNoEffect
 from test.test_predicate_tree import plot_predicate_tree
 
 
+def update_experience_dict(experience: dict, example: Example):
+    # Experience dict is a list of how many times we have tried for every object, every way to interacti with that
+    # object, for every action, how many times we've tried each
+
+    # To start with, only look at objects connected to the base object, taxi
+    # TODO: tuples instead of nested dicts?
+    for edge in example.state.base_object.edges:
+        to_object = edge.to_node.object_name[:-1]
+
+        if to_object not in experience:
+            experience[to_object] = dict()
+
+        if edge.type not in experience[to_object]:
+            experience[to_object][edge.type] = dict()
+
+        if example.action not in experience[to_object][edge.type]:
+            experience[to_object][edge.type][example.action] = 1
+        else:
+            experience[to_object][edge.type][example.action] += 1
+
+
 if __name__ == "__main__":
     random.seed(1)
     np.random.seed(1)
@@ -31,8 +52,10 @@ if __name__ == "__main__":
 
     examples = ExampleSet()
 
+    experience = dict()
+
     # for action in actions:
-    for i in range(3130):  # This breaks at 1130, due to trying to go down while touching a door and 3061
+    for i in range(1130):  # This breaks at 1130, due to trying to go down while touching a door and 3061
         action = random.randint(0, env.get_num_actions()-1)
         curr_state = env.get_state()
         # literals = env.get_literals(curr_state)
@@ -55,6 +78,9 @@ if __name__ == "__main__":
         outcome = Outcome(observation)
         example = Example(action, literals, outcome)
         examples.add_example(example)
+
+        # update_experience_dict(experience, example)
+        # print(f"Experience: {experience}")
 
     # print("Examples")
     # print(examples)

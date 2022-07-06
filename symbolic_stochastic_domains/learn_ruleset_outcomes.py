@@ -119,7 +119,9 @@ def find_rule_by_first_order_inductive_logic(examples: ExampleSet, relevant_exam
 
     # Our goal is learn the best rule that covers the most of the positive examples, and none of the negative examples
     lit_counter = 1  # How many lits have been addded, used for checking when deictic references should be used
-    while len(new_rule_negatives) > 0:
+    # End when deictic references are met and the rule covers no negatives
+    while len(new_rule_negatives) > 0 or not \
+          all((obj == "taxi" or obj in rule.context.referenced_objects) for obj in objects_in_outcome):
         # Generate all candidate literals to add to the new rule
         new_contexts = create_new_contexts_from_context(rule.context)
 
