@@ -22,7 +22,7 @@ class HeistRunner(Runner):
 
         # Experiment parameters
         self.max_steps = 150
-        self.num_episodes = 1
+        self.num_episodes = 5
         self.stochastic = False
         self.visualize = True
 

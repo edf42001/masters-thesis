@@ -8,7 +8,6 @@ with open("../runners/example.pkl", 'rb') as f:
     examples = pickle.load(f)
 
 examples = examples.copy()
-print(examples)
 
 
 start_time = time.perf_counter()

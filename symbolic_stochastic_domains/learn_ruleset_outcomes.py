@@ -42,20 +42,30 @@ def create_new_contexts_from_context(context: PredicateTree) -> List[PredicateTr
                 new_contexts.append(copy1)
                 new_contexts.append(copy2)
 
+                if object_name == "lock":
+                    copy3 = copy1.copy()
+                    copy4 = copy1.copy()
+
+                    copy3.add_property(object_name + str(identifier), PredicateType.OPEN, True)
+                    copy4.add_property(object_name + str(identifier), PredicateType.OPEN, False)
+
+                    new_contexts.append(copy3)
+                    new_contexts.append(copy4)
+
     # Manually handle the addition of variables for locks being open. In the future, this should be done automatically
     len_contexts = len(new_contexts)  # Store length since we will be appending
     # for i in range(len_contexts):
     # Check if the context has a lock being mentioned
-    for e, edge in enumerate(context.base_object.edges):
-        if edge.to_node.object_name[:-1] == "lock":
-            copy1 = context.copy()
-            copy2 = context.copy()
-
-            copy1.add_property(edge.to_node.object_name, PredicateType.OPEN, True)
-            copy2.add_property(edge.to_node.object_name, PredicateType.OPEN, False)
-
-            new_contexts.append(copy1)
-            new_contexts.append(copy2)
+    # for e, edge in enumerate(context.base_object.edges):
+    #     if edge.to_node.object_name[:-1] == "lock":
+    #         copy1 = context.copy()
+    #         copy2 = context.copy()
+    #
+    #         copy1.add_property(edge.to_node.object_name, PredicateType.OPEN, True)
+    #         copy2.add_property(edge.to_node.object_name, PredicateType.OPEN, False)
+    #
+    #         new_contexts.append(copy1)
+    #         new_contexts.append(copy2)
 
     return new_contexts
 
