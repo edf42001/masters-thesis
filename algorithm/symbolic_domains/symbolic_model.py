@@ -11,6 +11,7 @@ from common.structures import Transition
 from symbolic_stochastic_domains.symbolic_classes import Example, Outcome, ExampleSet, RuleSet, Rule, OutcomeSet
 from symbolic_stochastic_domains.learn_ruleset_outcomes import learn_ruleset_outcomes
 from symbolic_stochastic_domains.symbolic_utils import context_matches
+from symbolic_stochastic_domains.predicates_and_objects import PredicateType
 
 
 class SymbolicModel(TransitionModel):
@@ -65,13 +66,15 @@ class SymbolicModel(TransitionModel):
             if to_object not in self.experience:
                 self.experience[to_object] = dict()
 
-            if edge.type not in self.experience[to_object]:
-                self.experience[to_object][edge.type] = dict()
+            # This is a hacky hack to include the properties of the object in this dictionary
+            edge_type = str(edge.type)[14:] + ("_OPEN_" + str(edge.to_node.properties[PredicateType.OPEN]) if len(edge.to_node.properties) > 0 else "")
+            if edge_type not in self.experience[to_object]:
+                self.experience[to_object][edge_type] = dict()
 
-            if example.action not in self.experience[to_object][edge.type]:
-                self.experience[to_object][edge.type][example.action] = 1
+            if example.action not in self.experience[to_object][edge_type]:
+                self.experience[to_object][edge_type][example.action] = 1
             else:
-                self.experience[to_object][edge.type][example.action] += 1
+                self.experience[to_object][edge_type][example.action] += 1
 
     def compute_possible_transitions(self, state: int, action: int) -> List[Transition]:
         """

@@ -34,13 +34,14 @@ def update_experience_dict(experience: dict, example: Example):
         if to_object not in experience:
             experience[to_object] = dict()
 
-        if edge.type not in experience[to_object]:
-            experience[to_object][edge.type] = dict()
+        edge_type = str(edge.type)[14:] + ("_OPEN_" + str(edge.to_node.properties[PredicateType.OPEN]) if len(edge.to_node.properties) > 0 else "")
+        if edge_type not in experience[to_object]:
+            experience[to_object][edge_type] = dict()
 
-        if example.action not in experience[to_object][edge.type]:
-            experience[to_object][edge.type][example.action] = 1
+        if example.action not in experience[to_object][edge_type]:
+            experience[to_object][edge_type][example.action] = 1
         else:
-            experience[to_object][edge.type][example.action] += 1
+            experience[to_object][edge_type][example.action] += 1
 
 
 if __name__ == "__main__":
@@ -79,8 +80,11 @@ if __name__ == "__main__":
         example = Example(action, literals, outcome)
         examples.add_example(example)
 
-        # update_experience_dict(experience, example)
+        update_experience_dict(experience, example)
         # print(f"Experience: {experience}")
+        if i == 1000:
+            for key, value in experience.items():
+                print(key, value)
 
     # print("Examples")
     # print(examples)

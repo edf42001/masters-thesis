@@ -3,6 +3,7 @@ from collections import deque
 
 from algorithm.transition_model import TransitionModel
 from policy.policy import Policy
+from symbolic_stochastic_domains.predicates_and_objects import PredicateType
 
 
 class SymbolicPolicy(Policy):
@@ -70,8 +71,11 @@ class SymbolicPolicy(Policy):
                     for edge in literals.base_object.edges:
                         to_object = edge.to_node.object_name[:-1]
 
+                        # A hacky hack to include properties in experience so the agent can try going throw a lock that opens
+                        edge_type = str(edge.type)[14:] + ("_OPEN_" + str(edge.to_node.properties[PredicateType.OPEN]) if len(edge.to_node.properties) > 0 else "")
+
                         # Check if we haven't tried it
-                        if to_object not in self.model.experience or edge.type not in self.model.experience[to_object] or action not in self.model.experience[to_object][edge.type]:
+                        if to_object not in self.model.experience or edge_type not in self.model.experience[to_object] or action not in self.model.experience[to_object][edge_type]:
                             print(f"Found an experience: {str(edge.type)[14:]}-{to_object}, {action}")
                             # Path to the current state, plus add the new action on
                             path = self.get_path(curr_state, parents)
