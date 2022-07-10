@@ -8,6 +8,7 @@ import time
 import graphviz
 
 from environment.symbolic_heist import SymbolicHeist
+from environment.symbolic_taxi import SymbolicTaxi
 from symbolic_stochastic_domains.learn_ruleset_outcomes import learn_ruleset_outcomes
 from symbolic_stochastic_domains.symbolic_classes import ExampleSet, Outcome, Example, Rule, OutcomeSet
 from symbolic_stochastic_domains.predicates_and_objects import In, Open, TouchDown2D, PredicateType, On2D
@@ -48,7 +49,8 @@ if __name__ == "__main__":
     random.seed(1)
     np.random.seed(1)
 
-    env = SymbolicHeist(stochastic=False)
+    # env = SymbolicHeist(stochastic=False)
+    env = SymbolicTaxi(stochastic=False)
     env.restart()  # The env is being restarted twice in the runner, which means random key arrangements were different
 
     examples = ExampleSet()
@@ -56,17 +58,17 @@ if __name__ == "__main__":
     experience = dict()
 
     # for action in actions:
-    for i in range(1130):  # This breaks at 1130, due to trying to go down while touching a door and 3061
+    for i in range(13):  # This breaks at 1130, due to trying to go down while touching a door and 3061
         action = random.randint(0, env.get_num_actions()-1)
         curr_state = env.get_state()
         # literals = env.get_literals(curr_state)
         literals, observation, name_id_map = env.step(action)  # , predicate_to_ob_map, obs_grounding
 
         # if i > 3110:
-        #     print(literals)
-        #     print(name_id_map)
-        #     print(observation)
-            # print()
+        # print(literals)
+        # print(name_id_map)
+        # print(observation)
+        # print()
 
             # graph = graphviz.Digraph(format='png')
             # # graph.engine = 'neato'
@@ -74,7 +76,7 @@ if __name__ == "__main__":
             # plot_predicate_tree(literals, graph)
             # graph.view()
             #
-            # env.draw_world(curr_state, delay=0)
+        # env.draw_world(curr_state, delay=400)
 
         outcome = Outcome(observation)
         example = Example(action, literals, outcome)

@@ -1,18 +1,22 @@
 import numpy as np
+import random
+from typing import List, Tuple, Union, Dict
 import cv2
-from typing import List, Tuple, Dict
 
 from effects.effect import JointEffect, EffectType, Effect, JointNoEffect
 from environment.environment import Environment
-from symbolic_stochastic_domains.predicates_and_objects import Taxi2D, Key2D, Lock2D, Wall2D,\
-    Gem2D, Predicate, PredicateType
+
+from symbolic_stochastic_domains.predicates_and_objects import Taxi2D, Wall2D, Passenger, Destination,\
+    PredicateType, Predicate
 from symbolic_stochastic_domains.predicate_tree import PredicateTree
 
 
-class SymbolicHeist(Environment):
+class SymbolicTaxi(Environment):
+
     # Environment constants
     SIZE_X = 5
     SIZE_Y = 5
+    NUM_LOCATIONS = 4
 
     # Actions of agent
     A_NORTH = 0
@@ -20,138 +24,110 @@ class SymbolicHeist(Environment):
     A_SOUTH = 2
     A_WEST = 3
     A_PICKUP = 4
-    A_UNLOCK = 5
+    A_DROPOFF = 5
     NUM_ACTIONS = 6
+    ACTION_NAMES = ["Up", "Right", "Down", "Left", "Pickup", "Dropoff"]
 
     # State variables
     S_X = 0
     S_Y = 1
-    S_KEY_1 = 2
-    S_KEY_2 = 3
-    S_KEY_3 = 4
-    S_KEY_4 = 5
-    S_KEY_5 = 6
-    S_LOCK_1 = 7
-    S_LOCK_2 = 8
-    S_LOCK_3 = 9
-    S_GEM = 10
-    NUM_ATT = 11
-
-    # Agent can be anywhere in grid
-    # Keys are existing, not existing, or held by agent
-    # Locks are locked (1) or unlocked (0)
-    # Gem is not held or held
-    STATE_ARITIES = [SIZE_X, SIZE_Y] + [3] * 5 + [2] * 4
+    S_PASS = 2
+    S_DEST = 3
+    NUM_ATT = 4
+    STATE_ARITIES = [SIZE_X, SIZE_Y, NUM_LOCATIONS + 2, NUM_LOCATIONS]
 
     # Stochastic modification to actions
     MOD = [-1, 0, 1]
     P_PROB = [0.1, 0.8, 0.1]
 
     # Rewards
-    R_DEFAULT = -1
-    R_UNLOCK = 5
+    R_DEFAULT = -0.5
     R_SUCCESS = 10
 
     # Object descriptions
     OB_TAXI = 0
-    OB_KEY = 1
-    OB_LOCK = 2
-    OB_GEM = 3
-    OB_COUNT = [1, 5, 3, 1]
-    OB_ARITIES = [2, 1, 1, 1]
+    OB_PASS = 1
+    OB_DEST = 2
+    OB_COUNT = [1, 1, 1]
+    OB_ARITIES = [2, 1, 1]
+    OB_NAMES = ["taxi", "pass", "dest"]
 
-    OB_NAMES = ["taxi", "key", "lock", "gem"]
-    ACTION_NAMES = ['Up', 'Right', 'Down', 'Left', 'Pickup', 'Unlock']
-    ATT_NAMES = [["x", "y"], ["state"], ["state"], ["state"]]
+    ATT_NAMES = [["x", "y"], ["state"], ["state"]]
 
     # For each predicate type, defines which objects are valid for each argument
     # This is basically just (taxi, everything else) except for the ones that are just params?
     PREDICATE_MAPPINGS = {
-        PredicateType.TOUCH_LEFT2D: [[OB_TAXI], [OB_KEY, OB_LOCK, OB_GEM]],
-        PredicateType.TOUCH_RIGHT2D: [[OB_TAXI], [OB_KEY, OB_LOCK, OB_GEM]],
-        PredicateType.TOUCH_UP2D: [[OB_TAXI], [OB_KEY, OB_LOCK, OB_GEM]],
-        PredicateType.TOUCH_DOWN2D: [[OB_TAXI], [OB_KEY, OB_LOCK, OB_GEM]],
-        PredicateType.ON2D: [[OB_TAXI], [OB_KEY, OB_LOCK, OB_GEM]],
-        PredicateType.IN: [[OB_TAXI], [OB_KEY, OB_GEM]],
+        PredicateType.TOUCH_LEFT2D: [[OB_TAXI], [OB_PASS, OB_DEST]],
+        PredicateType.TOUCH_RIGHT2D: [[OB_TAXI], [OB_PASS, OB_DEST]],
+        PredicateType.TOUCH_UP2D: [[OB_TAXI], [OB_PASS, OB_DEST]],
+        PredicateType.TOUCH_DOWN2D: [[OB_TAXI], [OB_PASS, OB_DEST]],
+        PredicateType.ON2D: [[OB_TAXI], [OB_PASS, OB_DEST]],
+        PredicateType.IN: [[OB_TAXI], [OB_PASS, OB_DEST]],
         # PredicateType.OPEN: [[OB_LOCK]]
     }
 
-    def __init__(self, stochastic=True):
-        self.stochastic = stochastic
+    # For visualization
+    lines = ['|   |     |',
+             '|   |     |',
+             '|         |',
+             '| |   |   |',
+             '| |   |   |']
+
+    def __init__(self, stochastic=True, shuffle_actions=False):
+        self.stochastic: bool = stochastic
 
         # Add walls to the map
         # For each direction, stores which positions, (x, y), have a wall in that direction
-        #   x 0 1 2 3 4
-        # y   _ _ _ _ _
-        # 4  | |_ _    |
-        # 3  |  _    | |
-        # 2  | | | | |_|
-        # 1  | |_ _| | |
-        # 0  |_ _|_ _ _|
         self.walls = {
-            'N': {(1, 2), (0, 4), (3, 4), (1, 0), (2, 3), (2, 4), (4, 1), (2, 0), (1, 4), (1, 3), (4, 4)},
-            'E': {(1, 2), (3, 2), (0, 4), (3, 1), (3, 3), (4, 0), (1, 0), (2, 1), (4, 1), (2, 2), (4, 2),
-                  (0, 1), (4, 3), (0, 2), (4, 4)},
-            'S': {(1, 1), (4, 0), (1, 0), (2, 4), (2, 0), (2, 1), (0, 0), (4, 2), (1, 4), (3, 0), (1, 3)},
-            'W': {(0, 3), (1, 2), (3, 2), (0, 4), (1, 1), (3, 1), (1, 4), (2, 2), (2, 0), (4, 1), (0, 0),
-                  (4, 2), (0, 1), (4, 3), (0, 2)}
+            'N': [(0, 4), (1, 4), (2, 4), (3, 4), (4, 4)],
+            'E': [(0, 0), (0, 1), (1, 3), (1, 4), (2, 0), (2, 1), (4, 0), (4, 1), (4, 2), (4, 3), (4, 4)],
+            'S': [(0, 0), (1, 0), (2, 0), (3, 0), (4, 0)],
+            'W': [(0, 0), (0, 1), (0, 2), (0, 3), (0, 4), (1, 0), (1, 1), (2, 3), (2, 4), (3, 0), (3, 1)]
         }
 
-        # List of possible key locations
-        self.keys = [(0, 4), (1, 4), (1, 2), (2, 0), (4, 2)]
+        # List of possible pickup/dropoff locations
+        self.locations = [(0, 4), (4, 4), (3, 0), (0, 0)]
 
-        # List of lock locations
-        self.locks = [(0, 2), (0, 1), (0, 0)]
-
-        # Location of gem
-        self.gem = (1, 0)
-
-        # Object instance and class in state information
+        # Object instance in state information
         self.generate_object_maps()
 
-        # Set RL variables
         self.curr_state: List[int] = None
         self.last_action: int = None
         self.last_reward: float = None
+
+        # Restart to begin episode
         self.restart()
+
+        # For testing purposes only:
+        # Taxi position and pickup / dropoff
+        self.curr_state = [0, 2, 3, 1]
 
     def end_of_episode(self, state: int = None) -> bool:
         """Check if the episode has ended"""
         state = self.get_factored_state(state) if state else self.curr_state
-        return state[self.S_GEM] == 1
+        return state[self.S_PASS] == self.NUM_LOCATIONS + 1
 
     def restart(self, init_state=None):
         """Reset state variables to begin new episode"""
         if init_state:
-            self.curr_state = init_state
+            self.curr_state = [0, 1, init_state[0], init_state[1]]
         else:
-            # Agent starts at (2, 1)
-            # Randomly choose 3 of 5 possible key locations
-            # All locks begin locked
-            # Gem begins not held
-            key_idx = np.random.choice(5, size=3, replace=False)
-            self.curr_state = [2, 1] + [int(i in key_idx) for i in range(5)] + [1, 1, 1, 0]
+            # Taxi starts at (0, 1)
+            # Randomly choose passenger and destination locations
+            passenger, destination = random.sample([0, 1, 2, 3], 2)
+            self.curr_state = [0, 1, passenger, destination]
 
     def get_object_list(self, state: int):
         state = self.get_factored_state(state)
 
         taxi = (state[self.S_X], state[self.S_Y])
-        keys = state[self.S_KEY_1: self.S_KEY_5 + 1]
-        locks = state[self.S_LOCK_1: self.S_LOCK_3 + 1]
-        gem_state = state[self.S_GEM]  # TODO: need gem held
+        passenger = state[self.S_PASS]
+        destination = state[self.S_DEST]
 
         objects = []
-
         objects.append(Taxi2D("taxi", taxi))
-
-        # Instead of having str(i), we could just have key and then a mapping saying which key is the one that is true
-        for i, (key_state, location) in enumerate(zip(keys, self.keys)):
-            objects.append(Key2D("key", location, key_state))
-
-        for i, (lock_open, location) in enumerate(zip(locks, self.locks)):
-            objects.append(Lock2D("lock", location, lock_open == 0))  # A locked lock has a value of 1
-
-        objects.append(Gem2D("gem", self.gem, gem_state))
+        objects.append(Passenger("pass", self.locations[passenger] if passenger < len(self.locations) else None, passenger))
+        objects.append(Destination("dest", self.locations[destination], destination))
         objects.append(Wall2D("wall", self.walls))
 
         return objects
@@ -213,15 +189,6 @@ class SymbolicHeist(Environment):
                             tree.add_node(new_name2)
                             tree.add_edge("taxi0", new_name2, p_type)
 
-                            # Handle properties separately
-                            if type(objects[ob2_idx]) is Lock2D:
-                                pred = Predicate.create(PredicateType.OPEN, objects[ob2_idx], objects[ob2_idx])
-                                if pred.value:
-                                    # node.add_edge(Edge(PredicateType.OPEN, Node("lock", new_name2[-1])))
-                                    tree.add_property(new_name2, PredicateType.OPEN, True)
-                                    # tree.add_node(new_name2 + "_property")
-                                    # tree.add_edge(new_name2, new_name2 + "_property", PredicateType.OPEN)
-
                             # Only one object can satisfy the condition at a time, so no need to keep searching
                             break
 
@@ -246,19 +213,10 @@ class SymbolicHeist(Environment):
         # each predicate to it's mappings: {Predicate: ["taxi0", "key1"]}, which might help with hashing
         return tree, ob_index_name_map
 
-        # # If we found a valid predicate and it has an object with a property in it, record it
-        # # mapping from predicate referencing the object to the other predicate
-        # # Would it be easier for predicate objects to have ids for each object as well as names?
-
-    def step(self, action: int) -> Tuple[PredicateTree, JointEffect]:
+    def step(self, action: int) -> Union[List[JointEffect], List[int]]:
         """Stochastically apply action to environment"""
-        state = self.curr_state
-        x, y, keys, locks, gem = \
-            state[self.S_X], state[self.S_Y], state[self.S_KEY_1: self.S_KEY_5 + 1], \
-            state[self.S_LOCK_1: self.S_LOCK_3 + 1], state[self.S_GEM]
-        next_x, next_y, next_keys, next_locks, next_gem = x, y, keys.copy(), locks.copy(), gem
-
-        pos = (x, y)
+        x, y, passenger, destination = self.curr_state
+        next_x, next_y, next_passenger = x, y, passenger
 
         self.last_action = action
 
@@ -268,74 +226,36 @@ class SymbolicHeist(Environment):
                 # Randomly change action according to stochastic property of env
                 modification = np.random.choice(self.MOD, p=self.P_PROB)
                 action = (action + modification) % 4
-
-            next_x, next_y = self.compute_next_loc(x, y, locks, action)
+            next_x, next_y = self.compute_next_loc(x, y, action)
         # Pickup action
         elif action == 4:
-            # If holding key already, no change
-            if 2 in keys:
-                pass
-            # Pickup a gem
-            elif pos == self.gem:
-                next_gem = 1
-            # Pickup a key
-            else:
-                try:
-                    key_idx = self.keys.index(pos)
-                    if keys[key_idx] == 1:
-                        next_keys[key_idx] = 2
-                except ValueError:
-                    # No key to pick up
-                    pass
-        # Unlock action
+            pos = (x, y)
+            # Check if taxi already holds passenger
+            if passenger == self.NUM_LOCATIONS:
+                next_passenger = self.NUM_LOCATIONS
+            # Check if taxi is on correct pickup location
+            elif passenger < self.NUM_LOCATIONS and pos == self.locations[passenger]:
+                next_passenger = self.NUM_LOCATIONS
+        # Dropoff action
         else:
-            # If not holding a key, no change
-            if 2 not in keys:
-                pass
-            # Otherwise, check that a locked lock exists in the surrounding
-            # location and that no wall exists between the agent and the lock
-            else:
-                # Get the (possibly illegal) surrounding locations N/E/S/W
-                surroundings = [(pos[0], pos[1] - 1),
-                                (pos[0] + 1, pos[1]),
-                                (pos[0], pos[1] + 1),
-                                (pos[0] - 1, pos[1])]
+            pos = (x, y)
+            # Check if passenger is in taxi and taxi is on the destination
+            if passenger == self.NUM_LOCATIONS and pos == self.locations[destination]:
+                next_passenger = self.NUM_LOCATIONS + 1
 
-                for direction, walls in enumerate(self.walls.values()):
-                    if pos in walls:
-                        continue
-                    try:
-                        lock_idx = self.locks.index(surroundings[direction])
-                        if locks[lock_idx] == 1:
-                            # Unlock lock and consume held key
-                            next_locks[lock_idx] = 0
-                            next_keys[keys.index(2)] = 0
-                            break
-                    except ValueError:
-                        # No lock
-                        continue
-
-        # Create next state
-        next_state = [next_x, next_y] + next_keys + next_locks + [next_gem]
+        # Make updates to state
+        # Destination status does not change
+        next_state = [next_x, next_y, next_passenger, destination]
 
         # Assign reward
-        if next_gem > gem:
+        if next_passenger == self.NUM_LOCATIONS + 1:
             self.last_reward = self.R_SUCCESS
-        elif next_locks.count(1) < locks.count(1):
-            self.last_reward = self.R_UNLOCK
         else:
             self.last_reward = self.R_DEFAULT
 
-        # Get the correct effect type for each attribute. This is pretty good, but it would be better if it
-        # was on a per class basis, that is then mapped. So lets map the attribute to a class,
-        # and then we can reverse it using the groundings
-
-        # In order to specify which object's attributes are changing, we need to know the variable groundings
-        # for this state. Thus, we get the literals in here, and return them from the step function
-        # As part of the observation
         tree, ob_id_name_map = self.get_literals(self.get_flat_state(self.curr_state))  # predicate_to_ob_map
 
-        correct_types = [EffectType.INCREMENT] * 2 + [EffectType.SET_TO_NUMBER] * 9
+        correct_types = [EffectType.INCREMENT] * 2 + [EffectType.SET_TO_NUMBER] * 2
         effects = []
         atts = []
         obs_grounding = dict()  # class name to class unique identifier
@@ -380,60 +300,135 @@ class SymbolicHeist(Environment):
 
         # Update current state
         self.curr_state = next_state
-
         return tree, observation, unique_name_to_ob_id
 
-    def compute_next_loc(self, x: int, y: int, locks: List[int], action: int) -> Tuple[int, int]:
+    def compute_next_loc(self, x: int, y: int, action: int) -> Tuple[int, int]:
         """Deterministically return the result of taking an action"""
         pos = (x, y)
         if action == self.A_NORTH:
-            next_pos = (x, y + 1)
-            is_wall = pos in self.walls['N']
+            if pos not in self.walls['N']:
+                return x, y + 1
         elif action == self.A_EAST:
-            next_pos = (x + 1, y)
-            is_wall = pos in self.walls['E']
+            if pos not in self.walls['E']:
+                return x + 1, y
         elif action == self.A_SOUTH:
-            next_pos = (x, y - 1)
-            is_wall = pos in self.walls['S']
-        else:
-            next_pos = (x - 1, y)
-            is_wall = pos in self.walls['W']
+            if pos not in self.walls['S']:
+                return x, y - 1
+        elif action == self.A_WEST:
+            if pos not in self.walls['W']:
+                return x - 1, y
 
-        if is_wall or (next_pos in self.locks and locks[self.locks.index(next_pos)] == 1):
-            return x, y
-        else:
-            return next_pos
+        return x, y
 
     def get_reward(self, state: int, next_state: int, action: int) -> float:
         """Get reward of arbitrary state"""
-        factored_s = self.get_factored_state(state)
-        factored_ns = self.get_factored_state(next_state)
+        factored_s = self.get_factored_state(next_state)
 
-        if factored_ns[self.S_GEM] > factored_s[self.S_GEM]:
-            # The gem was picked up
+        # Assign reward if in goal state
+        if factored_s[self.S_PASS] == self.NUM_LOCATIONS + 1:
             return self.R_SUCCESS
-        if sum(factored_ns[self.S_LOCK_1: self.S_LOCK_3 + 1]) < sum(factored_s[self.S_LOCK_1: self.S_LOCK_3 + 1]):
-            # The number of locked locks decreased
-            return self.R_UNLOCK
         else:
             return self.R_DEFAULT
 
-    def visualize(self, delay=100):
-        self.draw_world(self.get_flat_state(self.curr_state), delay=delay)
+    def unreachable_state(self, from_state: int, to_state: int) -> bool:
+        """
+        If a next state is unreachable from the current state, we can ignore it for the purpose of value iteration
+        For example, if the current state has destination = 1, we can never reach a state destination = 2.
+        Destination is static during an episode.
+        """
+        from_factored = self.get_factored_state(from_state)
+        to_factored = self.get_factored_state(to_state)
 
-    def draw_world(self, state: int, delay=100):
+        # If the destinations are different, this is unreachable:
+        if from_factored[self.S_DEST] != to_factored[self.S_DEST]:
+            return True
+
+        # The passenger pickup location is represented as 0-N-1 if the passenger is
+        # at the location, N if in the taxi, and N+1 if the episode has ended and
+        # the passenger has been dropped off. THe only unreachable states is if the
+        # pickup locations differ, i.e. both states have passenger at a pickup location
+        # and they are not the same.
+        # What to do about end of episode state?
+        elif from_factored[self.S_PASS] < len(self.locations) and \
+             to_factored[self.S_PASS] < len(self.locations) and \
+             from_factored[self.S_PASS] != to_factored[self.S_PASS]:
+            return True
+        else:
+            return False
+
+    def visualize(self):
+        # self.draw_taxi(self.curr_state, delay=1)
+        self.visualize_state(self.curr_state)
+
+    def visualize_state(self, curr_state):
+        x, y, passenger, dest = curr_state
+        dest_x, dest_y = self.locations[dest]
+        lines = self.lines
+        taxi = '@' if passenger == len(self.locations) else 'O'
+
+        pass_x, pass_y = -1, -1
+        if passenger < len(self.locations):
+            pass_x, pass_y = self.locations[passenger]
+
+        ret = ""
+        ret += '-----------\n'
+        for i, line in enumerate(lines):
+            for j, c in enumerate(line):
+                iy = self.SIZE_Y - i - 1  # Flip y axis vertically
+                if iy == y and j == 2 * x + 1:
+                    ret += taxi
+                elif iy == dest_y and j == 2 * dest_x + 1:
+                    ret += "g"
+                elif iy == pass_y and j == 2 * pass_x + 1:
+                    ret += "p"
+                else:
+                    ret += c
+            ret += '\n'
+        ret += '-----------\n'
+
+        # Do the display
+        print(ret)
+
+    def draw_world(self, state, delay=100):
         state = self.get_factored_state(state)
 
         GRID_SIZE = 100
         WIDTH = self.SIZE_X
         HEIGHT = self.SIZE_Y
 
-        # x, y, passenger, dest = state
-        taxi_x = state[self.S_X]
-        taxi_y = state[self.S_Y]
+        x, y, passenger, dest = state
 
         # Blank white square
         img = 255 * np.ones((HEIGHT * GRID_SIZE, WIDTH * GRID_SIZE, 3))
+
+        # Draw pickup and dropoff zones
+        colors = [[0, 0, 255], [0, 255, 0], [255, 0, 0], [0, 128, 128]]
+        for loc, color in zip(self.locations, colors):
+            bottom_left_x = loc[0] * GRID_SIZE
+            bottom_left_y = (HEIGHT - loc[1]) * GRID_SIZE
+            cv2.rectangle(img, (bottom_left_x, bottom_left_y), (bottom_left_x + GRID_SIZE, bottom_left_y - GRID_SIZE),
+                          thickness=-1, color=color)
+
+        # Mark goal with small circle
+        goal_x = self.locations[dest][0]
+        goal_y = self.locations[dest][1]
+        cv2.circle(img, (int((goal_x + 0.5) * GRID_SIZE), int((HEIGHT - (goal_y + 0.5)) * GRID_SIZE)), int(GRID_SIZE * 0.05),
+                   thickness=-1, color=[0, 0, 0])
+
+        # Draw taxi
+        cv2.circle(img, (int((x + 0.5) * GRID_SIZE), int((HEIGHT - (y + 0.5)) * GRID_SIZE)), int(GRID_SIZE * 0.3),
+                   thickness=-1, color=[0, 0, 0])
+
+        # Draw passenger
+        if passenger >= len(self.locations):
+            pass_x = x
+            pass_y = y
+        else:
+            pass_x = self.locations[passenger][0]
+            pass_y = self.locations[passenger][1]
+
+        cv2.circle(img, (int((pass_x + 0.5) * GRID_SIZE), int((HEIGHT - (pass_y + 0.5)) * GRID_SIZE)), int(GRID_SIZE * 0.2),
+                   thickness=-1, color=[0.5, 0.5, 0.5])
 
         # Draw horizontal and vertical walls
         for i in range((self.SIZE_X + 1) * (self.SIZE_Y + 1)):
@@ -455,45 +450,13 @@ class SymbolicHeist(Environment):
                 cv2.line(img, (x * GRID_SIZE, (HEIGHT - y) * GRID_SIZE), (x * GRID_SIZE, (HEIGHT - y-1) * GRID_SIZE),
                          thickness=3, color=[0, 0, 0])
 
-        # Draw locks (need to be before taxi so taxi is shown on top)
-        lock_values = state[self.S_LOCK_1:self.S_LOCK_3+1]
-        for lock, value in zip(self.locks, lock_values):
-            inset = 0.05
-            bottom_left_x = lock[0] * GRID_SIZE + int(inset * GRID_SIZE)
-            bottom_left_y = (HEIGHT - lock[1]) * GRID_SIZE - int(inset * GRID_SIZE)
-            top_right_x = bottom_left_x + int((1 - 2 * inset) * GRID_SIZE)
-            top_right_y = bottom_left_y - int((1 - 2 * inset) * GRID_SIZE)
-
-            if value == 1:  # Closed lock
-                color = [0, 0, 0.8]
-            else:  # Open lock
-                color = [0.8, 0.8, 1]
-
-            cv2.rectangle(img, (bottom_left_x, bottom_left_y), (top_right_x, top_right_y), thickness=-1, color=color)
-
-        # Draw taxi
-        cv2.circle(img, (int((taxi_x + 0.5) * GRID_SIZE), int((HEIGHT - (taxi_y + 0.5)) * GRID_SIZE)), int(GRID_SIZE * 0.3),
-                   thickness=-1, color=[0, 0, 0])
-
-        # Draw gem
-        gem_x, gem_y = self.gem
-        cv2.circle(img, (int((gem_x + 0.5) * GRID_SIZE), int((HEIGHT - (gem_y + 0.5)) * GRID_SIZE)), int(GRID_SIZE * 0.25),
-                   thickness=-1, color=[0.8, 0, 0])
-
-        # Draw keys
-        key_values = state[self.S_KEY_1:self.S_KEY_5+1]
-        for key, value in zip(self.keys, key_values):
-            if value == 0:  # Non existent key
-                continue
-
-            key_x, key_y = key
-
-            if value == 1:  # Key on the ground
-                cv2.circle(img, (int((key_x + 0.5) * GRID_SIZE), int((HEIGHT - (key_y + 0.5)) * GRID_SIZE)), int(GRID_SIZE * 0.25),
-                           thickness=-1, color=[0, 0.7, 0.7])
-            else:  # Key in the taxi
-                cv2.circle(img, (int((taxi_x + 0.5) * GRID_SIZE), int((HEIGHT - (taxi_y + 0.5)) * GRID_SIZE)), int(GRID_SIZE * 0.2),
-                           thickness=-1, color=[0, 0.7, 0.7])
-
-        cv2.imshow("Heist World", img)
+        cv2.imshow("Taxi World", img)
         cv2.waitKey(delay)
+
+    def get_rmax(self) -> float:
+        """The maximum reward available in the environment"""
+        return self.R_SUCCESS + 5  # In my implementation, this value is 15
+
+    def get_action_map(self) -> dict:
+        """Returns the real action map for debugging purposes"""
+        return self.action_map

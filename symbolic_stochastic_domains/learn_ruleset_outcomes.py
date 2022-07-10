@@ -274,8 +274,8 @@ def learn_ruleset_outcomes(examples: ExampleSet) -> RuleSet:
 
         unique_outcomes.append(example.outcome)
 
-    # print("Unique outcomes:")
-    # print(unique_outcomes)
+    print("Unique outcomes:")
+    print(unique_outcomes)
     # unique_outcomes = [unique_outcomes[4]]  # test learning issues
     # unique_outcomes = [unique_outcomes[1]]  # test learning issues
     # unique_outcomes = [unique_outcomes[0]]  # test learning issues

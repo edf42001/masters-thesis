@@ -90,6 +90,24 @@ class Taxi2D(SymbolicObject):
         self.location = location
 
 
+class Passenger(SymbolicObject):
+    def __init__(self, name, location, state):
+        super().__init__(name)
+
+        self.location = location
+        self.state = state  # In taxi or on pickup location
+
+
+class Destination(SymbolicObject):
+    def __init__(self, name, location, state):
+        super().__init__(name)
+
+        # The destinations don't move so I don't know if they need a state?
+        # Or they can just store the location.
+        self.location = location
+        self.state = state
+
+
 class PredicateType(Enum):
     # These are currently used in door world
     TOUCH_LEFT = 0
@@ -305,5 +323,7 @@ class In(Predicate):
             return o2.state == 2
         elif type(o2) is Gem2D:
             return o2.state == 1
+        elif type(o2) is Passenger:
+            return o2.state == 4  # TODO: make this not hardcoded
         else:
             return False
