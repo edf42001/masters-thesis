@@ -124,7 +124,9 @@ class ExampleSet:
             self.examples[example] += 1
 
     def copy(self):
-        return {example.copy: count for example, count in self.examples.items()}
+        ret = ExampleSet()
+        ret.examples = {example.copy(): count for example, count in self.examples.items()}
+        return ret
 
     def __str__(self):
         ret = ""

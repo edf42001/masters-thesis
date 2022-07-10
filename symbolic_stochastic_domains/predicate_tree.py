@@ -31,7 +31,7 @@ class PredicateTree:
 
     def add_edge(self, from_name, to_name, type, negative=False):
         # Check values are there
-        assert from_name in self.node_lookup and to_name in self.node_lookup
+        assert from_name in self.node_lookup and to_name in self.node_lookup, f"Did not have {from_name} or {to_name}"
 
         from_node = self.node_lookup[from_name]
         to_node = self.node_lookup[to_name]
