@@ -9,7 +9,7 @@ import graphviz
 
 from environment.symbolic_heist import SymbolicHeist
 from environment.symbolic_taxi import SymbolicTaxi
-from symbolic_stochastic_domains.learn_ruleset_outcomes import learn_ruleset_outcomes
+from symbolic_stochastic_domains.learn_ruleset_outcomes import RulesetLearner
 from symbolic_stochastic_domains.symbolic_classes import ExampleSet, Outcome, Example, Rule, OutcomeSet
 from symbolic_stochastic_domains.predicates_and_objects import In, Open, TouchDown2D, PredicateType, On2D
 from symbolic_stochastic_domains.symbolic_utils import applicable, context_matches
@@ -58,7 +58,7 @@ if __name__ == "__main__":
     experience = dict()
 
     # for action in actions:
-    for i in range(13):  # This breaks at 1130, due to trying to go down while touching a door and 3061
+    for i in range(2000):  # This breaks at 1130, due to trying to go down while touching a door and 3061
         action = random.randint(0, env.get_num_actions()-1)
         curr_state = env.get_state()
         # literals = env.get_literals(curr_state)
@@ -76,7 +76,7 @@ if __name__ == "__main__":
             # plot_predicate_tree(literals, graph)
             # graph.view()
             #
-        # env.draw_world(curr_state, delay=400)
+        # env.draw_world(curr_state, delay=1)
 
         outcome = Outcome(observation)
         example = Example(action, literals, outcome)
@@ -138,7 +138,8 @@ if __name__ == "__main__":
     # for i in range(10):
     # profiler = cProfile.Profile()
     # profiler.enable()
-    ruleset = learn_ruleset_outcomes(examples)
+    solver = RulesetLearner(env)
+    ruleset = solver.learn_ruleset(examples)
     # profiler.disable()
     # stats = pstats.Stats(profiler)
     # stats.dump_stats('stats.prof')

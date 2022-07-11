@@ -98,10 +98,6 @@ class SymbolicTaxi(Environment):
         # Restart to begin episode
         self.restart()
 
-        # For testing purposes only:
-        # Taxi position and pickup / dropoff
-        self.curr_state = [0, 2, 3, 1]
-
     def end_of_episode(self, state: int = None) -> bool:
         """Check if the episode has ended"""
         state = self.get_factored_state(state) if state else self.curr_state
@@ -356,9 +352,8 @@ class SymbolicTaxi(Environment):
         else:
             return False
 
-    def visualize(self):
-        # self.draw_taxi(self.curr_state, delay=1)
-        self.visualize_state(self.curr_state)
+    def visualize(self, delay=100):
+        self.draw_world(self.get_flat_state(self.curr_state), delay=delay)
 
     def visualize_state(self, curr_state):
         x, y, passenger, dest = curr_state
