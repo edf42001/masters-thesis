@@ -11,6 +11,10 @@ from symbolic_stochastic_domains.predicates_and_objects import Taxi2D, Wall2D, P
 from symbolic_stochastic_domains.predicate_tree import PredicateTree
 
 
+def random_string_generator(length):
+    return ''.join(random.choice("abcdefghijklmnopqrstuvwxyz") for x in range(length))
+
+
 class SymbolicTaxi(Environment):
 
     # Environment constants
@@ -73,7 +77,7 @@ class SymbolicTaxi(Environment):
              '| |   |   |',
              '| |   |   |']
 
-    def __init__(self, stochastic=True, shuffle_actions=False):
+    def __init__(self, stochastic=True, shuffle_actions=False, shuffle_object_names=False):
         self.stochastic: bool = stochastic
 
         # Add walls to the map
@@ -95,6 +99,14 @@ class SymbolicTaxi(Environment):
         self.last_action: int = None
         self.last_reward: float = None
 
+        # Initialize object name map to anonymize object identities
+        self.object_name_map = None
+        if shuffle_object_names:
+            self.object_name_map = {}
+            for ob in self.OB_NAMES + ['wall']:
+                self.object_name_map[ob] = random_string_generator(5)
+            self.object_name_map['taxi'] = 'taxi'  # Except for taxi, taxi is base object
+
         # Restart to begin episode
         self.restart()
 
@@ -112,6 +124,12 @@ class SymbolicTaxi(Environment):
             # Randomly choose passenger and destination locations
             passenger, destination = random.sample([0, 1, 2, 3], 2)
             self.curr_state = [0, 1, passenger, destination]
+
+    def anonymize_name(self, ob_name):
+        if self.object_name_map:
+            return self.object_name_map[ob_name]
+
+        return ob_name
 
     def get_object_list(self, state: int):
         state = self.get_factored_state(state)
@@ -164,7 +182,7 @@ class SymbolicTaxi(Environment):
                             else:
                                 # Extract the class name, and append the id to the end of it
                                 ob_name = objects[ob1_id].name
-                                new_name1 = ob_name + str(object_reference_counts[ob_name])
+                                new_name1 = self.anonymize_name(ob_name) + str(object_reference_counts[ob_name])
                                 object_reference_counts[ob_name] += 1  # So the next will have a new name
                                 # Store this in the name map so if we encounter it again we can refer to it
                                 ob_index_name_map[ob1_id] = new_name1
@@ -174,7 +192,7 @@ class SymbolicTaxi(Environment):
                             else:
                                 # Extract the class name, and append the id to the end of it
                                 ob_name = objects[ob2_idx].name
-                                new_name2 = ob_name + str(object_reference_counts[ob_name])
+                                new_name2 = self.anonymize_name(ob_name) + str(object_reference_counts[ob_name])
                                 object_reference_counts[ob_name] += 1  # So the next will have a new name
                                 # Store this in the name map so if we encounter it again we can refer to it
                                 ob_index_name_map[ob2_idx] = new_name2
@@ -195,9 +213,10 @@ class SymbolicTaxi(Environment):
                        PredicateType.TOUCH_UP2D, PredicateType.TOUCH_DOWN2D]:
             pred = Predicate.create(p_type, objects[self.OB_TAXI], objects[-1])  # Objects -1 is the wall
             if pred.value:
-                if "wall0" not in tree.node_lookup:
-                    tree.add_node("wall0")
-                tree.add_edge("taxi0", "wall0", p_type)
+                wall_name = self.anonymize_name("wall") + "0"
+                if wall_name not in tree.node_lookup:
+                    tree.add_node(wall_name)
+                tree.add_edge("taxi0", wall_name, p_type)
                 # tree.base_object.add_edge(Edge(p_type, node))
 
         # # Note: The taxi is referenced by the action (MoveLeft(taxi0)) for example. We need to add this in or
@@ -455,3 +474,6 @@ class SymbolicTaxi(Environment):
     def get_action_map(self) -> dict:
         """Returns the real action map for debugging purposes"""
         return self.action_map
+
+    def get_object_names(self):
+        return [self.anonymize_name(ob_name) for ob_name in self.OB_NAMES + ["wall"]]

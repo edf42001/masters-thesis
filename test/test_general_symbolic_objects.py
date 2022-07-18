@@ -50,25 +50,27 @@ if __name__ == "__main__":
     np.random.seed(1)
 
     # env = SymbolicHeist(stochastic=False)
-    env = SymbolicTaxi(stochastic=False)
+    env = SymbolicTaxi(stochastic=False, shuffle_object_names=True)
     env.restart()  # The env is being restarted twice in the runner, which means random key arrangements were different
 
     examples = ExampleSet()
 
     experience = dict()
 
+    print(env.object_name_map)
+
     # for action in actions:
-    for i in range(2000):  # This breaks at 1130, due to trying to go down while touching a door and 3061
+    for i in range(1000):  # This breaks at 1130, due to trying to go down while touching a door and 3061
         action = random.randint(0, env.get_num_actions()-1)
         curr_state = env.get_state()
         # literals = env.get_literals(curr_state)
         literals, observation, name_id_map = env.step(action)  # , predicate_to_ob_map, obs_grounding
 
         # if i > 3110:
-        # print(literals)
-        # print(name_id_map)
-        # print(observation)
-        # print()
+        print(literals)
+        print(name_id_map)
+        print(observation)
+        print()
 
             # graph = graphviz.Digraph(format='png')
             # # graph.engine = 'neato'

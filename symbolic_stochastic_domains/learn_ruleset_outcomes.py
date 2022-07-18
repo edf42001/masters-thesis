@@ -26,9 +26,9 @@ class RulesetLearner:
 
         # Get the list of objects in the environment from the env. Modify it: no taxi, add wall
         # This is because we need a list of all objects the taxi can interact with
-        object_names = self.env.OB_NAMES.copy()
+        object_names = self.env.get_object_names()
         object_names.remove("taxi")
-        object_names.append("wall")
+        # object_names.append("wall")  I included wall in the above function
 
         for p_type in p_types:
             for object_name in object_names:
