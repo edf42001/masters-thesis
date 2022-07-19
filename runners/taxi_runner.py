@@ -16,8 +16,8 @@ class TaxiRunner(Runner):
     def __init__(self, exp_num):
         super().__init__()
 
-        self.name = 'heist'
-        self.pkl_name = 'heist'
+        self.name = 'taxi'
+        self.pkl_name = 'taxi'
         self.exp_num = exp_num
 
         # Experiment parameters
@@ -43,3 +43,7 @@ if __name__ == '__main__':
 
     runner = TaxiRunner(0)
     runner.run_experiment()
+
+    import pickle
+    with open("symbolic_taxi_rules.pkl", 'wb') as f:
+        pickle.dump(runner.model.ruleset, f)
