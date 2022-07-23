@@ -22,7 +22,7 @@ class TaxiObjectTransferRunner(Runner):
         self.exp_num = exp_num
 
         # Experiment parameters
-        self.max_steps = 150
+        self.max_steps = 5
         self.num_episodes = 1
         self.stochastic = False
         self.visualize = True
@@ -37,19 +37,7 @@ class TaxiObjectTransferRunner(Runner):
         with open("symbolic_taxi_rules.pkl", 'rb') as f:
             symbolic_taxi_ruleset = pickle.load(f)
 
-        prior_object_names = ["taxi", "pass", "dest", "wall"]
-        print(prior_object_names)
-        print(self.env.get_object_names())
-
-        # Assign initial probability for each object being each other object
-        likelihood_map = np.ones((len(prior_object_names), len(self.env.get_object_names())))
-        likelihood_map[0, 1:] = 0  # Set taxi to be known as taxi
-        likelihood_map[1:, 0] = 0
-        likelihood_map /= (len(self.env.get_object_names()) - 1)
-        likelihood_map[0, 0] = 1  # Again, set this to 1, we know taxi is taxi
-        print(likelihood_map)
-
-        self.model = ObjectTransferModel(self.env)
+        self.model = ObjectTransferModel(self.env, symbolic_taxi_ruleset)
         self.planner = ObjectTransferPolicy(self.env.get_num_actions(), self.model)
         self.learner = ObjectTransferLearner(self.env, self.model, self.planner, visualize=self.visualize, delay=10)
         self.plot = Plot(self, self.eval_episodes, self.eval_timer)
@@ -59,4 +47,4 @@ if __name__ == '__main__':
     logging.basicConfig(level=logging.DEBUG, stream=sys.stdout)
 
     runner = TaxiObjectTransferRunner(0)
-    # runner.run_experiment()
+    runner.run_experiment()

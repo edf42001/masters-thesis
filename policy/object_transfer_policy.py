@@ -16,6 +16,9 @@ class ObjectTransferPolicy(Policy):
         self.path_to_experience = None
 
     def choose_action(self, curr_state: int, is_learning: bool = True) -> int:
+        # For now, return random actions until we can figure out which object is which
+        return random.randint(0, self.num_actions-1)
+
         # Ok, here's the current plan. Use breadth first search to try and make it to the goal state
         # (state with the max reward). If we can't make it, take a random action.
 

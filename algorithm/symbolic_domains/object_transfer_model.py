@@ -4,6 +4,8 @@ import pickle
 import sys
 import time
 
+import numpy as np
+
 from effects.effect import JointEffect
 from algorithm.transition_model import TransitionModel
 from common.structures import Transition
@@ -17,7 +19,7 @@ from symbolic_stochastic_domains.predicates_and_objects import PredicateType
 class ObjectTransferModel(TransitionModel):
     """Tracks interactions with the world with Examples and Experience"""
 
-    def __init__(self, env):
+    def __init__(self, env, previous_ruleset):
         self.env = env
 
         self.num_actions = self.env.get_num_actions()
@@ -33,6 +35,25 @@ class ObjectTransferModel(TransitionModel):
         # Need to init with a default rule or we get out of bounds errors with the list
         self.ruleset = RuleSet([Rule(action=-1, context=[], outcomes=OutcomeSet())])
 
+        # Learned rules from taxi world but with different object names
+        self.previous_ruleset = previous_ruleset
+
+        self.prior_object_names = ["taxi", "pass", "dest", "wall"]
+        self.current_object_names = self.env.get_object_names()
+
+        # Assign initial probability for each object being each other object
+        self.object_map_belief = np.ones((len(self.prior_object_names), len(self.current_object_names)))
+
+        self.object_map_belief /= (len(self.current_object_names) - 1)
+        self.object_map_belief[0, 1:] = 0  # Set taxi to be known as taxi
+        self.object_map_belief[1:, 0] = 0
+        self.object_map_belief[0, 0] = 1
+        print("Starting likelihood map:")
+        print(self.object_map_belief)
+
+        print("Previous Ruleset")
+        print(self.previous_ruleset)
+
     def add_experience(self, action: int, state: int, obs: JointEffect):
         """Records experience of state action transition"""
 
@@ -40,21 +61,29 @@ class ObjectTransferModel(TransitionModel):
         outcome = Outcome(obs)
         literals, instance_name_map = self.env.get_literals(state)
         example = Example(action, literals, outcome)
-        self.examples.add_example(example)
 
-        self.update_experience_dict(example)
+        print("Experienced Example:")
+        print(example)
 
-        # Currently, update the model on every step. I wonder how it would work to update it based
-        # on the existing ruleset
-        start_time = time.perf_counter()
-        learner = RulesetLearner(self.env)
-        self.ruleset = learner.learn_ruleset(self.examples)
-        end_time = time.perf_counter()
-        print(f"Ruleset learning took {end_time - start_time:.3f} (# of examples {len(self.examples.examples)})")
+        rules = [rule for rule in self.previous_ruleset.rules if rule.action == action]
+        print("Rules for this example:")
+        print(rules)
 
-        print("New model:")
-        self.print_model()
-        print()
+        # self.examples.add_example(example)
+        #
+        # self.update_experience_dict(example)
+        #
+        # # Currently, update the model on every step. I wonder how it would work to update it based
+        # # on the existing ruleset
+        # start_time = time.perf_counter()
+        # learner = RulesetLearner(self.env)
+        # self.ruleset = learner.learn_ruleset(self.examples)
+        # end_time = time.perf_counter()
+        # print(f"Ruleset learning took {end_time - start_time:.3f} (# of examples {len(self.examples.examples)})")
+        #
+        # print("New model:")
+        # self.print_model()
+        # print()
 
     def update_experience_dict(self, example: Example):
         # Experience dict is a list of how many times we have tried for every object, every way to interacti with that

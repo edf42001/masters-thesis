@@ -73,6 +73,28 @@ class PredicateTree:
 
         return ret
 
+    def copy_replace_names(self, mapping):
+        """Create a copy of this tree, but replace the names with the mapping defined in mapping"""
+        def replace(name, mapping):
+            return mapping[name[:-1]] + name[-1]
+
+        ret = PredicateTree()
+
+        for node in self.nodes:
+            ret.add_node(replace(node.object_name, mapping))
+
+            for k, v in node.properties.items():
+                ret.add_property(replace(node.object_name, mapping), k, v)
+
+        for node in self.nodes:
+            for edge in node.edges:
+                ret.add_edge(replace(node.object_name, mapping), replace(edge.to_node.object_name, mapping), edge.type)
+
+            for edge in node.negative_edges:
+                ret.add_edge(replace(node.object_name, mapping), replace(edge.to_node.object_name, mapping), edge.type, negative=True)
+
+        return ret
+
     def print_tree(self):
         for node in self.nodes:
             ret = ""
