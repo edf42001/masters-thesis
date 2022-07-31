@@ -151,7 +151,7 @@ class Predicate:
         return f"{squiggle}{name}({self.object1}, {self.object2})"
 
     @staticmethod
-    def create(p_type: PredicateType, o1: SymbolicObject, o2: SymbolicObject):
+    def create(p_type: PredicateType, o1: SymbolicObject, o2: SymbolicObject, **kwargs):
         """Factory method for creating predicates of specific type"""
         if p_type == PredicateType.TOUCH_LEFT:
             return TouchLeft(p_type, o1.name, o2.name, TouchLeft.evaluate(o1, o2))
@@ -162,15 +162,13 @@ class Predicate:
         elif p_type == PredicateType.OPEN:
             return Open(p_type, o1.name, o2.name, Open.evaluate(o1, o2))
         elif p_type == PredicateType.TOUCH_LEFT2D:
-            return TouchLeft2D(p_type, o1.name, o2.name, TouchLeft2D.evaluate(o1, o2))
+            return TouchLeft2D(p_type, o1.name, o2.name, TouchLeft2D.evaluate(o1, o2, **kwargs))
         elif p_type == PredicateType.TOUCH_RIGHT2D:
-            return TouchRight2D(p_type, o1.name, o2.name, TouchRight2D.evaluate(o1, o2))
+            return TouchRight2D(p_type, o1.name, o2.name, TouchRight2D.evaluate(o1, o2, **kwargs))
         elif p_type == PredicateType.TOUCH_UP2D:
-            return TouchUp2D(p_type, o1.name, o2.name, TouchUp2D.evaluate(o1, o2))
+            return TouchUp2D(p_type, o1.name, o2.name, TouchUp2D.evaluate(o1, o2, **kwargs))
         elif p_type == PredicateType.TOUCH_DOWN2D:
-            return TouchDown2D(p_type, o1.name, o2.name, TouchDown2D.evaluate(o1, o2))
-        elif p_type == PredicateType.TOUCH_UP2D:
-            return TouchUp2D(p_type, o1.name, o2.name, TouchUp2D.evaluate(o1, o2))
+            return TouchDown2D(p_type, o1.name, o2.name, TouchDown2D.evaluate(o1, o2, **kwargs))
         elif p_type == PredicateType.ON2D:
             return On2D(p_type, o1.name, o2.name, On2D.evaluate(o1, o2))
         elif p_type == PredicateType.IN:
@@ -232,10 +230,16 @@ class Open(Predicate):
 
 class TouchLeft2D(Predicate):
     @staticmethod
-    def evaluate(o1, o2):
-        # The wall object refers to all walls and is handled separately
+    def evaluate(o1, o2, **kwargs):
+        # I don't want predicates to work through walls, but now I have to pass walls in as a kwarg :(
+        touching_wall = o1.location in kwargs['walls']['W']
+
+        # If there is a wall in the way, we can't touch the thing
+        if touching_wall and not type(o2) is Wall2D:
+            return False
+
         if type(o2) is Wall2D:
-            return o1.location in o2.locations['W']
+            return touching_wall
         elif type(o2) is Key2D:  # I could use an or, but for some reason the gem's state is 0 when it's on the ground
             # Key needs to be on the ground to be touching it
             x, y = o1.location
@@ -251,9 +255,16 @@ class TouchLeft2D(Predicate):
 
 class TouchRight2D(Predicate):
     @staticmethod
-    def evaluate(o1, o2):
+    def evaluate(o1, o2, **kwargs):
+        # I don't want predicates to work through walls, but now I have to pass walls in as a kwarg :(
+        touching_wall = o1.location in kwargs['walls']['E']
+
+        # If there is a wall in the way, we can't touch the thing
+        if touching_wall and not type(o2) is Wall2D:
+            return False
+
         if type(o2) is Wall2D:
-            return o1.location in o2.locations['E']
+            return touching_wall
         elif type(o2) is Key2D:
             # Key needs to be on the ground to be touching it
             x, y = o1.location
@@ -268,9 +279,16 @@ class TouchRight2D(Predicate):
 
 class TouchUp2D(Predicate):
     @staticmethod
-    def evaluate(o1, o2):
+    def evaluate(o1, o2, **kwargs):
+        # I don't want predicates to work through walls, but now I have to pass walls in as a kwarg :(
+        touching_wall = o1.location in kwargs['walls']['N']
+
+        # If there is a wall in the way, we can't touch the thing
+        if touching_wall and not type(o2) is Wall2D:
+            return False
+
         if type(o2) is Wall2D:
-            return o1.location in o2.locations['N']
+            return touching_wall
         elif type(o2) is Key2D:
             # Key needs to be on the ground to be touching it
             x, y = o1.location
@@ -285,9 +303,16 @@ class TouchUp2D(Predicate):
 
 class TouchDown2D(Predicate):
     @staticmethod
-    def evaluate(o1, o2):
+    def evaluate(o1, o2, **kwargs):
+        # I don't want predicates to work through walls, but now I have to pass walls in as a kwarg :(
+        touching_wall = o1.location in kwargs['walls']['S']
+
+        # If there is a wall in the way, we can't touch the thing
+        if touching_wall and not type(o2) is Wall2D:
+            return False
+
         if type(o2) is Wall2D:
-            return o1.location in o2.locations['S']
+            return touching_wall
         elif type(o2) is Key2D:
             # Key needs to be on the ground to be touching it
             x, y = o1.location

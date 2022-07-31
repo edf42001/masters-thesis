@@ -98,76 +98,76 @@ class PredicateTree:
 
         return ret
 
-    def determine_bindings_that_would_match_trees(self, other_tree, outcome_occurred: bool):
-        """
-        Say we have a tree representing the condition for a rule.
-        The other tree is a state, with different object names.
-        What mappings of objects names make it so the rule condition tree is applicable to the other?
-        """
-
-        # If the outcome didn't occur, that could just be because we aren't near the right objects
-        # in which case we gain no information. However, in the presence of negative edges, it's
-        # possible the outcome didn't occur because one of those were violated. In that case,
-        # we can use these to determine what an object might be. For example, if
-        # ~TouchWallRight -> Move Right, then ~Move Right -> TouchWallRight, by the contrapositive,
-        # Telling us the thing to our right is a wall.
-        print(f"Determining bindings. Outcome occurred: {outcome_occurred}")
-        mappings = []
-        if not outcome_occurred:
-            if len(self.base_object.negative_edges) > 0:
-                assert len(self.base_object.edges) == 0, "We do not yet check for positive matches as well as negative"
-                assert len(self.base_object.negative_edges), "The code would probably break with more than one negative edge"
-
-            # Search for negative edges
-            for edge in self.base_object.negative_edges:
-                for edge2 in other_tree.base_object.edges:  # Only one edge per type in these worlds
-                    if edge.type == edge2.type:
-                        mapping = {edge.to_node.object_name[:-1]: edge2.to_node.object_name[:-1]}
-                        mappings.append(mapping)
-        else:
-            # If the outcome matched, we simply need to find which tree assignments would make the
-            # condition apply. I think we might technically be able to do more than that, for example,
-            # negative edges rule out certain object interactions, but for now we'll just do the base case
-            # nah, never mind, let's do it properly
-            # Nah, we don't know how to handle negative literals yet.
-            # Triple nah, I think the permute method may actually work in this case?
-            # Or would it accidentally rule things out?
-            # unknown_objects = set(ob.split("-")[-1] for ob in other_tree.referenced_objects)
-            # known_objects = set(ob.split("-")[-1] for ob in self.referenced_objects)
-            # permutations = itertools.permutations(unknown_objects, len(known_objects))
-            # for permutation in permutations:
-            #     mapping = {known_ob: unknown_ob for known_ob, unknown_ob in zip(known_objects, permutation)}
-            #     mapping["taxi"] = "taxi"
-            #     new_context = self.copy_replace_names(mapping)
-            #     matched = other_tree.base_object.contains(new_context.base_object)
-            #     del mapping["taxi"]
-            #
-            #     if matched:
-            #         mappings.append(mapping)
-            #
-            # print(mappings)
-            # assert False, "do not handle this case yet"
-            # Or even negative edges that match for that matter
-            # For every positive match, find it's associated object. What about the case when there's more than one option?
-            if len(self.base_object.edges) > 0:
-                assert len(self.base_object.negative_edges) == 0, "Can't handle matched cases with positive and negative edges yet"
-
-                # Search for matches. This generates joint matches, but doesn't handle multiple possibilites
-                # For example, if you're touching a key and a wall to the left
-                # Should I make it so you can't have the same predicate on two objects?
-                # Probably, I think
-                mapping = {}
-                for edge in self.base_object.edges:
-                    for edge2 in other_tree.base_object.edges:  # Only one edge per type in these worlds
-                        if edge.type == edge2.type:
-                            mapping[edge.to_node.object_name[:-1]] = edge2.to_node.object_name[:-1]
-                mappings.append(mapping)
-            else:
-                pass  # No positive objects, just negative objects. Could do some elimation here, but for now we do nothing
-
-            # assert len(self.base_object.edges) == 0, "Can't handle matched cases with positive edges yet"
-
-        return mappings
+    # def determine_bindings_that_would_match_trees(self, other_tree, outcome_occurred: bool):
+    #     """
+    #     Say we have a tree representing the condition for a rule.
+    #     The other tree is a state, with different object names.
+    #     What mappings of objects names make it so the rule condition tree is applicable to the other?
+    #     """
+    #
+    #     # If the outcome didn't occur, that could just be because we aren't near the right objects
+    #     # in which case we gain no information. However, in the presence of negative edges, it's
+    #     # possible the outcome didn't occur because one of those were violated. In that case,
+    #     # we can use these to determine what an object might be. For example, if
+    #     # ~TouchWallRight -> Move Right, then ~Move Right -> TouchWallRight, by the contrapositive,
+    #     # Telling us the thing to our right is a wall.
+    #     print(f"Determining bindings. Outcome occurred: {outcome_occurred}")
+    #     mappings = []
+    #     if not outcome_occurred:
+    #         if len(self.base_object.negative_edges) > 0:
+    #             assert len(self.base_object.edges) == 0, "We do not yet check for positive matches as well as negative"
+    #             assert len(self.base_object.negative_edges), "The code would probably break with more than one negative edge"
+    #
+    #         # Search for negative edges
+    #         for edge in self.base_object.negative_edges:
+    #             for edge2 in other_tree.base_object.edges:  # Only one edge per type in these worlds
+    #                 if edge.type == edge2.type:
+    #                     mapping = {edge.to_node.object_name[:-1]: edge2.to_node.object_name[:-1]}
+    #                     mappings.append(mapping)
+    #     else:
+    #         # If the outcome matched, we simply need to find which tree assignments would make the
+    #         # condition apply. I think we might technically be able to do more than that, for example,
+    #         # negative edges rule out certain object interactions, but for now we'll just do the base case
+    #         # nah, never mind, let's do it properly
+    #         # Nah, we don't know how to handle negative literals yet.
+    #         # Triple nah, I think the permute method may actually work in this case?
+    #         # Or would it accidentally rule things out?
+    #         # unknown_objects = set(ob.split("-")[-1] for ob in other_tree.referenced_objects)
+    #         # known_objects = set(ob.split("-")[-1] for ob in self.referenced_objects)
+    #         # permutations = itertools.permutations(unknown_objects, len(known_objects))
+    #         # for permutation in permutations:
+    #         #     mapping = {known_ob: unknown_ob for known_ob, unknown_ob in zip(known_objects, permutation)}
+    #         #     mapping["taxi"] = "taxi"
+    #         #     new_context = self.copy_replace_names(mapping)
+    #         #     matched = other_tree.base_object.contains(new_context.base_object)
+    #         #     del mapping["taxi"]
+    #         #
+    #         #     if matched:
+    #         #         mappings.append(mapping)
+    #         #
+    #         # print(mappings)
+    #         # assert False, "do not handle this case yet"
+    #         # Or even negative edges that match for that matter
+    #         # For every positive match, find it's associated object. What about the case when there's more than one option?
+    #         if len(self.base_object.edges) > 0:
+    #             assert len(self.base_object.negative_edges) == 0, "Can't handle matched cases with positive and negative edges yet"
+    #
+    #             # Search for matches. This generates joint matches, but doesn't handle multiple possibilites
+    #             # For example, if you're touching a key and a wall to the left
+    #             # Should I make it so you can't have the same predicate on two objects?
+    #             # Probably, I think
+    #             mapping = {}
+    #             for edge in self.base_object.edges:
+    #                 for edge2 in other_tree.base_object.edges:  # Only one edge per type in these worlds
+    #                     if edge.type == edge2.type:
+    #                         mapping[edge.to_node.object_name[:-1]] = edge2.to_node.object_name[:-1]
+    #             mappings.append(mapping)
+    #         else:
+    #             pass  # No positive objects, just negative objects. Could do some elimation here, but for now we do nothing
+    #
+    #         # assert len(self.base_object.edges) == 0, "Can't handle matched cases with positive edges yet"
+    #
+    #     return mappings
 
     def print_tree(self):
         for node in self.nodes:
