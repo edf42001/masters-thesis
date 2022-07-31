@@ -183,7 +183,7 @@ class SymbolicHeist(Environment):
                     # Find if any object makes the condition true. Only add predicates for true values
                     # Check every object of that type
                     for ob2_idx in range(ob_index_range_map[ob2_id-1], ob_index_range_map[ob2_id]):
-                        pred = Predicate.create(p_type, objects[ob1_id], objects[ob2_idx])
+                        pred = Predicate.create(p_type, objects[ob1_id], objects[ob2_idx], walls=self.walls)
                         if pred.value:
                             # Convert the objects to unique variable names
                             # If we have already encountered this object, reuse the name
@@ -230,7 +230,7 @@ class SymbolicHeist(Environment):
 
         for p_type in [PredicateType.TOUCH_LEFT2D, PredicateType.TOUCH_RIGHT2D,
                        PredicateType.TOUCH_UP2D, PredicateType.TOUCH_DOWN2D]:
-            pred = Predicate.create(p_type, objects[self.OB_TAXI], objects[-1])  # Objects -1 is the wall
+            pred = Predicate.create(p_type, objects[self.OB_TAXI], objects[-1], walls=self.walls)  # Objects -1 is the wall
             if pred.value:
                 if "wall0" not in tree.node_lookup:
                     tree.add_node("wall0")

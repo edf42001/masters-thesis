@@ -1,13 +1,10 @@
 import random
-import time
 import pickle
 import itertools
 
 import numpy as np
 
-from environment.symbolic_heist import SymbolicHeist
 from environment.symbolic_taxi import SymbolicTaxi
-from symbolic_stochastic_domains.learn_ruleset_outcomes import RulesetLearner
 from symbolic_stochastic_domains.symbolic_classes import ExampleSet, Outcome, Example, RuleSet
 from symbolic_stochastic_domains.predicate_tree import PredicateTree
 from effects.effect import JointNoEffect
@@ -25,11 +22,7 @@ def get_possible_object_assignments(example: Example, prev_ruleset: RuleSet):
     outcome = example.outcome
 
     # Get the rules that apply to this situation
-    print("Applicable rules:")
     applicable_rules = [rule for rule in prev_ruleset.rules if rule.action == action]
-    print(applicable_rules)
-    print()
-
     assert len(applicable_rules) == 1, "My code only works for one rule for now"
 
     rule = applicable_rules[0]
@@ -42,10 +35,38 @@ def get_possible_object_assignments(example: Example, prev_ruleset: RuleSet):
     else:
         assignments = determine_bindings_for_no_outcome(rule.context, literals)
 
-    print("Assignments were: ")
-    print(assignments)
+    print(f"Assignments were: {assignments}")
 
     return assignments
+
+# def apply_assignment(object_map, assignment)
+
+
+def determine_possible_object_maps(object_map, possible_assignments):
+    """
+    Tries to figure out which assignments are the true ones and which are not,
+    in the process learning which object is which
+    """
+
+    # Basically, one or more assignment in each assignment list must be true, find which
+    for assignment_list in possible_assignments:
+        # If the length is one, then we know that one must be true, so we can apply it
+        if len(assignment_list.assignments) == 1:
+            assignment = assignment_list.assignments[0]
+
+            # If we know it is one thing, set all of those to their correct value
+            for unknown, known in assignment.positives.items():
+                assert known in object_map[unknown], "We say it must be true so it better be an option"
+                object_map[unknown] = [known]
+
+            # Remove everything from negatives (it may have been removed already)
+            for unknown, known in assignment.negatives.items():
+                if known in object_map[unknown]:
+                    object_map[unknown].remove(known)
+
+        assert len(assignment_list.assignments) <= 1, "Do not know how to deal with multiple options yet"
+
+    return object_map
 
 
 if __name__ == "__main__":
@@ -69,18 +90,15 @@ if __name__ == "__main__":
     print(previous_ruleset)
     print()
 
-    prior_object_names = ["taxi", "pass", "dest", "wall"]
-    current_object_names = env.get_object_names()
-
     possible_assignments = set()
 
-    for i in range(1000):
+    for i in range(335):
         action = random.randint(0, env.get_num_actions()-1)
         curr_state = env.get_state()
 
         literals, observation, name_id_map = env.step(action)
 
-        print(f"Step {i} taking action {action}")
+        print(f"---- Step {i} taking action {action} ----")
         print(literals)
         # print(name_id_map)
         print(observation)
@@ -96,7 +114,13 @@ if __name__ == "__main__":
         print(possible_assignments)
         print()
 
+    # Create an object map and then pare it down
+    prior_object_names = ["pass", "dest", "wall"]
+    current_object_names = env.get_object_names()
+    # current_object_names.remove("taxi")
+    object_map = {unknown: prior_object_names.copy() for unknown in current_object_names if unknown != "taxi"}
+    new_object_map = determine_possible_object_maps(object_map.copy(), possible_assignments)
 
-    # print("Examples")
-    # print(examples)
-    # print()
+    print("New object map:")
+    for key, value in new_object_map.items():
+        print(f"{key}: {value}")

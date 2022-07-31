@@ -86,6 +86,8 @@ def determine_bindings_for_same_outcome(condition: PredicateTree, state: Predica
     This is for the specific case when the rule says an outcome and the actual outcome matched.
     """
 
+    # Make sure to remove the number from all the object names
+
     assignment = ObjectAssignment()
 
     # First, check all positive edges. All of these must match
@@ -95,7 +97,7 @@ def determine_bindings_for_same_outcome(condition: PredicateTree, state: Predica
         for edge2 in state.base_object.edges:
             if edge.type == edge2.type:
                 # This is the match, these objects are the same
-                assignment.add_positive(edge2.to_node.object_name, edge.to_node.object_name)
+                assignment.add_positive(edge2.to_node.object_name[:-1], edge.to_node.object_name[:-1])
                 found = True
                 break
 
@@ -105,10 +107,14 @@ def determine_bindings_for_same_outcome(condition: PredicateTree, state: Predica
     for edge in condition.base_object.negative_edges:
         for edge2 in state.base_object.edges:
             if edge.type == edge2.type:
-                assignment.add_negative(edge2.to_node.object_name, edge.to_node.object_name)
+                assignment.add_negative(edge2.to_node.object_name[:-1], edge.to_node.object_name[:-1])
                 break
 
-    return ObjectAssignmentList([assignment])
+    # FOr later down the line, it'll be easier if the list is completely empty, instead of having and empty object
+    if len(assignment.negatives) == 0 and len(assignment.positives) == 0:
+        return ObjectAssignmentList([])
+    else:
+        return ObjectAssignmentList([assignment])
 
 
 def determine_bindings_for_no_outcome(condition: PredicateTree, state: PredicateTree):
@@ -134,7 +140,7 @@ def determine_bindings_for_no_outcome(condition: PredicateTree, state: Predicate
                 break
 
         if not found:
-            return ObjectAssignmentList([ObjectAssignment()])
+            return ObjectAssignmentList([])
 
     # Now, let's look for negative edges that perhaps are causing the issue
     # Also some positive edges could be missing. Each of these are independent, add them to the array separately.
@@ -142,7 +148,7 @@ def determine_bindings_for_no_outcome(condition: PredicateTree, state: Predicate
         for edge2 in state.base_object.edges:  # (Could probably combine this with the above, then throw out if bad?)
             if edge.type == edge2.type:
                 assignment = ObjectAssignment()
-                assignment.add_negative(edge2.to_node.object_name, edge.to_node.object_name)
+                assignment.add_negative(edge2.to_node.object_name[:-1], edge.to_node.object_name[:-1])
                 assignments.append(assignment)
                 break
 
@@ -150,7 +156,7 @@ def determine_bindings_for_no_outcome(condition: PredicateTree, state: Predicate
         for edge2 in state.base_object.edges:
             if edge.type == edge2.type:
                 assignment = ObjectAssignment()
-                assignment.add_positive(edge2.to_node.object_name, edge.to_node.object_name)
+                assignment.add_positive(edge2.to_node.object_name[:-1], edge.to_node.object_name[:-1])
                 assignments.append(assignment)
                 break
 
