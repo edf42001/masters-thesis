@@ -1,14 +1,11 @@
 import random
 import pickle
-import itertools
 
 import numpy as np
 
 from environment.symbolic_taxi import SymbolicTaxi
 from symbolic_stochastic_domains.symbolic_classes import ExampleSet, Outcome, Example, RuleSet
-from symbolic_stochastic_domains.predicate_tree import PredicateTree
-from effects.effect import JointNoEffect
-from test.test_object_transfer_functions import determine_bindings_for_same_outcome, determine_bindings_for_no_outcome
+from test.object_transfer.test_object_transfer_functions import determine_bindings_for_same_outcome, determine_bindings_for_no_outcome
 
 
 def get_possible_object_assignments(example: Example, prev_ruleset: RuleSet):
