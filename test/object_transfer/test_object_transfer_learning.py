@@ -32,8 +32,6 @@ def get_possible_object_assignments(example: Example, prev_ruleset: RuleSet):
     else:
         assignments = determine_bindings_for_no_outcome(rule.context, literals)
 
-    print(f"Assignments were: {assignments}")
-
     return assignments
 
 # def apply_assignment(object_map, assignment)
@@ -53,7 +51,7 @@ def determine_possible_object_maps(object_map, possible_assignments):
 
             # If we know it is one thing, set all of those to their correct value
             for unknown, known in assignment.positives.items():
-                assert known in object_map[unknown], "We say it must be true so it better be an option"
+                assert known in object_map[unknown], f"We say it must be true so it better be an option: {unknown}"
                 object_map[unknown] = [known]
 
             # Remove everything from negatives (it may have been removed already)
@@ -97,7 +95,6 @@ if __name__ == "__main__":
 
         print(f"---- Step {i} taking action {action} ----")
         print(literals)
-        # print(name_id_map)
         print(observation)
         print()
 
@@ -114,7 +111,6 @@ if __name__ == "__main__":
     # Create an object map and then pare it down
     prior_object_names = ["pass", "dest", "wall"]
     current_object_names = env.get_object_names()
-    # current_object_names.remove("taxi")
     object_map = {unknown: prior_object_names.copy() for unknown in current_object_names if unknown != "taxi"}
     new_object_map = determine_possible_object_maps(object_map.copy(), possible_assignments)
 
