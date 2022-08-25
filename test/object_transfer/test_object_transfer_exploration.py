@@ -133,22 +133,3 @@ if __name__ == "__main__":
         object_map = {unknown: prior_object_names.copy() for unknown in current_object_names if unknown != "taxi"}
 
         info_gain = information_gain_of_action(curr_state, 2, object_map, previous_ruleset)
-
-
-        #
-        # literals, observation, name_id_map = env.step(action)
-        #
-        # print(f"---- Step {i} taking action {action} ----")
-        # print(literals)
-        # print(observation)
-        # print()
-        #
-        # outcome = Outcome(observation)
-        # example = Example(action, literals, outcome)
-        # examples.add_example(example)
-        #
-        # assignments = get_possible_object_assignments(example, previous_ruleset)
-        # possible_assignments.add(assignments)
-        # print("All assignments: ")
-        # print(possible_assignments)
-        # print()
