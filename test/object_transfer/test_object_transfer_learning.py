@@ -43,6 +43,10 @@ def determine_possible_object_maps(object_map, possible_assignments):
     in the process learning which object is which
     """
 
+    # Create a copy so as to not modify the original object
+    # Need to use deepcopy on object map because it is a dict of lists
+    object_map = {key: value.copy() for key, value in object_map.items()}
+
     # Basically, one or more assignment in each assignment list must be true, find which
     for assignment_list in possible_assignments:
         # If the length is one, then we know that one must be true, so we can apply it

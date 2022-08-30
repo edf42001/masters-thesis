@@ -53,9 +53,14 @@ def information_gain_of_action(state: int, action: int, object_map, prev_ruleset
     print(f"Context objects: {context_objects}")
     print(f"State objects: {state_objects}")
 
-    print("Permutations:")
+    # Track total info gain and number of permutations so we can calculate an expected info gain
+    total_info_gain = 0
+    num_permutations = 0
+
     permutations = itertools.permutations(known_objects, len(state_objects))
+    print("Permutations:")
     for permutation in permutations:
+        num_permutations += 1
         mapping = {state_object: permute_object for state_object, permute_object in zip(state_objects, permutation)}
         print(mapping)
         mapping["taxi"] = "taxi"  # Taxi has to be there but always maps to itself
@@ -78,11 +83,16 @@ def information_gain_of_action(state: int, action: int, object_map, prev_ruleset
         print(f"Possible assignments: {possible_assignment}")
 
         print(object_map)
-        # Need to use deepcopy on object map because it is a dict of lists
-        object_map_copy = {key: value.copy() for key, value in object_map.items()}
-        new_object_map = determine_possible_object_maps(object_map_copy, possible_assignment)
+
+        new_object_map = determine_possible_object_maps(object_map, possible_assignment)
+        prev_num_options = sum(len(possibilities) for possibilities in object_map.values())
+        new_num_options = sum(len(possibilities) for possibilities in new_object_map.values())
+
         print(f"New object map: {new_object_map}")
-        print(f"New total length: {sum(len(possibilites) for possibilites in new_object_map.values())}")
+        print(f"Length update: {prev_num_options}->{new_num_options}")
+
+        # Info gain is change in bits required to express number of object possibilities, which is log2 of length
+        total_info_gain += np.log2(prev_num_options) - np.log2(new_num_options)
 
     # Step 2: Assuming that mapping is the real one, see what would happen.
 
@@ -91,13 +101,13 @@ def information_gain_of_action(state: int, action: int, object_map, prev_ruleset
     # There is probably a less roundabout method of doing this. For example, maybe we only care about objects
     # That are referenced the way the objects in the rule is referenced?
     # See if the ones where those are the same have same/different effects
+    print(f"Total info {total_info_gain}, num permutations: {num_permutations}")
+    return total_info_gain / num_permutations
 
-    return 0.0
 
-
-def information_gain_of_state(state: int) -> float:
+def information_gain_of_state(state: int, object_map, prev_ruleset: RuleSet) -> float:
     """Returns the total info gain over all actions for a state"""
-    return sum([information_gain_of_action(state, a) for a in range(num_actions)])
+    return sum([information_gain_of_action(state, a, object_map, prev_ruleset) for a in range(num_actions)])
 
 
 if __name__ == "__main__":
@@ -117,10 +127,6 @@ if __name__ == "__main__":
     print(env.object_name_map)
     print()
 
-    # print("Previous Ruleset")
-    # print(previous_ruleset)
-    # print()
-
     possible_assignments = set()
 
     for i in range(1):
@@ -132,4 +138,11 @@ if __name__ == "__main__":
         current_object_names = env.get_object_names()
         object_map = {unknown: prior_object_names.copy() for unknown in current_object_names if unknown != "taxi"}
 
-        info_gain = information_gain_of_action(curr_state, 2, object_map, previous_ruleset)
+        info_gains = []
+        for a in range(num_actions):
+            info_gain = information_gain_of_action(curr_state, a, object_map, previous_ruleset)
+            info_gains.append(info_gain)
+
+        info_gain_of_state = information_gain_of_state(curr_state, object_map, previous_ruleset)
+        print(f"Info gains: {info_gains}")
+        print(f"Info gain of state: {info_gain_of_state}")
