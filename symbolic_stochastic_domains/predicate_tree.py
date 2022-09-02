@@ -77,6 +77,8 @@ class PredicateTree:
         return ret
 
     def copy_replace_names(self, mapping):
+        print(mapping)
+        print(self)
         """Create a copy of this tree, but replace the names with the mapping defined in mapping"""
         def replace(name, mapping):
             return mapping[name[:-1]] + name[-1]

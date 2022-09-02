@@ -20,7 +20,12 @@ from test.object_transfer.test_object_transfer_learning import determine_possibl
 
 num_actions = 6
 
-env = None
+random.seed(1)
+np.random.seed(1)
+
+# These will eventually be stored in a class as a member variable for easy access
+env = SymbolicTaxi(stochastic=False, shuffle_object_names=True)
+env.restart()  # The env is being restarted twice in the runner, which means random key arrangements were different
 
 
 def information_gain_of_action(state: int, action: int, object_map, prev_ruleset: RuleSet) -> float:
@@ -110,13 +115,64 @@ def information_gain_of_state(state: int, object_map, prev_ruleset: RuleSet) -> 
     return sum([information_gain_of_action(state, a, object_map, prev_ruleset) for a in range(num_actions)])
 
 
+def determine_transition_given_action(state: int, action: int, object_map, prev_ruleset: RuleSet):
+    """
+    Given a current state and current object map belief,
+    what are the possible next states for a specific actions?
+    If there is more than one possibility depending on object map bindings, return None.
+    This is an opportunity to gain information (possibly?). Otherwise, return the transition? Or the state?
+    """
+
+    # All this is the exact same as information_gain_of_action. See there for more info.
+    # In fact, all this code is the exact same, because in order to know what info we learn we
+    # have to figure out what the transition was base on the previous rule.
+
+    literals, _ = env.get_literals(state)
+
+    # Get the rules that apply to this situation
+    applicable_rules = [rule for rule in prev_ruleset.rules if rule.action == action]
+    assert len(applicable_rules) == 1, "My code only works for one rule for now"
+    rule = applicable_rules[0]
+    assert len(rule.outcomes.outcomes) == 1, "Only deal with one possible outcome"
+
+    # TODO: Exclude permutations that are not relavent to the rule, or not relevant to the current object map
+    context_objects = set([diectic_obj.split("-")[-1] for diectic_obj in rule.context.referenced_objects])
+
+    # Objects that are currently in the state
+    state_objects = set([diectic_obj.split("-")[-1] for diectic_obj in literals.referenced_objects])
+
+    applicable_tracker = None  # Stores outcome as we process permutations so we can look for contradictions
+
+    # Filter the object map by only objects in the state. Then, create all possible combinations of state objects
+    # and what we believe they could be. Then, check if all the outcomes match.
+    mappings_to_choose_from = (object_map[unknown_object] for unknown_object in state_objects)
+    print(object_map)
+    print(state_objects)
+    permutations = itertools.product(*mappings_to_choose_from)
+
+    for permutation in permutations:
+        # Remove ones where there is a duplicate assignment. Two objects can not be mapped to the same
+        # Technically there should be no reason why not but it breaks literals.copy_replace_names
+        if len(set(permutation)) != len(permutation):
+            continue
+
+        mapping = {state_object: permute_object for state_object, permute_object in zip(state_objects, permutation)}
+        mapping["taxi"] = "taxi"  # Taxi has to be there but always maps to itself
+
+        new_literals = literals.copy_replace_names(mapping)
+
+        applicable = new_literals.base_object.contains(rule.context.base_object)
+
+        if applicable_tracker is None:
+            applicable_tracker = applicable
+        elif applicable_tracker != applicable:  # If we every get different answers, we don't know so return none
+            return None
+
+    # Returns the outcome if something will happen, no effect if nothing was applicable to the rule
+    return rule.outcomes.outcomes[0] if applicable_tracker else Outcome(JointNoEffect())
+
+
 if __name__ == "__main__":
-    random.seed(1)
-    np.random.seed(1)
-
-    env = SymbolicTaxi(stochastic=False, shuffle_object_names=True)
-    env.restart()  # The env is being restarted twice in the runner, which means random key arrangements were different
-
     examples = ExampleSet()
 
     # Load previously learned model with different object names
@@ -126,8 +182,6 @@ if __name__ == "__main__":
     print("Object name map:")
     print(env.object_name_map)
     print()
-
-    possible_assignments = set()
 
     for i in range(1):
         action = random.randint(0, env.get_num_actions()-1)

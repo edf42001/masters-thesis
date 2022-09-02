@@ -1,0 +1,41 @@
+"""
+Created on 9/1/22 by Ethan Frank
+
+Tests with determine_next_state_given action given various object maps
+"""
+
+import random
+import pickle
+
+import numpy as np
+
+from environment.symbolic_taxi import SymbolicTaxi
+from test.object_transfer.test_object_transfer_exploration import determine_transition_given_action
+
+num_actions = 6
+
+random.seed(1)
+np.random.seed(1)
+
+env = SymbolicTaxi(stochastic=False, shuffle_object_names=True)
+env.restart()
+
+
+if __name__ == "__main__":
+    # Load previously learned model with different object names
+    with open("../runners/symbolic_taxi_rules.pkl", 'rb') as f:
+        previous_ruleset = pickle.load(f)
+
+    # Current object map belief
+    object_map = {'idpyo': ['pass', 'dest'],
+                  'pumzg': ['wall'],
+                  'dpamn': ['pass', 'dest', 'wall']}
+
+    curr_state = env.get_state()
+    literals, _ = env.get_literals(curr_state)
+
+    print(literals)
+    action = 2
+    transition = determine_transition_given_action(curr_state, action, object_map, previous_ruleset)
+
+    print(f"Transition: {transition}")
