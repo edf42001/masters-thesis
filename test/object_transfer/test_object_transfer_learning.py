@@ -116,7 +116,7 @@ if __name__ == "__main__":
     prior_object_names = ["pass", "dest", "wall"]
     current_object_names = env.get_object_names()
     object_map = {unknown: prior_object_names.copy() for unknown in current_object_names if unknown != "taxi"}
-    new_object_map = determine_possible_object_maps(object_map.copy(), possible_assignments)
+    new_object_map = determine_possible_object_maps(object_map, possible_assignments)
 
     print("New object map:")
     for key, value in new_object_map.items():

@@ -36,7 +36,6 @@ class ObjectTransferLearner(Simulator):
             if self.visualize:
                 self.env.visualize(delay=self.delay)
 
-            # TODO: for consistency, this should take in state instead of literals
             if is_learning:
                 self.model.add_experience(action, self.curr_state, observation)
 

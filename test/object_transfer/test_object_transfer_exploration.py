@@ -20,15 +20,8 @@ from test.object_transfer.test_object_transfer_learning import determine_possibl
 
 num_actions = 6
 
-random.seed(1)
-np.random.seed(1)
 
-# These will eventually be stored in a class as a member variable for easy access
-env = SymbolicTaxi(stochastic=False, shuffle_object_names=True)
-env.restart()  # The env is being restarted twice in the runner, which means random key arrangements were different
-
-
-def information_gain_of_action(state: int, action: int, object_map, prev_ruleset: RuleSet) -> float:
+def information_gain_of_action(env, state: int, action: int, object_map, prev_ruleset: RuleSet) -> float:
     """
     Returns the expected information gain from taking an action, given the current knowledge of the world.
     measured based on net decrease in number of possibilities in object map (wrong, it's better to have one go to 0
@@ -62,9 +55,18 @@ def information_gain_of_action(state: int, action: int, object_map, prev_ruleset
     total_info_gain = 0
     num_permutations = 0
 
-    permutations = itertools.permutations(known_objects, len(state_objects))
+    mappings_to_choose_from = (object_map[unknown_object] for unknown_object in state_objects)
+    permutations = itertools.product(*mappings_to_choose_from)
+
+    # permutations = itertools.permutations(known_objects, len(state_objects))
     print("Permutations:")
     for permutation in permutations:
+        # Remove ones where there is a duplicate assignment. Two objects can not be mapped to the same
+        # Technically there should be no reason why not but it breaks literals.copy_replace_names
+        if len(set(permutation)) != len(permutation):
+            continue
+
+
         num_permutations += 1
         mapping = {state_object: permute_object for state_object, permute_object in zip(state_objects, permutation)}
         print(mapping)
@@ -84,7 +86,7 @@ def information_gain_of_action(state: int, action: int, object_map, prev_ruleset
 
         # Get object assignments from this example. Is this the part that could be shortcut?
         example = Example(action, literals, outcome)
-        possible_assignment = [get_possible_object_assignments(example, previous_ruleset)]
+        possible_assignment = [get_possible_object_assignments(example, prev_ruleset)]
         print(f"Possible assignments: {possible_assignment}")
 
         print(object_map)
@@ -110,12 +112,12 @@ def information_gain_of_action(state: int, action: int, object_map, prev_ruleset
     return total_info_gain / num_permutations
 
 
-def information_gain_of_state(state: int, object_map, prev_ruleset: RuleSet) -> float:
+def information_gain_of_state(env, state: int, object_map, prev_ruleset: RuleSet) -> float:
     """Returns the total info gain over all actions for a state"""
-    return sum([information_gain_of_action(state, a, object_map, prev_ruleset) for a in range(num_actions)])
+    return sum([information_gain_of_action(env, state, a, object_map, prev_ruleset) for a in range(num_actions)])
 
 
-def determine_transition_given_action(state: int, action: int, object_map, prev_ruleset: RuleSet):
+def determine_transition_given_action(env, state: int, action: int, object_map, prev_ruleset: RuleSet):
     """
     Given a current state and current object map belief,
     what are the possible next states for a specific actions?
@@ -146,8 +148,6 @@ def determine_transition_given_action(state: int, action: int, object_map, prev_
     # Filter the object map by only objects in the state. Then, create all possible combinations of state objects
     # and what we believe they could be. Then, check if all the outcomes match.
     mappings_to_choose_from = (object_map[unknown_object] for unknown_object in state_objects)
-    print(object_map)
-    print(state_objects)
     permutations = itertools.product(*mappings_to_choose_from)
 
     for permutation in permutations:
@@ -169,11 +169,19 @@ def determine_transition_given_action(state: int, action: int, object_map, prev_
             return None
 
     # Returns the outcome if something will happen, no effect if nothing was applicable to the rule
+    # TODO: This returns the object names from the rule. It should probably replace those with the current object names
     return rule.outcomes.outcomes[0] if applicable_tracker else Outcome(JointNoEffect())
 
 
 if __name__ == "__main__":
+    random.seed(1)
+    np.random.seed(1)
+
     examples = ExampleSet()
+
+    # These will eventually be stored in a class as a member variable for easy access
+    env = SymbolicTaxi(stochastic=False, shuffle_object_names=True)
+    env.restart()  # The env is being restarted twice in the runner, which means random key arrangements were different
 
     # Load previously learned model with different object names
     with open("../runners/symbolic_taxi_rules.pkl", 'rb') as f:
@@ -194,9 +202,9 @@ if __name__ == "__main__":
 
         info_gains = []
         for a in range(num_actions):
-            info_gain = information_gain_of_action(curr_state, a, object_map, previous_ruleset)
+            info_gain = information_gain_of_action(env, curr_state, a, object_map, previous_ruleset)
             info_gains.append(info_gain)
 
-        info_gain_of_state = information_gain_of_state(curr_state, object_map, previous_ruleset)
+        info_gain_of_state = information_gain_of_state(env, curr_state, object_map, previous_ruleset)
         print(f"Info gains: {info_gains}")
         print(f"Info gain of state: {info_gain_of_state}")

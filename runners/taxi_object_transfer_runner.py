@@ -22,14 +22,14 @@ class TaxiObjectTransferRunner(Runner):
         self.exp_num = exp_num
 
         # Experiment parameters
-        self.max_steps = 5
+        self.max_steps = 50
         self.num_episodes = 1
         self.stochastic = False
         self.visualize = True
 
         # For testing (I think I have to set both or the keys spawn in different areas)
-        random.seed(1)
-        np.random.seed(1)
+        random.seed(3)
+        np.random.seed(3)
 
         self.env = SymbolicTaxi(stochastic=self.stochastic, shuffle_object_names=True)
 
@@ -39,7 +39,7 @@ class TaxiObjectTransferRunner(Runner):
 
         self.model = ObjectTransferModel(self.env, symbolic_taxi_ruleset)
         self.planner = ObjectTransferPolicy(self.env.get_num_actions(), self.model)
-        self.learner = ObjectTransferLearner(self.env, self.model, self.planner, visualize=self.visualize, delay=10)
+        self.learner = ObjectTransferLearner(self.env, self.model, self.planner, visualize=self.visualize, delay=100)
         self.plot = Plot(self, self.eval_episodes, self.eval_timer)
 
 
