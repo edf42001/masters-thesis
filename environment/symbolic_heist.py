@@ -1,12 +1,18 @@
 import numpy as np
 import cv2
 from typing import List, Tuple, Dict
+import random
 
 from effects.effect import JointEffect, EffectType, Effect, JointNoEffect
 from environment.environment import Environment
 from symbolic_stochastic_domains.predicates_and_objects import Taxi2D, Key2D, Lock2D, Wall2D,\
     Gem2D, Predicate, PredicateType
 from symbolic_stochastic_domains.predicate_tree import PredicateTree
+
+
+# TODO: Lots of duplicate code here
+def random_string_generator(length):
+    return ''.join(random.choice("abcdefghijklmnopqrstuvwxyz") for x in range(length))
 
 
 class SymbolicHeist(Environment):
@@ -76,7 +82,7 @@ class SymbolicHeist(Environment):
         # PredicateType.OPEN: [[OB_LOCK]]
     }
 
-    def __init__(self, stochastic=True):
+    def __init__(self, stochastic=True, shuffle_object_names=False):
         self.stochastic = stochastic
 
         # Add walls to the map
@@ -113,6 +119,15 @@ class SymbolicHeist(Environment):
         self.curr_state: List[int] = None
         self.last_action: int = None
         self.last_reward: float = None
+
+        # Initialize object name map to anonymize object identities
+        self.object_name_map = None
+        if shuffle_object_names:
+            self.object_name_map = {}
+            for ob in self.OB_NAMES + ['wall']:
+                self.object_name_map[ob] = random_string_generator(5)
+            self.object_name_map['taxi'] = 'taxi'  # Except for taxi, taxi is base object
+
         self.restart()
 
     def end_of_episode(self, state: int = None) -> bool:
@@ -155,6 +170,12 @@ class SymbolicHeist(Environment):
         objects.append(Wall2D("wall", self.walls))
 
         return objects
+
+    def anonymize_name(self, ob_name):
+        if self.object_name_map:
+            return self.object_name_map[ob_name]
+
+        return ob_name
 
     def get_literals(self, state: int) -> Tuple[PredicateTree, Dict]:
         """Converts state to the literals from that state using variables to refer to objects"""
@@ -497,3 +518,6 @@ class SymbolicHeist(Environment):
 
         cv2.imshow("Heist World", img)
         cv2.waitKey(delay)
+
+    def get_object_names(self):
+        return [self.anonymize_name(ob_name) for ob_name in self.OB_NAMES + ["wall"]]

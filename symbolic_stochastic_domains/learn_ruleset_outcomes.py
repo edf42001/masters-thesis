@@ -112,6 +112,9 @@ class RulesetLearner:
 
         # Wait, could I replace rule.context with just context?
 
+        # TODO: Idea: start with a context that specifically mentions diectic references. Modify as needed
+        # For the first learning add the properties to existing contexts, otherwise add as needed
+
         # Our goal is learn the best rule that covers the most of the positive examples, and none of the negative examples
         lit_counter = 1  # How many lits have been addded, used for checking when deictic references should be used
         # End when deictic references are met and the rule covers no negatives
@@ -168,7 +171,21 @@ class RulesetLearner:
             # for score, context in zip(scores[-5:], new_contexts[-5:]):
             #     print(f"{context}: {score:.4f}")
 
+            # Extract the best score to look for ties
+            best_score = scores[-1]
+            best_contexts = []
+            i = len(scores) - 1
+            while scores[i] == best_score and i >= 0:
+                best_contexts.append(new_contexts[i])
+                i -= 1
+
+            # In case of ties, find one that matches diectic references. Start with end of the list just in case
             best_context = new_contexts[-1]
+            for context in best_contexts:
+                if any(obj in context.referenced_objects for obj in objects_in_outcome):
+                    best_context = context
+                    break
+
             # print("Chose best context:")
             # print(best_context)
 

@@ -28,11 +28,6 @@ class DoorWorldSymbolicLearnerRunner(Runner):
         # For testing
         random.seed(1)
 
-        # Hyperparameters
-        params = {
-            'discount_factor': 0.95
-        }
-
         # Learning
         self.env = SymbolicDoorWorld(stochastic=self.stochastic)
 

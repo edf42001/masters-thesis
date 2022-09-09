@@ -22,11 +22,10 @@ class TaxiRunner(Runner):
 
         # Experiment parameters
         self.max_steps = 150
-        self.num_episodes = 1
+        self.num_episodes = 5
         self.stochastic = False
         self.visualize = True
 
-        # For testing (I think I have to set both or the keys spawn in different areas)
         random.seed(1)
         np.random.seed(1)
 
