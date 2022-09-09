@@ -33,20 +33,21 @@ class Plot:
         self.cumulative_reward = []
         self.steps_between_eval = 0
 
-        plt.ion()
-        fig = plt.figure()
-
-        self.ax_train_r = fig.add_subplot(221)
-        self.ax_train_r.set_title('Train: Cumulative reward')
-
-        self.ax_train_s = fig.add_subplot(222)
-        self.ax_train_s.set_title('Train: Episode lengths')
-
-        self.ax_eval_r = fig.add_subplot(223)
-        self.ax_eval_r.set_title('Eval: Cumulative reward')
-
-        self.ax_eval_s = fig.add_subplot(224)
-        self.ax_eval_s.set_title('Eval: Episode lengths')
+        # Turned off plots for now
+        # plt.ion()
+        # fig = plt.figure()
+        #
+        # self.ax_train_r = fig.add_subplot(221)
+        # self.ax_train_r.set_title('Train: Cumulative reward')
+        #
+        # self.ax_train_s = fig.add_subplot(222)
+        # self.ax_train_s.set_title('Train: Episode lengths')
+        #
+        # self.ax_eval_r = fig.add_subplot(223)
+        # self.ax_eval_r.set_title('Eval: Cumulative reward')
+        #
+        # self.ax_eval_s = fig.add_subplot(224)
+        # self.ax_eval_s.set_title('Eval: Episode lengths')
 
     def update(self, steps: int, reward: float):
         """Provide results of training step. If eval timer is 0, runs evaluation using current policy"""
@@ -54,15 +55,15 @@ class Plot:
         self.train_steps.append(steps)
         self.steps_between_eval += steps
 
-        self.ax_train_r.clear()
-        self.ax_train_r.plot(self.train_rewards)
-        self.ax_train_r.set_title('Train: Cumulative reward')
-
-        self.ax_train_s.clear()
-        self.ax_train_s.plot(self.train_steps)
-        self.ax_train_s.set_title('Train: Episode lengths')
-
-        plt.pause(0.02)
+        # self.ax_train_r.clear()
+        # self.ax_train_r.plot(self.train_rewards)
+        # self.ax_train_r.set_title('Train: Cumulative reward')
+        #
+        # self.ax_train_s.clear()
+        # self.ax_train_s.plot(self.train_steps)
+        # self.ax_train_s.set_title('Train: Episode lengths')
+        #
+        # plt.pause(0.02)
 
         self.eval_time -= 1
         if self.eval_time == 0:
@@ -92,21 +93,21 @@ class Plot:
             self.cumulative_reward.append(best_reward)
             self.steps_between_eval = 0
 
-            self.ax_eval_r.clear()
-            self.ax_eval_r.plot(self.cumulative_steps, self.eval_rewards)
-            self.ax_eval_r.set_title('Eval: Cumulative reward')
-
-            self.ax_eval_s.clear()
-            self.ax_eval_s.plot(self.cumulative_steps, self.eval_steps)
-            self.ax_eval_s.set_title('Eval: Episode lengths')
-
-            plt.pause(0.02)
+            # self.ax_eval_r.clear()
+            # self.ax_eval_r.plot(self.cumulative_steps, self.eval_rewards)
+            # self.ax_eval_r.set_title('Eval: Cumulative reward')
+            #
+            # self.ax_eval_s.clear()
+            # self.ax_eval_s.plot(self.cumulative_steps, self.eval_steps)
+            # self.ax_eval_s.set_title('Eval: Episode lengths')
+            #
+            # plt.pause(0.02)
 
     def finalize(self, show: bool = False):
-        plt.ioff()
-        if show:
-            plt.show()
-        plt.close()
+        # plt.ioff()
+        # if show:
+        #     plt.show()
+        # plt.close()
 
         return self.cumulative_reward, self.cumulative_steps
 
