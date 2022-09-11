@@ -176,7 +176,7 @@ class SymbolicTaxi(Environment):
                         pred = Predicate.create(p_type, objects[ob1_id], objects[ob2_idx], walls=self.walls)
                         if pred.value:
                             # Convert the objects to unique variable names
-                            # If we have already encountered this object, reuse the name
+                            # If we have already encountered this object, reuse the name. Why is this not used?
                             if ob1_id in ob_index_name_map:
                                 new_name1 = ob_index_name_map[ob1_id]
                             else:

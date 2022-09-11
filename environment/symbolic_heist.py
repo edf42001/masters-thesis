@@ -207,23 +207,28 @@ class SymbolicHeist(Environment):
                         pred = Predicate.create(p_type, objects[ob1_id], objects[ob2_idx], walls=self.walls)
                         if pred.value:
                             # Convert the objects to unique variable names
-                            # If we have already encountered this object, reuse the name
+                            # If we have already encountered this object, reuse the name.
+                            # TODO: Why is this not used? Or does it just think it isn't used?
                             if ob1_id in ob_index_name_map:
                                 new_name1 = ob_index_name_map[ob1_id]
+                                print("YUP")
+                                exit()
                             else:
                                 # Extract the class name, and append the id to the end of it
                                 ob_name = objects[ob1_id].name
-                                new_name1 = ob_name + str(object_reference_counts[ob_name])
+                                new_name1 = self.anonymize_name(ob_name) + str(object_reference_counts[ob_name])
                                 object_reference_counts[ob_name] += 1  # So the next will have a new name
                                 # Store this in the name map so if we encounter it again we can refer to it
                                 ob_index_name_map[ob1_id] = new_name1
 
                             if ob2_idx in ob_index_name_map:
                                 new_name2 = ob_index_name_map[ob2_idx]
+                                print("YUP2")
+                                exit()
                             else:
                                 # Extract the class name, and append the id to the end of it
                                 ob_name = objects[ob2_idx].name
-                                new_name2 = ob_name + str(object_reference_counts[ob_name])
+                                new_name2 = self.anonymize_name(ob_name) + str(object_reference_counts[ob_name])
                                 object_reference_counts[ob_name] += 1  # So the next will have a new name
                                 # Store this in the name map so if we encounter it again we can refer to it
                                 ob_index_name_map[ob2_idx] = new_name2
@@ -253,9 +258,10 @@ class SymbolicHeist(Environment):
                        PredicateType.TOUCH_UP2D, PredicateType.TOUCH_DOWN2D]:
             pred = Predicate.create(p_type, objects[self.OB_TAXI], objects[-1], walls=self.walls)  # Objects -1 is the wall
             if pred.value:
-                if "wall0" not in tree.node_lookup:
-                    tree.add_node("wall0")
-                tree.add_edge("taxi0", "wall0", p_type)
+                wall_name = self.anonymize_name("wall") + "0"
+                if wall_name not in tree.node_lookup:
+                    tree.add_node(wall_name)
+                tree.add_edge("taxi0", wall_name, p_type)
                 # tree.base_object.add_edge(Edge(p_type, node))
 
         # # Note: The taxi is referenced by the action (MoveLeft(taxi0)) for example. We need to add this in or

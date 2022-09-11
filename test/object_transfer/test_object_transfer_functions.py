@@ -65,7 +65,7 @@ class ObjectAssignmentList:
         self.hash = hash(self.__str__())
 
     def __str__(self):
-        return str(self.assignments)
+        return "[" + " or ".join(str(a) for a in self.assignments) + "]"
 
     def __repr__(self):
         return self.__str__()
@@ -101,6 +101,7 @@ def determine_bindings_for_same_outcome(condition: PredicateTree, state: Predica
                 found = True
                 break
 
+        # Bug: Assertion failing because there are two rules that apply to going down
         assert found, "Matching positive edge was not found"
 
     # Now all negative edges, any matches here must be false
@@ -130,12 +131,27 @@ def determine_bindings_for_no_outcome(condition: PredicateTree, state: Predicate
 
     # First, make sure all the positive edges match. If they don't we can't really give a reason,
     # because the missing positive edge could be why nothing happened
+
+    # The same is true of properties. If any of the properties of positive edges do not match, that could be
+    # why nothing happened. So we can't really give any more information.
+
     for edge in condition.base_object.edges:
         # Find matching edge
         found = False
         for edge2 in state.base_object.edges:
             if edge.type == edge2.type:
                 # This is the match, these objects are the same
+
+                # Check if any of the properties do not match.
+                for prop, value in edge.to_node.properties.items():
+                    # If the property is not present, assume it is false.
+                    # Then, I don't have to add false properties to every object, but the learner can't cheat
+                    # by using which properties are present to distinguish objects
+                    other_value = False if prop not in edge2.to_node.properties else edge2.to_node.properties[prop]
+
+                    if value != other_value:
+                        return ObjectAssignmentList([])
+
                 found = True
                 break
 
@@ -167,7 +183,7 @@ def test_positive_positive():
     # The rule's condition
     condition = PredicateTree()
     condition.add_node("taxi0")
-    condition.add_node("obja1")
+    condition.add_node("obja1")  # We append numbers on the end because it strips those off to get the object name
     condition.add_node("objb2")
     condition.add_node("objc3")
     condition.add_node("objd4")
@@ -237,6 +253,75 @@ def test_positive_negative():
     print(f"Resulting Assignments: {assignments}")
 
 
+def test_positive_positive_with_properties():
+    # If we observed the outcome that we predicted, we don't have to care about the properties
+    # This is because only one object can be referenced per fluent per timestep,
+    # so if there was an object where the rule said it wasn, then the properties must be correct,
+    # No matter what
+
+    condition = PredicateTree()
+    condition.add_node("taxi0")
+    condition.add_node("obja1")
+    condition.add_node("objb2")
+
+    condition.add_edge("taxi0", "obja1", PredicateType.TOUCH_LEFT)
+    condition.add_property("obja1", PredicateType.OPEN, True)
+    condition.add_edge("taxi0", "objb2", PredicateType.TOUCH_RIGHT)
+    condition.add_property("objb2", PredicateType.OPEN, False)
+
+    # The current state
+    state = PredicateTree()
+    state.add_node("taxi0")
+    state.add_node("a0")
+    state.add_node("b0")
+
+    state.add_edge("taxi0", "a0", PredicateType.TOUCH_LEFT)
+    state.add_property("a0", PredicateType.OPEN, True)
+    state.add_edge("taxi0", "b0", PredicateType.TOUCH_RIGHT)
+    state.add_property("b0", PredicateType.OPEN, False)
+
+    # For matching outcomes, determine which object must/must not be which
+    assignments = determine_bindings_for_same_outcome(condition, state)
+    print(f"Resulting Assignments: {assignments}")
+
+
+def test_positive_negative_with_properties():
+    # Now in this case, we have to modify our algorithm a bit.
+    # If we expected to have a object with a certain property, and the property differs,
+    # then maybe the object is actually the correct object but the issue was the property was wrong
+    # Should we return both "nothing" as a possible assignment, and that the object was wrong?
+    # Or because we can't say which it is, just one? I think we have to return all possibilities that
+    # could have caused it to fail. Because I say "at least one of these needs to be correct"
+    # Or do we just return empty?
+
+    condition = PredicateTree()
+    condition.add_node("taxi0")
+    condition.add_node("obja1")
+    condition.add_node("objb2")
+
+    condition.add_edge("taxi0", "obja1", PredicateType.TOUCH_LEFT)
+    condition.add_property("obja1", PredicateType.OPEN, True)
+    condition.add_edge("taxi0", "objb2", PredicateType.TOUCH_RIGHT)
+    condition.add_property("objb2", PredicateType.OPEN, False)
+
+    # The current state
+    state = PredicateTree()
+    state.add_node("taxi0")
+    state.add_node("a0")
+    state.add_node("b0")
+
+    state.add_edge("taxi0", "a0", PredicateType.TOUCH_LEFT)
+    state.add_property("a0", PredicateType.OPEN, True)
+    state.add_edge("taxi0", "b0", PredicateType.TOUCH_RIGHT)
+    state.add_property("b0", PredicateType.OPEN, True)
+
+    # For matching outcomes, determine which object must/must not be which
+    assignments = determine_bindings_for_no_outcome(condition, state)
+    print(f"Resulting Assignments: {assignments}")
+
+
 if __name__ == "__main__":
     test_positive_positive()
     test_positive_negative()
+    test_positive_positive_with_properties()
+    test_positive_negative_with_properties()
