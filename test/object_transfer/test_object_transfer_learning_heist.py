@@ -86,9 +86,10 @@ def determine_possible_object_maps(object_map, possible_assignments):
                 object_map[unknown] = [known]
 
             # Remove everything from negatives (it may have been removed already)
-            for unknown, known in assignment.negatives.items():
-                if known in object_map[unknown]:
-                    object_map[unknown].remove(known)
+            for unknown, knowns in assignment.negatives.items():
+                for known in knowns:  # Negatives are list of things the object isn't
+                    if known in object_map[unknown]:
+                        object_map[unknown].remove(known)
 
         # If there are two possible assignments, for now, let's just apply all of them
         # If there are multiple positives, say it could be either. If negatives, just remove all of those
@@ -112,6 +113,23 @@ def determine_possible_object_maps(object_map, possible_assignments):
                 object_map[unknown] = [value for value in object_map[unknown] if value in knowns]
 
         # If length is 0 we don't have to do anything
+
+    # Check if any objects have been brought to 1, if so, remove those from the others
+    # If this causes another to go to one, continue looping
+    changed = True
+    while changed:
+        changed = False
+        for known, unknowns in object_map.items():
+            if len(unknowns) == 1:
+                unknown = unknowns[0]
+                for known2, unknowns2 in object_map.items():
+                    if known2 != known and unknown in unknowns2:
+                        unknowns2.remove(unknown)
+                        changed = True
+
+    # Verify no lists went to 0, which indicates a conflict in rules somewhere
+    for unknowns in object_map.values():
+        assert len(unknowns) > 0, "Should also have some belief about what objects it is"
 
     return object_map
 
@@ -141,7 +159,7 @@ if __name__ == "__main__":
 
     possible_assignments = set()
 
-    for i in range(309):
+    for i in range(1500):
         action = random.randint(0, env.get_num_actions()-1)
         curr_state = env.get_state()
 

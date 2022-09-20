@@ -32,19 +32,27 @@ class ObjectAssignment:
         self.negatives = {}
 
     def add_positive(self, unknown, known):
+        assert unknown not in self.positives, "One object can never be two different objects"
         self.positives[unknown] = known
 
     def add_negative(self, unknown, known):
-        self.negatives[unknown] = known
+        # Use lists here because it is possible that 1 unknown is not two different objects
+        if unknown not in self.negatives:
+            self.negatives[unknown] = [known]
+        else:
+            self.negatives[unknown].append(known)
+
+    def dict_to_str(self, dictionary):
+        return str({key: ", ".join(values) for key, values in dictionary.items()})
 
     def __repr__(self):
         return self.__str__()
 
     def __str__(self):
         if len(self.positives) > 0 and len(self.negatives) > 0:
-            return str(self.positives) + " - ~" + str(self.negatives)
+            return str(self.positives) + " - ~" + self.dict_to_str(self.negatives)
         elif len(self.negatives) > 0:
-            return "~" + str(self.negatives)
+            return "~" + self.dict_to_str(self.negatives)
         elif len(self.positives) > 0:
             return str(self.positives)
         else:
@@ -95,12 +103,26 @@ def determine_bindings_for_same_outcome(condition: PredicateTree, state: Predica
     assignment = ObjectAssignment()
 
     # First, check all positive edges. All of these must match
+    # However, note that if any properties of the positive edges don't match, this was not the real rule
+    # That caused this to occur. So, we return None just like below, and hope that some other rule covered
+    # this occurrence.
     for edge in condition.base_object.edges:
         # Find matching edge
         found = False
         for edge2 in state.base_object.edges:
             if edge.type == edge2.type:
                 # This is the match, these objects are the same
+
+                # Check if any of the properties do not match.
+                for prop, value in edge.to_node.properties.items():
+                    # If the property is not present, assume it is false.
+                    # Then, I don't have to add false properties to every object, but the learner can't cheat
+                    # by using which properties are present to distinguish objects
+                    other_value = False if prop not in edge2.to_node.properties else edge2.to_node.properties[prop]
+
+                    if value != other_value:
+                        return None
+
                 assignment.add_positive(edge2.to_node.object_name[:-1], edge.to_node.object_name[:-1])
                 found = True
                 break
