@@ -16,7 +16,7 @@ import numpy as np
 from environment.symbolic_taxi import SymbolicTaxi
 from symbolic_stochastic_domains.symbolic_classes import ExampleSet, Outcome, Example, RuleSet
 from effects.effect import JointNoEffect
-from test.object_transfer.test_object_transfer_learning_taxi import determine_possible_object_maps, get_possible_object_assignments
+from test.object_transfer.test_object_transfer_learning_heist import determine_possible_object_maps, get_possible_object_assignments
 
 num_actions = 6
 
@@ -27,7 +27,10 @@ def information_gain_of_action(env, state: int, action: int, object_map, prev_ru
     measured based on net decrease in number of possibilities in object map (wrong, it's better to have one go to 0
     then 3 go down by 1), use entropy total decrease instead)
     """
-    known_objects = {"wall", "dest", "pass"}  # TODO: hardcoded for now
+    # List of known object names without taxi and with wall (wall is static so is not in the list normally)
+    known_objects = set(env.OB_NAMES)
+    known_objects.add("wall")
+    known_objects.remove("taxi")
 
     print(f"State {state}")
     print(f"Action {action}")
@@ -65,7 +68,6 @@ def information_gain_of_action(env, state: int, action: int, object_map, prev_ru
         # Technically there should be no reason why not but it breaks literals.copy_replace_names
         if len(set(permutation)) != len(permutation):
             continue
-
 
         num_permutations += 1
         mapping = {state_object: permute_object for state_object, permute_object in zip(state_objects, permutation)}

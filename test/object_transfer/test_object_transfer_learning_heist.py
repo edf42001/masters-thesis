@@ -36,8 +36,6 @@ def get_possible_object_assignments(example: Example, prev_ruleset: RuleSet) -> 
     all_assignments = ObjectAssignmentList([])
     print(f"{len(applicable_rules)} applicable rules")
     for rule in applicable_rules:
-        # assert len(applicable_rules) == 1, "My code only works for one rule for now"
-
         # Wait, could the same action have different outcomes depending on the situation?
         outcome_occured = type(outcome.outcome) == type(rule.outcomes.outcomes[0].outcome)
 
@@ -64,7 +62,7 @@ def get_possible_object_assignments(example: Example, prev_ruleset: RuleSet) -> 
     return all_assignments
 
 
-def determine_possible_object_maps(object_map, possible_assignments):
+def determine_possible_object_maps(object_map: dict, possible_assignments: List[ObjectAssignmentList]):
     """
     Tries to figure out which assignments are the true ones and which are not,
     in the process learning which object is which
