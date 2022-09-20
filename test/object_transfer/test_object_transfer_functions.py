@@ -64,6 +64,10 @@ class ObjectAssignmentList:
         self.assignments = assignments
         self.hash = hash(self.__str__())
 
+    def add_assignments(self, assignment_list):
+        self.assignments.extend(assignment_list.assignments)
+        self.hash = hash(self.__str__())
+
     def __str__(self):
         return "[" + " or ".join(str(a) for a in self.assignments) + "]"
 
@@ -101,8 +105,11 @@ def determine_bindings_for_same_outcome(condition: PredicateTree, state: Predica
                 found = True
                 break
 
-        # Bug: Assertion failing because there are two rules that apply to going down
-        assert found, "Matching positive edge was not found"
+        # If this happens, it is because this action has more than one rule that covers it,
+        # and this condition was not the one. This is fine, the other condition will cover it.
+        # If neither cover it, then we have a paradox in the code.
+        if not found:
+            return None
 
     # Now all negative edges, any matches here must be false
     for edge in condition.base_object.negative_edges:
@@ -111,7 +118,7 @@ def determine_bindings_for_same_outcome(condition: PredicateTree, state: Predica
                 assignment.add_negative(edge2.to_node.object_name[:-1], edge.to_node.object_name[:-1])
                 break
 
-    # FOr later down the line, it'll be easier if the list is completely empty, instead of having and empty object
+    # For later down the line, it'll be easier if the list is completely empty, instead of having and empty object
     if len(assignment.negatives) == 0 and len(assignment.positives) == 0:
         return ObjectAssignmentList([])
     else:

@@ -10,7 +10,7 @@ from test.object_transfer.test_object_transfer_functions import determine_bindin
 from test.object_transfer.test_object_transfer_functions import ObjectAssignmentList
 
 
-def get_possible_object_assignments(example: Example, prev_ruleset: RuleSet) -> List[ObjectAssignmentList]:
+def get_possible_object_assignments(example: Example, prev_ruleset: RuleSet) -> ObjectAssignmentList:
     """
     Return possible unknown to known object assignments for this example
     and the previously known ruleset
@@ -28,11 +28,17 @@ def get_possible_object_assignments(example: Example, prev_ruleset: RuleSet) -> 
     # Because when there was only one rule we knew that was the one that should apply?
     # But sometimes it didn't? No I think it always did
 
-    all_possible_assignments = []
+    # Keeps track of if we found assignments. Only used to verify that when more than one rule is applicable,
+    # at least one is matched if the outcomes matched.
+    # See determine_bindings_for_same_outcome for more info (when it returns None)
+    found_an_assignment = False
+
+    all_assignments = ObjectAssignmentList([])
     print(f"{len(applicable_rules)} applicable rules")
     for rule in applicable_rules:
         # assert len(applicable_rules) == 1, "My code only works for one rule for now"
 
+        # Wait, could the same action have different outcomes depending on the situation?
         outcome_occured = type(outcome.outcome) == type(rule.outcomes.outcomes[0].outcome)
 
         # Use different reasoning based on if we had a positive or negative example
@@ -43,9 +49,19 @@ def get_possible_object_assignments(example: Example, prev_ruleset: RuleSet) -> 
 
         print(f"Assignments for\n{rule}:\n{assignments}")
         print()
-        all_possible_assignments.append(assignments)
+        if assignments is not None:
+            found_an_assignment = True
+            all_assignments.add_assignments(assignments)
 
-    return all_possible_assignments
+    assert not (len(applicable_rules) > 1 and not found_an_assignment), "At least one rule must not return None"
+
+    # Make sure all rules have the same outcome. What happens if they don't?
+    assert all(type(rule.outcomes.outcomes[0].outcome) ==
+               type(applicable_rules[0].outcomes.outcomes[0].outcome)
+               for rule in applicable_rules)
+
+    print(f"All possible assignments: {all_assignments}")
+    return all_assignments
 
 
 def determine_possible_object_maps(object_map, possible_assignments):
@@ -125,7 +141,7 @@ if __name__ == "__main__":
 
     possible_assignments = set()
 
-    for i in range(7):
+    for i in range(309):
         action = random.randint(0, env.get_num_actions()-1)
         curr_state = env.get_state()
 
@@ -141,7 +157,13 @@ if __name__ == "__main__":
         examples.add_example(example)
 
         assignments = get_possible_object_assignments(example, previous_ruleset)
-        possible_assignments.update(assignments)
+
+        length_of_knowledge = len(possible_assignments)
+        possible_assignments.add(assignments)
+        new_length_of_knowledge = len(possible_assignments)
+        if new_length_of_knowledge != length_of_knowledge:
+            print("Learned Something New")
+
         print("All assignments: ")
         print(possible_assignments)
         print()

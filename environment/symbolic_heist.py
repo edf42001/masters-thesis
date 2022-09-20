@@ -208,11 +208,9 @@ class SymbolicHeist(Environment):
                         if pred.value:
                             # Convert the objects to unique variable names
                             # If we have already encountered this object, reuse the name.
-                            # TODO: Why is this not used? Or does it just think it isn't used?
+                            # I think because I hardcode taxi0, it never needs to lookup taxi0 here
                             if ob1_id in ob_index_name_map:
                                 new_name1 = ob_index_name_map[ob1_id]
-                                print("YUP")
-                                exit()
                             else:
                                 # Extract the class name, and append the id to the end of it
                                 ob_name = objects[ob1_id].name

@@ -16,7 +16,7 @@ import numpy as np
 from environment.symbolic_taxi import SymbolicTaxi
 from symbolic_stochastic_domains.symbolic_classes import ExampleSet, Outcome, Example, RuleSet
 from effects.effect import JointNoEffect
-from test.object_transfer.test_object_transfer_learning import determine_possible_object_maps, get_possible_object_assignments
+from test.object_transfer.test_object_transfer_learning_taxi import determine_possible_object_maps, get_possible_object_assignments
 
 num_actions = 6
 
