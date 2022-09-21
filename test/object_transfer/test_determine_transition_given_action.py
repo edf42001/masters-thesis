@@ -10,6 +10,8 @@ import pickle
 import numpy as np
 
 from environment.symbolic_taxi import SymbolicTaxi
+from environment.symbolic_heist import SymbolicHeist
+
 from test.object_transfer.test_object_transfer_exploration import determine_transition_given_action
 
 num_actions = 6
@@ -17,25 +19,26 @@ num_actions = 6
 random.seed(1)
 np.random.seed(1)
 
-env = SymbolicTaxi(stochastic=False, shuffle_object_names=True)
+env = SymbolicHeist(stochastic=False, shuffle_object_names=True)
 env.restart()
 
 
 if __name__ == "__main__":
     # Load previously learned model with different object names
-    with open("../runners/symbolic_taxi_rules.pkl", 'rb') as f:
+    with open("../runners/symbolic_heist_rules.pkl", 'rb') as f:
         previous_ruleset = pickle.load(f)
 
     # Current object map belief
-    object_map = {'idpyo': ['pass', 'dest'],
-                  'pumzg': ['wall'],
-                  'dpamn': ['pass', 'dest', 'wall']}
+    object_map = {'idpyo': ['key'],
+                  'pumzg': ['gem'],
+                  'dpamn': ['lock', 'wall'],
+                  'tyyaw': ['wall', 'lock']}
 
     curr_state = env.get_state()
     literals, _ = env.get_literals(curr_state)
 
     print(literals)
     action = 2
-    transition = determine_transition_given_action(curr_state, action, object_map, previous_ruleset)
+    transition = determine_transition_given_action(env, curr_state, action, object_map, previous_ruleset)
 
     print(f"Transition: {transition}")

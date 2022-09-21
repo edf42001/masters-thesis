@@ -14,6 +14,7 @@ import itertools
 import numpy as np
 
 from environment.symbolic_taxi import SymbolicTaxi
+from environment.symbolic_heist import SymbolicHeist
 from symbolic_stochastic_domains.symbolic_classes import ExampleSet, Outcome, Example, RuleSet
 from effects.effect import JointNoEffect
 from test.object_transfer.test_object_transfer_learning_heist import determine_possible_object_maps, get_possible_object_assignments
@@ -41,17 +42,17 @@ def information_gain_of_action(env, state: int, action: int, object_map, prev_ru
 
     # Get the rules that apply to this situation
     applicable_rules = [rule for rule in prev_ruleset.rules if rule.action == action]
-    assert len(applicable_rules) == 1, "My code only works for one rule for now"
-    rule = applicable_rules[0]
-    assert len(rule.outcomes.outcomes) == 1, "Only deal with one possible outcome"
-    print(f"Applicable rules: {rule}")
+    # assert len(applicable_rules) == 1, "My code only works for one rule for now"
+    for rule in applicable_rules:
+        print(f"Applicable rules: {rule}")
+        print()
 
     # Description of how my brute force algorithm works.
     # Step 1: There are some objects in the state, and some we have the whole list of previously known object
     # Create every combination of mappings possible
-    context_objects = set([diectic_obj.split("-")[-1] for diectic_obj in rule.context.referenced_objects])
+    # context_objects = set([diectic_obj.split("-")[-1] for diectic_obj in rule.context.referenced_objects])
     state_objects = set([diectic_obj.split("-")[-1] for diectic_obj in literals.referenced_objects])
-    print(f"Context objects: {context_objects}")
+    # print(f"Context objects: {context_objects}")
     print(f"State objects: {state_objects}")
 
     # Track total info gain and number of permutations so we can calculate an expected info gain
@@ -70,6 +71,7 @@ def information_gain_of_action(env, state: int, action: int, object_map, prev_ru
             continue
 
         num_permutations += 1
+
         mapping = {state_object: permute_object for state_object, permute_object in zip(state_objects, permutation)}
         print(mapping)
         mapping["taxi"] = "taxi"  # Taxi has to be there but always maps to itself
@@ -77,31 +79,42 @@ def information_gain_of_action(env, state: int, action: int, object_map, prev_ru
         new_literals = literals.copy_replace_names(mapping)
         print(f"New tree: {new_literals}")
 
-        applicable = new_literals.base_object.contains(rule.context.base_object)
-        print(f"Applicable: {applicable}")
+        # Check each rule. Because rules are constructed to be mutually exclusive, either one of them will
+        # be applicable, or none of them will be applicable.
+        # TODO: Could simply computations by noting there are some times where a rule will never apply.
+        # i.e., if it is missing edges that are relevant
 
-        outcome = Outcome(JointNoEffect())
-        if applicable:
-            outcome = rule.outcomes.outcomes[0]
+        for rule in applicable_rules:
+            print(f"Rule: {rule}")
+            print()
+            assert len(rule.outcomes.outcomes) == 1, "Only deal with one possible outcome"
 
-        print(f"Predicted outcome: {outcome}")
+            applicable = new_literals.base_object.contains(rule.context.base_object)
+            print(f"Applicable: {applicable}")
 
-        # Get object assignments from this example. Is this the part that could be shortcut?
-        example = Example(action, literals, outcome)
-        possible_assignment = [get_possible_object_assignments(example, prev_ruleset)]
-        print(f"Possible assignments: {possible_assignment}")
+            outcome = Outcome(JointNoEffect())
+            if applicable:
+                outcome = rule.outcomes.outcomes[0]
 
-        print(object_map)
+            print(f"Predicted outcome: {outcome}")
 
-        new_object_map = determine_possible_object_maps(object_map, possible_assignment)
-        prev_num_options = sum(len(possibilities) for possibilities in object_map.values())
-        new_num_options = sum(len(possibilities) for possibilities in new_object_map.values())
+            # Get object assignments from this example. Is this the part that could be shortcut?
+            example = Example(action, literals, outcome)
+            possible_assignment = [get_possible_object_assignments(example, prev_ruleset)]
+            print(f"Possible assignments: {possible_assignment}")
 
-        print(f"New object map: {new_object_map}")
-        print(f"Length update: {prev_num_options}->{new_num_options}")
+            print("Previous object map:")
+            print(object_map)
 
-        # Info gain is change in bits required to express number of object possibilities, which is log2 of length
-        total_info_gain += np.log2(prev_num_options) - np.log2(new_num_options)
+            new_object_map = determine_possible_object_maps(object_map, possible_assignment)
+            prev_num_options = sum(len(possibilities) for possibilities in object_map.values())
+            new_num_options = sum(len(possibilities) for possibilities in new_object_map.values())
+
+            print(f"New object map: {new_object_map}")
+            print(f"Length update: {prev_num_options}->{new_num_options}")
+
+            # Info gain is change in bits required to express number of object possibilities, which is log2 of length
+            total_info_gain += np.log2(prev_num_options) - np.log2(new_num_options)
 
     # Step 2: Assuming that mapping is the real one, see what would happen.
 
@@ -135,12 +148,11 @@ def determine_transition_given_action(env, state: int, action: int, object_map, 
 
     # Get the rules that apply to this situation
     applicable_rules = [rule for rule in prev_ruleset.rules if rule.action == action]
-    assert len(applicable_rules) == 1, "My code only works for one rule for now"
-    rule = applicable_rules[0]
-    assert len(rule.outcomes.outcomes) == 1, "Only deal with one possible outcome"
+    # assert len(applicable_rules) == 1, "My code only works for one rule for now"
+    # rule = applicable_rules[0]
 
     # TODO: Exclude permutations that are not relavent to the rule, or not relevant to the current object map
-    context_objects = set([diectic_obj.split("-")[-1] for diectic_obj in rule.context.referenced_objects])
+    # context_objects = set([diectic_obj.split("-")[-1] for diectic_obj in rule.context.referenced_objects])
 
     # Objects that are currently in the state
     state_objects = set([diectic_obj.split("-")[-1] for diectic_obj in literals.referenced_objects])
@@ -163,16 +175,26 @@ def determine_transition_given_action(env, state: int, action: int, object_map, 
 
         new_literals = literals.copy_replace_names(mapping)
 
-        applicable = new_literals.base_object.contains(rule.context.base_object)
+        # Because rules are constructed to be mutually exclusive, either one will apply, or neither will apply
+        # If one applies, take that as the outcome. If none apply, then nothing happens. It's like an OR.
+        # TODO: What if the same action leads to different outcomes depending on the rule?
+        any_applied = False
+        for rule in applicable_rules:
+            assert len(rule.outcomes.outcomes) == 1, "Only deal with one possible outcome"
+
+            applicable = new_literals.base_object.contains(rule.context.base_object)
+
+            if applicable:
+                any_applied = True
 
         if applicable_tracker is None:
-            applicable_tracker = applicable
-        elif applicable_tracker != applicable:  # If we every get different answers, we don't know so return none
+            applicable_tracker = any_applied
+        elif applicable_tracker != any_applied:  # If we every get different answers, we don't know so return none
             return None
 
     # Returns the outcome if something will happen, no effect if nothing was applicable to the rule
     # TODO: This returns the object names from the rule. It should probably replace those with the current object names
-    return rule.outcomes.outcomes[0] if applicable_tracker else Outcome(JointNoEffect())
+    return applicable_rules[0].outcomes.outcomes[0] if applicable_tracker else Outcome(JointNoEffect())
 
 
 if __name__ == "__main__":
@@ -182,11 +204,11 @@ if __name__ == "__main__":
     examples = ExampleSet()
 
     # These will eventually be stored in a class as a member variable for easy access
-    env = SymbolicTaxi(stochastic=False, shuffle_object_names=True)
+    env = SymbolicHeist(stochastic=False, shuffle_object_names=True)
     env.restart()  # The env is being restarted twice in the runner, which means random key arrangements were different
 
     # Load previously learned model with different object names
-    with open("../runners/symbolic_taxi_rules.pkl", 'rb') as f:
+    with open("../runners/symbolic_heist_rules.pkl", 'rb') as f:
         previous_ruleset = pickle.load(f)
 
     print("Object name map:")
@@ -194,11 +216,13 @@ if __name__ == "__main__":
     print()
 
     for i in range(1):
-        action = random.randint(0, env.get_num_actions()-1)
         curr_state = env.get_state()
 
         # Create an object map (need deep copy because is dict of list?)
-        prior_object_names = ["pass", "dest", "wall"]
+        prior_object_names = set(env.OB_NAMES)
+        prior_object_names.add("wall")
+        prior_object_names.remove("taxi")
+
         current_object_names = env.get_object_names()
         object_map = {unknown: prior_object_names.copy() for unknown in current_object_names if unknown != "taxi"}
 

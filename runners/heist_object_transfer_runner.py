@@ -21,14 +21,14 @@ class HeistObjectTransferRunner(Runner):
         self.exp_num = exp_num
 
         # Experiment parameters
-        self.max_steps = 3
+        self.max_steps = 55
         self.num_episodes = 1
         self.stochastic = False
         self.visualize = True
 
         # For testing (I think I have to set both or the keys spawn in different areas)
-        random.seed(1)
-        np.random.seed(1)
+        random.seed(6)
+        np.random.seed(6)
 
         self.env = SymbolicHeist(stochastic=self.stochastic, shuffle_object_names=True)
 

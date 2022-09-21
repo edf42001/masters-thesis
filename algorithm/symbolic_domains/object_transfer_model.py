@@ -21,7 +21,11 @@ class ObjectTransferModel(TransitionModel):
         # Learned rules from taxi world but with different object names
         self.previous_ruleset = previous_ruleset
 
-        self.prior_object_names = ["pass", "dest", "wall"]
+        # List of known object names without taxi and with wall (wall is static so is not in the list normally)
+        self.prior_object_names = env.OB_NAMES.copy()
+        self.prior_object_names.append("wall")
+        self.prior_object_names.remove("taxi")
+
         current_object_names = self.env.get_object_names()
         self.object_map = {unknown: self.prior_object_names.copy() for unknown in current_object_names if unknown != "taxi"}
         self.solved = False  # Whether the object_map is now one to one
