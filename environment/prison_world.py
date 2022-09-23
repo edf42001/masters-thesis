@@ -1,20 +1,32 @@
+"""
+Created on 9/23/22 by Ethan Frank
+
+Prison world is a combination of taxi and heist world, where the taxi has to get keys to open locks
+so it can get to a passenger, pick them up and drop them off.
+"""
+
 import numpy as np
 import cv2
 from typing import List, Tuple, Dict
 
 from effects.effect import JointEffect, EffectType, Effect, JointNoEffect
 from environment.environment import Environment
-from symbolic_stochastic_domains.predicates_and_objects import Taxi2D, Key2D, Lock2D, Wall2D,\
-    Gem2D, Predicate, PredicateType
+from symbolic_stochastic_domains.predicates_and_objects import Taxi2D, Key2D, Lock2D, Wall2D, \
+    Gem2D, Passenger, Destination, Predicate, PredicateType
 from symbolic_stochastic_domains.predicate_tree import PredicateTree
 from common.utils.utils import random_string_generator
 
 
 # TODO: Lots of duplicate code here
-class SymbolicHeist(Environment):
+
+
+class Prison(Environment):
     # Environment constants
-    SIZE_X = 5
+    SIZE_X = 6
     SIZE_Y = 5
+
+    # Number of places the passenger can be. But wait the destination is in a different place now.
+    NUM_LOCATIONS = 1
 
     # Actions of agent
     A_NORTH = 0
@@ -23,7 +35,9 @@ class SymbolicHeist(Environment):
     A_WEST = 3
     A_PICKUP = 4
     A_UNLOCK = 5
-    NUM_ACTIONS = 6
+    A_DROPOFF = 6  # TODO: Need to remap this because there will be a conflict
+    NUM_ACTIONS = 7
+    ACTION_NAMES = ['Up', 'Right', 'Down', 'Left', 'Pickup', 'Unlock', 'Dropoff']
 
     # State variables
     S_X = 0
@@ -36,18 +50,19 @@ class SymbolicHeist(Environment):
     S_LOCK_1 = 7
     S_LOCK_2 = 8
     S_LOCK_3 = 9
-    S_GEM = 10
-    NUM_ATT = 11
+    S_LOCK_4 = 10
+    S_GEM = 11
+    S_PASS = 12
+    S_DEST = 13
+    NUM_ATT = 14
 
     # Agent can be anywhere in grid
     # Keys are existing, not existing, or held by agent
     # Locks are locked (1) or unlocked (0)
     # Gem is not held or held
-    STATE_ARITIES = [SIZE_X, SIZE_Y] + [3] * 5 + [2] * 4
-
-    # Stochastic modification to actions
-    MOD = [-1, 0, 1]
-    P_PROB = [0.1, 0.8, 0.1]
+    # Passenger is on pickup location, in taxi, or successful dropped off
+    # There is only one destination
+    STATE_ARITIES = [SIZE_X, SIZE_Y] + [3] * 5 + [2] * 4 + [2] + [NUM_LOCATIONS + 2, 2]
 
     # Rewards
     R_DEFAULT = -1
@@ -59,22 +74,23 @@ class SymbolicHeist(Environment):
     OB_KEY = 1
     OB_LOCK = 2
     OB_GEM = 3
-    OB_COUNT = [1, 5, 3, 1]
-    OB_ARITIES = [2, 1, 1, 1]
+    OB_PASS = 4
+    OB_DEST = 5
+    OB_COUNT = [1, 5, 4, 1, 1, 1]
+    OB_ARITIES = [2, 1, 1, 1, 1, 1]
 
-    OB_NAMES = ["taxi", "key", "lock", "gem"]
-    ACTION_NAMES = ['Up', 'Right', 'Down', 'Left', 'Pickup', 'Unlock']
-    ATT_NAMES = [["x", "y"], ["state"], ["state"], ["state"]]
+    OB_NAMES = ["taxi", "key", "lock", "gem", "pass", "dest"]
+    ATT_NAMES = [["x", "y"], ["state"], ["state"], ["state"], ["state"], ["state"]]
 
     # For each predicate type, defines which objects are valid for each argument
     # This is basically just (taxi, everything else) except for the ones that are just params?
     PREDICATE_MAPPINGS = {
-        PredicateType.TOUCH_LEFT2D: [[OB_TAXI], [OB_KEY, OB_LOCK, OB_GEM]],
-        PredicateType.TOUCH_RIGHT2D: [[OB_TAXI], [OB_KEY, OB_LOCK, OB_GEM]],
-        PredicateType.TOUCH_UP2D: [[OB_TAXI], [OB_KEY, OB_LOCK, OB_GEM]],
-        PredicateType.TOUCH_DOWN2D: [[OB_TAXI], [OB_KEY, OB_LOCK, OB_GEM]],
-        PredicateType.ON2D: [[OB_TAXI], [OB_KEY, OB_LOCK, OB_GEM]],
-        PredicateType.IN: [[OB_TAXI], [OB_KEY, OB_GEM]],
+        PredicateType.TOUCH_LEFT2D: [[OB_TAXI], [OB_KEY, OB_LOCK, OB_GEM, OB_PASS, OB_DEST]],
+        PredicateType.TOUCH_RIGHT2D: [[OB_TAXI], [OB_KEY, OB_LOCK, OB_GEM, OB_PASS, OB_DEST]],
+        PredicateType.TOUCH_UP2D: [[OB_TAXI], [OB_KEY, OB_LOCK, OB_GEM, OB_PASS, OB_DEST]],
+        PredicateType.TOUCH_DOWN2D: [[OB_TAXI], [OB_KEY, OB_LOCK, OB_GEM, OB_PASS, OB_DEST]],
+        PredicateType.ON2D: [[OB_TAXI], [OB_KEY, OB_LOCK, OB_GEM, OB_PASS, OB_DEST]],
+        PredicateType.IN: [[OB_TAXI], [OB_KEY, OB_GEM, OB_PASS]],
         # PredicateType.OPEN: [[OB_LOCK]]
     }
 
@@ -83,30 +99,33 @@ class SymbolicHeist(Environment):
 
         # Add walls to the map
         # For each direction, stores which positions, (x, y), have a wall in that direction
-        #   x 0 1 2 3 4
-        # y   _ _ _ _ _
-        # 4  | |_ _    |
-        # 3  |  _    | |
-        # 2  | | | | |_|
-        # 1  | |_ _| | |
-        # 0  |_ _|_ _ _|
+        #   x 0 1 2 3 4 5
+        # y   _ _ _ _ _ _
+        # 4  |_ _  |  _| |
+        # 3  |  _        |
+        # 2  | | |   | | |
+        # 1  | |_ _| | | |
+        # 0  |_ _|_ _|_|_|
         self.walls = {
-            'N': {(1, 2), (0, 4), (3, 4), (1, 0), (2, 3), (2, 4), (4, 1), (2, 0), (1, 4), (1, 3), (4, 4)},
-            'E': {(1, 2), (3, 2), (0, 4), (3, 1), (3, 3), (4, 0), (1, 0), (2, 1), (4, 1), (2, 2), (4, 2),
-                  (0, 1), (4, 3), (0, 2), (4, 4)},
-            'S': {(1, 1), (4, 0), (1, 0), (2, 4), (2, 0), (2, 1), (0, 0), (4, 2), (1, 4), (3, 0), (1, 3)},
-            'W': {(0, 3), (1, 2), (3, 2), (0, 4), (1, 1), (3, 1), (1, 4), (2, 2), (2, 0), (4, 1), (0, 0),
-                  (4, 2), (0, 1), (4, 3), (0, 2)}
+            'N': {(0, 4), (1, 4), (2, 4), (3, 4), (4, 4), (5, 4), (0, 3), (1, 3), (4, 3), (1, 2), (1, 0), (2, 0)},
+            'E': {(5, 0), (5, 1), (5, 2), (5, 3), (5, 4), (4, 0), (4, 1), (4, 2), (4, 4), (3, 0), (3, 1), (3, 2),
+                  (2, 1), (2, 4), (1, 0), (1, 2), (0, 1), (0, 2)},
+            'S': {(0, 0), (1, 0), (2, 0), (3, 0), (4, 0), (5, 0), (1, 1), (2, 1), (1, 3), (0, 4), (1, 4), (4, 4)},
+            'W': {(0, 0), (0, 1), (0, 2), (0, 3), (0, 4), (1, 1), (1, 2), (2, 0), (2, 2), (3, 1), (3, 4), (4, 0),
+                  (4, 1), (4, 2), (5, 0), (5, 1), (5, 2), (5, 4)}
         }
 
         # List of possible key locations
-        self.keys = [(0, 4), (1, 4), (1, 2), (2, 0), (4, 2)]
+        self.keys = [(0, 4), (1, 2), (2, 0), (4, 4), (5, 4)]
 
         # List of lock locations
-        self.locks = [(0, 2), (0, 1), (0, 0)]
+        self.locks = [(0, 0), (0, 1), (4, 1), (5, 1)]
 
         # Location of gem
-        self.gem = (1, 0)
+        self.gem = (5, 0)
+
+        # Passenger and destination locations
+        self.locations = [(4, 0), (1, 0)]
 
         # Object instance and class in state information
         self.generate_object_maps()
@@ -141,15 +160,21 @@ class SymbolicHeist(Environment):
             # All locks begin locked
             # Gem begins not held
             key_idx = np.random.choice(5, size=3, replace=False)
-            self.curr_state = [2, 1] + [int(i in key_idx) for i in range(5)] + [1, 1, 1, 0]
+            passenger = 0
+            destination = 1
+
+            # Taxi, 5 keys, 4 locks, gem, pass, dest
+            self.curr_state = [2, 1] + [int(i in key_idx) for i in range(5)] + [1] * 4 + [0, passenger, destination]
 
     def get_object_list(self, state: int):
         state = self.get_factored_state(state)
 
         taxi = (state[self.S_X], state[self.S_Y])
         keys = state[self.S_KEY_1: self.S_KEY_5 + 1]
-        locks = state[self.S_LOCK_1: self.S_LOCK_3 + 1]
+        locks = state[self.S_LOCK_1: self.S_LOCK_4 + 1]
         gem_state = state[self.S_GEM]  # TODO: need gem held
+        passenger = state[self.S_PASS]
+        destination = state[self.S_DEST]
 
         objects = []
 
@@ -163,6 +188,10 @@ class SymbolicHeist(Environment):
             objects.append(Lock2D("lock", location, lock_open == 0))  # A locked lock has a value of 1
 
         objects.append(Gem2D("gem", self.gem, gem_state))
+
+        objects.append(Passenger("pass", self.locations[passenger] if passenger < len(self.locations) else None, passenger))
+        objects.append(Destination("dest", self.locations[destination], destination))
+
         objects.append(Wall2D("wall", self.walls))
 
         return objects
@@ -185,6 +214,7 @@ class SymbolicHeist(Environment):
 
         # To create unique ids for each object, but that don't depend on which object is which
         object_reference_counts = {name: 0 for name in self.OB_NAMES}  # Like {'taxi': 0, 'key': 1, 'lock': 0, 'gem': 0}
+
         # Object id to incremental id, i.e {3: 0, 4: 1, 0: 0} (3 and 4 are both keys, so one is key0 and one is key2)
         ob_index_name_map = dict()
 
@@ -273,9 +303,9 @@ class SymbolicHeist(Environment):
     def step(self, action: int) -> Tuple[PredicateTree, JointEffect]:
         """Stochastically apply action to environment"""
         state = self.curr_state
-        x, y, keys, locks, gem = \
+        x, y, keys, locks, gem, passenger, destination = \
             state[self.S_X], state[self.S_Y], state[self.S_KEY_1: self.S_KEY_5 + 1], \
-            state[self.S_LOCK_1: self.S_LOCK_3 + 1], state[self.S_GEM]
+            state[self.S_LOCK_1: self.S_LOCK_4 + 1], state[self.S_GEM], state[self.S_PASS], state[self.S_DEST]
         next_x, next_y, next_keys, next_locks, next_gem = x, y, keys.copy(), locks.copy(), gem
 
         pos = (x, y)
@@ -336,7 +366,7 @@ class SymbolicHeist(Environment):
                         continue
 
         # Create next state
-        next_state = [next_x, next_y] + next_keys + next_locks + [next_gem]
+        next_state = [next_x, next_y] + next_keys + next_locks + [next_gem] + [passenger, destination]
 
         # Assign reward
         if next_gem > gem:
@@ -355,7 +385,7 @@ class SymbolicHeist(Environment):
         # As part of the observation
         tree, ob_id_name_map = self.get_literals(self.get_flat_state(self.curr_state))  # predicate_to_ob_map
 
-        correct_types = [EffectType.INCREMENT] * 2 + [EffectType.SET_TO_NUMBER] * 9
+        correct_types = [EffectType.INCREMENT] * 2 + [EffectType.SET_TO_NUMBER] * 12
         effects = []
         atts = []
         obs_grounding = dict()  # class name to class unique identifier
@@ -373,7 +403,6 @@ class SymbolicHeist(Environment):
                 # identifier = f"{ob_id_name_map[class_instance_id]}.{self.ATT_NAMES[class_id][class_att_idx]}"
                 # identifier = f"{self.OB_NAMES[class_id]}{ob_id_name_map[class_instance_id]}.{self.ATT_NAMES[class_id][class_att_idx]}"
                 # obs_grounding[self.OB_NAMES[class_id]] = ob_id_name_map[class_instance_id]
-                unique_name_to_ob_id[ob_id_name_map[class_instance_id]] = class_instance_id
 
                 # We want to use deictic references to refer to objects. First we use the unique identifier to get the
                 # corresponding node in the tree
@@ -432,7 +461,7 @@ class SymbolicHeist(Environment):
         if factored_ns[self.S_GEM] > factored_s[self.S_GEM]:
             # The gem was picked up
             return self.R_SUCCESS
-        if sum(factored_ns[self.S_LOCK_1: self.S_LOCK_3 + 1]) < sum(factored_s[self.S_LOCK_1: self.S_LOCK_3 + 1]):
+        if sum(factored_ns[self.S_LOCK_1: self.S_LOCK_4 + 1]) < sum(factored_s[self.S_LOCK_1: self.S_LOCK_4 + 1]):
             # The number of locked locks decreased
             return self.R_UNLOCK
         else:
@@ -456,9 +485,9 @@ class SymbolicHeist(Environment):
         img = 255 * np.ones((HEIGHT * GRID_SIZE, WIDTH * GRID_SIZE, 3))
 
         # Draw horizontal and vertical walls
-        for i in range((self.SIZE_X + 1) * (self.SIZE_Y + 1)):
-            x = i % (self.SIZE_X + 1)
-            y = int(i / (self.SIZE_Y + 1))
+        for i in range((self.SIZE_X) * (self.SIZE_Y)):
+            x = i % (self.SIZE_X)
+            y = int(i / (self.SIZE_X))
 
             pos = (x, y)
 
@@ -476,7 +505,7 @@ class SymbolicHeist(Environment):
                          thickness=3, color=[0, 0, 0])
 
         # Draw locks (need to be before taxi so taxi is shown on top)
-        lock_values = state[self.S_LOCK_1:self.S_LOCK_3+1]
+        lock_values = state[self.S_LOCK_1:self.S_LOCK_4+1]
         for lock, value in zip(self.locks, lock_values):
             inset = 0.05
             bottom_left_x = lock[0] * GRID_SIZE + int(inset * GRID_SIZE)
@@ -491,6 +520,14 @@ class SymbolicHeist(Environment):
 
             cv2.rectangle(img, (bottom_left_x, bottom_left_y), (top_right_x, top_right_y), thickness=-1, color=color)
 
+        # Draw pickup and dropoff zones (before taxi so taxi goes above)
+        # colors = [[0, 0, 255], [0, 255, 0], [255, 0, 0], [0, 128, 128]]
+        # for loc, color in zip(self.locations, colors[:2]):
+        #     bottom_left_x = loc[0] * GRID_SIZE
+        #     bottom_left_y = (HEIGHT - loc[1]) * GRID_SIZE
+        #     cv2.rectangle(img, (bottom_left_x, bottom_left_y), (bottom_left_x + GRID_SIZE, bottom_left_y - GRID_SIZE),
+        #                   thickness=-1, color=color)
+
         # Draw taxi
         cv2.circle(img, (int((taxi_x + 0.5) * GRID_SIZE), int((HEIGHT - (taxi_y + 0.5)) * GRID_SIZE)), int(GRID_SIZE * 0.3),
                    thickness=-1, color=[0, 0, 0])
@@ -499,6 +536,25 @@ class SymbolicHeist(Environment):
         gem_x, gem_y = self.gem
         cv2.circle(img, (int((gem_x + 0.5) * GRID_SIZE), int((HEIGHT - (gem_y + 0.5)) * GRID_SIZE)), int(GRID_SIZE * 0.25),
                    thickness=-1, color=[0.8, 0, 0])
+
+        # Draw passenger
+        passenger = state[self.S_PASS]
+        if passenger >= len(self.locations):
+            pass_x = taxi_x
+            pass_y = taxi_y
+        else:
+            pass_x = self.locations[passenger][0]
+            pass_y = self.locations[passenger][1]
+
+        cv2.circle(img, (int((pass_x + 0.5) * GRID_SIZE), int((HEIGHT - (pass_y + 0.5)) * GRID_SIZE)), int(GRID_SIZE * 0.2),
+                   thickness=-1, color=[0.5, 0.5, 0.5])
+
+        # Mark passenger destination with small circle
+        dest = state[self.S_DEST]
+        goal_x = self.locations[dest][0]
+        goal_y = self.locations[dest][1]
+        cv2.circle(img, (int((goal_x + 0.5) * GRID_SIZE), int((HEIGHT - (goal_y + 0.5)) * GRID_SIZE)), int(GRID_SIZE * 0.05),
+                   thickness=-1, color=[0, 0, 0])
 
         # Draw keys
         key_values = state[self.S_KEY_1:self.S_KEY_5+1]
@@ -515,7 +571,7 @@ class SymbolicHeist(Environment):
                 cv2.circle(img, (int((taxi_x + 0.5) * GRID_SIZE), int((HEIGHT - (taxi_y + 0.5)) * GRID_SIZE)), int(GRID_SIZE * 0.2),
                            thickness=-1, color=[0, 0.7, 0.7])
 
-        cv2.imshow("Heist World", img)
+        cv2.imshow("Prison World", img)
         cv2.waitKey(delay)
 
     def get_object_names(self):

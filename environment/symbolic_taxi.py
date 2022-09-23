@@ -9,10 +9,7 @@ from environment.environment import Environment
 from symbolic_stochastic_domains.predicates_and_objects import Taxi2D, Wall2D, Passenger, Destination,\
     PredicateType, Predicate
 from symbolic_stochastic_domains.predicate_tree import PredicateTree
-
-
-def random_string_generator(length):
-    return ''.join(random.choice("abcdefghijklmnopqrstuvwxyz") for x in range(length))
+from common.utils.utils import random_string_generator
 
 
 class SymbolicTaxi(Environment):
