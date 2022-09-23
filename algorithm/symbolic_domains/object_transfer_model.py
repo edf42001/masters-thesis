@@ -74,6 +74,37 @@ class ObjectTransferModel(TransitionModel):
         if transition is None:
             return []
 
+        # Sometimes we have more than one transition object. This causes bugs in my code. Pick the one that applies
+        if len(transition) > 1:
+            assert self.solved, "Can't invert unless solved"
+            reverse_object_map = {value[0]: key for key, value in self.object_map.items()}
+            reverse_object_map["taxi"] = "taxi"
+
+            found_any_match = False
+            for t in transition:
+                for object_string in t.outcome.value.keys():
+                    outcome_known_object_str = object_string.split(".")[0]
+                    splits = outcome_known_object_str.split("-")
+                    outcome_unknown_object_str = "-".join(splits[:2]) + "-" + reverse_object_map[splits[-1]]
+                    print(outcome_unknown_object_str)
+
+                    found_match = False
+                    for edge in literals.base_object.edges:
+                        edge_string = "taxi-" + str(edge)[:-1]  # Remove number
+                        # print(f"Edge String: {edge_string}, u: {outcome_unknown_object_str}")
+                        if edge_string == outcome_unknown_object_str:
+                            found_match = True
+                            transition = t
+                            break
+
+                    if found_match:
+                        found_any_match = True
+
+            assert found_any_match, "One of the fules better match"
+        else:
+            transition = list(transition)
+            transition = transition[0]
+
         transitions = []
 
         effect = transition.outcome

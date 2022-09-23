@@ -30,10 +30,11 @@ if __name__ == "__main__":
 
     # Current object map belief
     object_map = {'idpyo': ['key'],
-                  'pumzg': ['gem'],
-                  'dpamn': ['lock', 'wall'],
+                  'pumzg': ['lock'],
+                  'dpamn': ['gem'],
                   'tyyaw': ['wall', 'lock']}
 
+    # env.restart(init_state=env.get_factored_state(19440))
     curr_state = env.get_state()
     literals, _ = env.get_literals(curr_state)
 

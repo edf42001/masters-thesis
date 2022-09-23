@@ -21,7 +21,7 @@ class HeistObjectTransferRunner(Runner):
         self.exp_num = exp_num
 
         # Experiment parameters
-        self.max_steps = 55
+        self.max_steps = 50
         self.num_episodes = 1
         self.stochastic = False
         self.visualize = True

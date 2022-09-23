@@ -194,7 +194,7 @@ def determine_transition_given_action(env, state: int, action: int, object_map, 
 
     # Returns the outcome if something will happen, no effect if nothing was applicable to the rule
     # TODO: This returns the object names from the rule. It should probably replace those with the current object names
-    return applicable_rules[0].outcomes.outcomes[0] if applicable_tracker else Outcome(JointNoEffect())
+    return set(rule.outcomes.outcomes[0] for rule in applicable_rules) if applicable_tracker else {Outcome(JointNoEffect())}
 
 
 if __name__ == "__main__":
