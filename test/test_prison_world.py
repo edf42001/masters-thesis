@@ -17,7 +17,7 @@ if __name__ == "__main__":
 
     env = Prison(stochastic=False, shuffle_object_names=False)
 
-    for i in range(100):
+    for i in range(1000):
         action = random.randint(0, env.get_num_actions()-1)
         curr_state = env.get_state()
         literals, observation, name_id_map = env.step(action)
@@ -30,4 +30,4 @@ if __name__ == "__main__":
 
         outcome = Outcome(observation)
 
-        env.visualize(delay=50)
+        env.visualize(delay=1)

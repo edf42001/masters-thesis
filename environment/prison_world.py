@@ -67,6 +67,7 @@ class Prison(Environment):
     # Rewards
     R_DEFAULT = -1
     R_UNLOCK = 5
+    R_GEM = 5
     R_SUCCESS = 10
 
     # Object descriptions
@@ -148,7 +149,7 @@ class Prison(Environment):
     def end_of_episode(self, state: int = None) -> bool:
         """Check if the episode has ended"""
         state = self.get_factored_state(state) if state else self.curr_state
-        return state[self.S_GEM] == 1
+        return state[self.S_PASS] == self.NUM_LOCATIONS + 1
 
     def restart(self, init_state=None):
         """Reset state variables to begin new episode"""
@@ -306,7 +307,7 @@ class Prison(Environment):
         x, y, keys, locks, gem, passenger, destination = \
             state[self.S_X], state[self.S_Y], state[self.S_KEY_1: self.S_KEY_5 + 1], \
             state[self.S_LOCK_1: self.S_LOCK_4 + 1], state[self.S_GEM], state[self.S_PASS], state[self.S_DEST]
-        next_x, next_y, next_keys, next_locks, next_gem = x, y, keys.copy(), locks.copy(), gem
+        next_x, next_y, next_keys, next_locks, next_gem, next_pass = x, y, keys.copy(), locks.copy(), gem, passenger
 
         pos = (x, y)
 
@@ -322,12 +323,15 @@ class Prison(Environment):
             next_x, next_y = self.compute_next_loc(x, y, locks, action)
         # Pickup action
         elif action == 4:
-            # If holding key already, no change
-            if 2 in keys:
+            # If holding key or gem or passenger already, no change
+            if 2 in keys or gem == 1 or passenger == self.NUM_LOCATIONS:
                 pass
             # Pickup a gem
             elif pos == self.gem:
                 next_gem = 1
+            # Pickup a passenger
+            elif pos == self.locations[passenger]:
+                next_pass = self.NUM_LOCATIONS
             # Pickup a key
             else:
                 try:
@@ -337,8 +341,9 @@ class Prison(Environment):
                 except ValueError:
                     # No key to pick up
                     pass
+
         # Unlock action
-        else:
+        elif action == 5:
             # If not holding a key, no change
             if 2 not in keys:
                 pass
@@ -364,13 +369,23 @@ class Prison(Environment):
                     except ValueError:
                         # No lock
                         continue
+        # Dropoff action
+        elif action == 6:
+            # Check if passenger is in taxi and taxi is on the destination
+            if passenger == self.NUM_LOCATIONS and pos == self.locations[destination]:
+                next_pass = self.NUM_LOCATIONS + 1
+        else:
+            raise ValueError(f"Action {action} not within range of {self.NUM_ACTIONS}")
 
         # Create next state
-        next_state = [next_x, next_y] + next_keys + next_locks + [next_gem] + [passenger, destination]
+        next_state = [next_x, next_y] + next_keys + next_locks + [next_gem] + [next_pass, destination]
 
-        # Assign reward
-        if next_gem > gem:
+        # Assign reward. In this world, get reward for locks, gems, and dropoff passenger.
+        # However, only dropoff passenger ends episode
+        if passenger == self.NUM_LOCATIONS and next_pass == self.NUM_LOCATIONS + 1:
             self.last_reward = self.R_SUCCESS
+        elif next_gem > gem:
+            self.last_reward = self.R_GEM
         elif next_locks.count(1) < locks.count(1):
             self.last_reward = self.R_UNLOCK
         else:
@@ -458,9 +473,12 @@ class Prison(Environment):
         factored_s = self.get_factored_state(state)
         factored_ns = self.get_factored_state(next_state)
 
+        if factored_s[self.S_PASS] == self.NUM_LOCATIONS and factored_ns[self.S_PASS] == self.NUM_LOCATIONS + 1:
+            # Passenger was picked up
+            return self.R_SUCCESS
         if factored_ns[self.S_GEM] > factored_s[self.S_GEM]:
             # The gem was picked up
-            return self.R_SUCCESS
+            return self.R_GEM
         if sum(factored_ns[self.S_LOCK_1: self.S_LOCK_4 + 1]) < sum(factored_s[self.S_LOCK_1: self.S_LOCK_4 + 1]):
             # The number of locked locks decreased
             return self.R_UNLOCK
@@ -485,9 +503,9 @@ class Prison(Environment):
         img = 255 * np.ones((HEIGHT * GRID_SIZE, WIDTH * GRID_SIZE, 3))
 
         # Draw horizontal and vertical walls
-        for i in range((self.SIZE_X) * (self.SIZE_Y)):
-            x = i % (self.SIZE_X)
-            y = int(i / (self.SIZE_X))
+        for i in range(self.SIZE_X * self.SIZE_Y):
+            x = i % self.SIZE_X
+            y = int(i / self.SIZE_X)
 
             pos = (x, y)
 
@@ -539,7 +557,7 @@ class Prison(Environment):
 
         # Draw passenger
         passenger = state[self.S_PASS]
-        if passenger >= len(self.locations):
+        if passenger >= self.NUM_LOCATIONS:
             pass_x = taxi_x
             pass_y = taxi_y
         else:
