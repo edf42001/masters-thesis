@@ -100,7 +100,7 @@ class ObjectTransferModel(TransitionModel):
                     if found_match:
                         found_any_match = True
 
-            assert found_any_match, "One of the fules better match"
+            assert found_any_match, "One of the rules better match"
         else:
             transition = list(transition)
             transition = transition[0]

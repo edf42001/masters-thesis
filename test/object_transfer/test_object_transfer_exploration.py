@@ -84,6 +84,8 @@ def information_gain_of_action(env, state: int, action: int, object_map, prev_ru
         # TODO: Could simply computations by noting there are some times where a rule will never apply.
         # i.e., if it is missing edges that are relevant
 
+        # If one rule applies, find that rule, otherwise, the effect will be NoEffect
+        outcome = Outcome(JointNoEffect())
         for rule in applicable_rules:
             print(f"Rule: {rule}")
             print()
@@ -92,29 +94,30 @@ def information_gain_of_action(env, state: int, action: int, object_map, prev_ru
             applicable = new_literals.base_object.contains(rule.context.base_object)
             print(f"Applicable: {applicable}")
 
-            outcome = Outcome(JointNoEffect())
             if applicable:
+                # TODO Really you could put a break statement in here but I'm leaving in this assertion just to check
+                assert type(outcome.outcome) is JointNoEffect, "A second rule was applicable which doesn't make sense"
                 outcome = rule.outcomes.outcomes[0]
 
-            print(f"Predicted outcome: {outcome}")
+        print(f"Predicted outcome: {outcome}")
 
-            # Get object assignments from this example. Is this the part that could be shortcut?
-            example = Example(action, literals, outcome)
-            possible_assignment = [get_possible_object_assignments(example, prev_ruleset)]
-            print(f"Possible assignments: {possible_assignment}")
+        # Get object assignments from this example. Is this the part that could be shortcut?
+        example = Example(action, literals, outcome)
+        possible_assignment = [get_possible_object_assignments(example, prev_ruleset)]
+        print(f"Possible assignments: {possible_assignment}")
 
-            print("Previous object map:")
-            print(object_map)
+        print("Previous object map:")
+        print(object_map)
 
-            new_object_map = determine_possible_object_maps(object_map, possible_assignment)
-            prev_num_options = sum(len(possibilities) for possibilities in object_map.values())
-            new_num_options = sum(len(possibilities) for possibilities in new_object_map.values())
+        new_object_map = determine_possible_object_maps(object_map, possible_assignment)
+        prev_num_options = sum(len(possibilities) for possibilities in object_map.values())
+        new_num_options = sum(len(possibilities) for possibilities in new_object_map.values())
 
-            print(f"New object map: {new_object_map}")
-            print(f"Length update: {prev_num_options}->{new_num_options}")
+        print(f"New object map: {new_object_map}")
+        print(f"Length update: {prev_num_options}->{new_num_options}")
 
-            # Info gain is change in bits required to express number of object possibilities, which is log2 of length
-            total_info_gain += np.log2(prev_num_options) - np.log2(new_num_options)
+        # Info gain is change in bits required to express number of object possibilities, which is log2 of length
+        total_info_gain += np.log2(prev_num_options) - np.log2(new_num_options)
 
     # Step 2: Assuming that mapping is the real one, see what would happen.
 

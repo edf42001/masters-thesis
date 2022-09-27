@@ -126,8 +126,8 @@ def determine_possible_object_maps(object_map: dict, possible_assignments: List[
                         changed = True
 
     # Verify no lists went to 0, which indicates a conflict in rules somewhere
-    for unknowns in object_map.values():
-        assert len(unknowns) > 0, "Should also have some belief about what objects it is"
+    for known, unknowns in object_map.items():
+        assert len(unknowns) > 0, f"Should always have a belief about what objects it is: {known}"
 
     return object_map
 

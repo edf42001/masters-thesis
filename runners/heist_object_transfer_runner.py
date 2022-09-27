@@ -36,6 +36,8 @@ class HeistObjectTransferRunner(Runner):
         with open("symbolic_heist_rules.pkl", 'rb') as f:
             symbolic_heist_rules = pickle.load(f)
 
+        print(self.env.object_name_map)
+
         self.model = ObjectTransferModel(self.env, symbolic_heist_rules)
         self.planner = ObjectTransferPolicy(self.env.get_num_actions(), self.model)
         self.learner = ObjectTransferLearner(self.env, self.model, self.planner, visualize=self.visualize, delay=1000)
