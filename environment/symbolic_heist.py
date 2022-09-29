@@ -40,9 +40,9 @@ class SymbolicHeist(Environment):
     NUM_ATT = 11
 
     # Agent can be anywhere in grid
-    # Keys are existing, not existing, or held by agent
+    # Keys are held by agent (0) existing (1), or not existing (2)
     # Locks are locked (1) or unlocked (0)
-    # Gem is not held or held
+    # Gem is held (0) or not held (1)
     STATE_ARITIES = [SIZE_X, SIZE_Y] + [3] * 5 + [2] * 4
 
     # Stochastic modification to actions
@@ -129,7 +129,7 @@ class SymbolicHeist(Environment):
     def end_of_episode(self, state: int = None) -> bool:
         """Check if the episode has ended"""
         state = self.get_factored_state(state) if state else self.curr_state
-        return state[self.S_GEM] == 1
+        return state[self.S_GEM] == 0
 
     def restart(self, init_state=None):
         """Reset state variables to begin new episode"""
@@ -137,11 +137,11 @@ class SymbolicHeist(Environment):
             self.curr_state = init_state
         else:
             # Agent starts at (2, 1)
-            # Randomly choose 3 of 5 possible key locations
-            # All locks begin locked
-            # Gem begins not held
+            # Randomly choose 3 of 5 possible key locations (1 if exists, 2 if not exists)
+            # All locks (3) begin locked (1)
+            # Gem begins not held (1)
             key_idx = np.random.choice(5, size=3, replace=False)
-            self.curr_state = [2, 1] + [int(i in key_idx) for i in range(5)] + [1, 1, 1, 0]
+            self.curr_state = [2, 1] + [1 if i in key_idx else 2 for i in range(5)] + [1, 1, 1, 1]
 
     def get_object_list(self, state: int):
         state = self.get_factored_state(state)
@@ -293,24 +293,24 @@ class SymbolicHeist(Environment):
         # Pickup action
         elif action == 4:
             # If holding key already, no change
-            if 2 in keys:
+            if 0 in keys:
                 pass
             # Pickup a gem
             elif pos == self.gem:
-                next_gem = 1
+                next_gem = 0
             # Pickup a key
             else:
                 try:
                     key_idx = self.keys.index(pos)
                     if keys[key_idx] == 1:
-                        next_keys[key_idx] = 2
+                        next_keys[key_idx] = 0
                 except ValueError:
                     # No key to pick up
                     pass
         # Unlock action
         else:
             # If not holding a key, no change
-            if 2 not in keys:
+            if 0 not in keys:
                 pass
             # Otherwise, check that a locked lock exists in the surrounding
             # location and that no wall exists between the agent and the lock
@@ -329,7 +329,7 @@ class SymbolicHeist(Environment):
                         if locks[lock_idx] == 1:
                             # Unlock lock and consume held key
                             next_locks[lock_idx] = 0
-                            next_keys[keys.index(2)] = 0
+                            next_keys[keys.index(0)] = 2
                             break
                     except ValueError:
                         # No lock
@@ -503,7 +503,7 @@ class SymbolicHeist(Environment):
         # Draw keys
         key_values = state[self.S_KEY_1:self.S_KEY_5+1]
         for key, value in zip(self.keys, key_values):
-            if value == 0:  # Non existent key
+            if value == 2:  # Non existent key
                 continue
 
             key_x, key_y = key

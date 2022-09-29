@@ -246,7 +246,7 @@ class TouchLeft2D(Predicate):
             return (x - 1, y) == o2.location and o2.state == 1
         elif type(o2) is Gem2D:
             x, y = o1.location
-            return (x - 1, y) == o2.location and o2.state == 0
+            return (x - 1, y) == o2.location and o2.state == 1
         else:
             # If these used x and y this could work for 1D as well
             x, y = o1.location
@@ -271,7 +271,7 @@ class TouchRight2D(Predicate):
             return (x + 1, y) == o2.location and o2.state == 1
         elif type(o2) is Gem2D:
             x, y = o1.location
-            return (x + 1, y) == o2.location and o2.state == 0
+            return (x + 1, y) == o2.location and o2.state == 1
         else:
             x, y = o1.location
             return (x + 1, y) == o2.location
@@ -295,7 +295,7 @@ class TouchUp2D(Predicate):
             return (x, y + 1) == o2.location and o2.state == 1
         elif type(o2) is Gem2D:
             x, y = o1.location
-            return (x, y + 1) == o2.location and o2.state == 0
+            return (x, y + 1) == o2.location and o2.state == 1
         else:
             x, y = o1.location
             return (x, y + 1) == o2.location
@@ -319,7 +319,7 @@ class TouchDown2D(Predicate):
             return (x, y - 1) == o2.location and o2.state == 1
         elif type(o2) is Gem2D:
             x, y = o1.location
-            return (x, y - 1) == o2.location and o2.state == 0
+            return (x, y - 1) == o2.location and o2.state == 1
         else:
             x, y = o1.location
             return (x, y - 1) == o2.location
@@ -335,7 +335,7 @@ class On2D(Predicate):
             return o2.state == 1 and o1.location == o2.location
         elif type(o2) is Gem2D:
             # We can't be on the gem when it is being held
-            return o2.state == 0 and o1.location == o2.location
+            return o2.state == 1 and o1.location == o2.location
         else:
             return o1.location == o2.location
 
@@ -344,12 +344,7 @@ class In(Predicate):
     @staticmethod
     def evaluate(o1, o2):
         # Only Key or Gem or Passenger can be in the taxi
-        # Goal: Make these all to 0
-        if type(o2) is Key2D:
-            return o2.state == 2
-        elif type(o2) is Gem2D:
-            return o2.state == 1
-        elif type(o2) is Passenger:
-            return o2.state == 0
+        if type(o2) in [Key2D, Gem2D, Passenger] and o2.state == 0:
+            return True
         else:
             return False
