@@ -119,7 +119,8 @@ class SymbolicTaxi(Environment):
         else:
             # Taxi starts at (0, 1)
             # Randomly choose passenger and destination locations
-            passenger, destination = random.sample([0, 1, 2, 3], 2)
+            # Update so set to 0 indicates pickup
+            passenger, destination = random.sample([1, 2, 3, 4], 2)
             self.curr_state = [0, 1, passenger, destination]
 
     def anonymize_name(self, ob_name):
@@ -137,8 +138,8 @@ class SymbolicTaxi(Environment):
 
         objects = []
         objects.append(Taxi2D("taxi", taxi))
-        objects.append(Passenger("pass", self.locations[passenger] if passenger < len(self.locations) else None, passenger))
-        objects.append(Destination("dest", self.locations[destination], destination))
+        objects.append(Passenger("pass", self.locations[passenger-1] if 0 < passenger < len(self.locations) else None, passenger))
+        objects.append(Destination("dest", self.locations[destination-1], destination))
         objects.append(Wall2D("wall", self.walls))
 
         return objects
@@ -242,17 +243,14 @@ class SymbolicTaxi(Environment):
         # Pickup action
         elif action == 4:
             pos = (x, y)
-            # Check if taxi already holds passenger
-            if passenger == self.NUM_LOCATIONS:
-                next_passenger = self.NUM_LOCATIONS
-            # Check if taxi is on correct pickup location
-            elif passenger < self.NUM_LOCATIONS and pos == self.locations[passenger]:
-                next_passenger = self.NUM_LOCATIONS
+            # Check if taxi is on correct pickup location and not already held
+            if 0 < passenger < self.NUM_LOCATIONS+1 and pos == self.locations[passenger-1]:
+                next_passenger = 0
         # Dropoff action
         else:
             pos = (x, y)
             # Check if passenger is in taxi and taxi is on the destination
-            if passenger == self.NUM_LOCATIONS and pos == self.locations[destination]:
+            if passenger == 0 and pos == self.locations[destination-1]:
                 next_passenger = self.NUM_LOCATIONS + 1
 
         # Make updates to state
@@ -361,8 +359,8 @@ class SymbolicTaxi(Environment):
         # pickup locations differ, i.e. both states have passenger at a pickup location
         # and they are not the same.
         # What to do about end of episode state?
-        elif from_factored[self.S_PASS] < len(self.locations) and \
-             to_factored[self.S_PASS] < len(self.locations) and \
+        elif 0 < from_factored[self.S_PASS] < len(self.locations) and \
+             0 < to_factored[self.S_PASS] < len(self.locations) and \
              from_factored[self.S_PASS] != to_factored[self.S_PASS]:
             return True
         else:
@@ -373,13 +371,13 @@ class SymbolicTaxi(Environment):
 
     def visualize_state(self, curr_state):
         x, y, passenger, dest = curr_state
-        dest_x, dest_y = self.locations[dest]
+        dest_x, dest_y = self.locations[dest-1]
         lines = self.lines
-        taxi = '@' if passenger == len(self.locations) else 'O'
+        taxi = '@' if passenger == 0 else 'O'
 
         pass_x, pass_y = -1, -1
-        if passenger < len(self.locations):
-            pass_x, pass_y = self.locations[passenger]
+        if 0 < passenger < self.NUM_LOCATIONS+1:
+            pass_x, pass_y = self.locations[passenger - 1]
 
         ret = ""
         ret += '-----------\n'
@@ -421,8 +419,8 @@ class SymbolicTaxi(Environment):
                           thickness=-1, color=color)
 
         # Mark goal with small circle
-        goal_x = self.locations[dest][0]
-        goal_y = self.locations[dest][1]
+        goal_x = self.locations[dest-1][0]
+        goal_y = self.locations[dest-1][1]
         cv2.circle(img, (int((goal_x + 0.5) * GRID_SIZE), int((HEIGHT - (goal_y + 0.5)) * GRID_SIZE)), int(GRID_SIZE * 0.05),
                    thickness=-1, color=[0, 0, 0])
 
@@ -431,12 +429,12 @@ class SymbolicTaxi(Environment):
                    thickness=-1, color=[0, 0, 0])
 
         # Draw passenger
-        if passenger >= len(self.locations):
+        if passenger == 0 or passenger == self.NUM_LOCATIONS+1:
             pass_x = x
             pass_y = y
         else:
-            pass_x = self.locations[passenger][0]
-            pass_y = self.locations[passenger][1]
+            pass_x = self.locations[passenger-1][0]
+            pass_y = self.locations[passenger-1][1]
 
         cv2.circle(img, (int((pass_x + 0.5) * GRID_SIZE), int((HEIGHT - (pass_y + 0.5)) * GRID_SIZE)), int(GRID_SIZE * 0.2),
                    thickness=-1, color=[0.5, 0.5, 0.5])

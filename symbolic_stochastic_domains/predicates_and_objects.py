@@ -343,12 +343,13 @@ class On2D(Predicate):
 class In(Predicate):
     @staticmethod
     def evaluate(o1, o2):
-        # Only Key or Gem can be in the taxi
+        # Only Key or Gem or Passenger can be in the taxi
+        # Goal: Make these all to 0
         if type(o2) is Key2D:
             return o2.state == 2
         elif type(o2) is Gem2D:
             return o2.state == 1
         elif type(o2) is Passenger:
-            return o2.state == 4  # TODO: make this not hardcoded
+            return o2.state == 0
         else:
             return False
