@@ -120,7 +120,9 @@ class SymbolicTaxi(Environment):
             # Taxi starts at (0, 1)
             # Randomly choose passenger and destination locations
             # Update so set to 0 indicates pickup
+            # Passenger has 0 = pickup, but destination is normal (starts at 0)
             passenger, destination = random.sample([1, 2, 3, 4], 2)
+            destination = destination - 1
             self.curr_state = [0, 1, passenger, destination]
 
     def anonymize_name(self, ob_name):
@@ -138,8 +140,8 @@ class SymbolicTaxi(Environment):
 
         objects = []
         objects.append(Taxi2D("taxi", taxi))
-        objects.append(Passenger("pass", self.locations[passenger-1] if 0 < passenger < len(self.locations) else None, passenger))
-        objects.append(Destination("dest", self.locations[destination-1], destination))
+        objects.append(Passenger("pass", self.locations[passenger-1] if 0 < passenger < len(self.locations)+1 else None, passenger))
+        objects.append(Destination("dest", self.locations[destination], destination))
         objects.append(Wall2D("wall", self.walls))
 
         return objects
@@ -250,7 +252,7 @@ class SymbolicTaxi(Environment):
         else:
             pos = (x, y)
             # Check if passenger is in taxi and taxi is on the destination
-            if passenger == 0 and pos == self.locations[destination-1]:
+            if passenger == 0 and pos == self.locations[destination]:
                 next_passenger = self.NUM_LOCATIONS + 1
 
         # Make updates to state
@@ -359,8 +361,8 @@ class SymbolicTaxi(Environment):
         # pickup locations differ, i.e. both states have passenger at a pickup location
         # and they are not the same.
         # What to do about end of episode state?
-        elif 0 < from_factored[self.S_PASS] < len(self.locations) and \
-             0 < to_factored[self.S_PASS] < len(self.locations) and \
+        elif 0 < from_factored[self.S_PASS] < len(self.locations)+1 and \
+             0 < to_factored[self.S_PASS] < len(self.locations)+1 and \
              from_factored[self.S_PASS] != to_factored[self.S_PASS]:
             return True
         else:
@@ -371,7 +373,7 @@ class SymbolicTaxi(Environment):
 
     def visualize_state(self, curr_state):
         x, y, passenger, dest = curr_state
-        dest_x, dest_y = self.locations[dest-1]
+        dest_x, dest_y = self.locations[dest]
         lines = self.lines
         taxi = '@' if passenger == 0 else 'O'
 
@@ -419,8 +421,8 @@ class SymbolicTaxi(Environment):
                           thickness=-1, color=color)
 
         # Mark goal with small circle
-        goal_x = self.locations[dest-1][0]
-        goal_y = self.locations[dest-1][1]
+        goal_x = self.locations[dest][0]
+        goal_y = self.locations[dest][1]
         cv2.circle(img, (int((goal_x + 0.5) * GRID_SIZE), int((HEIGHT - (goal_y + 0.5)) * GRID_SIZE)), int(GRID_SIZE * 0.05),
                    thickness=-1, color=[0, 0, 0])
 

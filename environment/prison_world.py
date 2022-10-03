@@ -26,7 +26,7 @@ class Prison(Environment):
     SIZE_Y = 5
 
     # Number of places the passenger can be. But wait the destination is in a different place now.
-    NUM_LOCATIONS = 1
+    NUM_LOCATIONS = 2
 
     # Actions of agent
     A_NORTH = 0
@@ -57,10 +57,10 @@ class Prison(Environment):
     NUM_ATT = 14
 
     # Agent can be anywhere in grid
-    # Keys are existing, not existing, or held by agent
+    # Keys are held by agent (0) existing (1), or not existing (2)
     # Locks are locked (1) or unlocked (0)
-    # Gem is not held or held
-    # Passenger is on pickup location, in taxi, or successful dropped off
+    # Gem is held (0) or not held (1)
+    # Passenger is on pickup location (1), in taxi (0), or successful dropped off (2)
     # There is only one destination
     STATE_ARITIES = [SIZE_X, SIZE_Y] + [3] * 5 + [2] * 4 + [2] + [NUM_LOCATIONS + 2, 2]
 
@@ -161,11 +161,12 @@ class Prison(Environment):
             # All locks begin locked
             # Gem begins not held
             key_idx = np.random.choice(5, size=3, replace=False)
-            passenger = 0
+
+            passenger = 1  # Passenger needs a -1, but destination is normal. So here, pass, dest is actually loc 0, 1
             destination = 1
 
             # Taxi, 5 keys, 4 locks, gem, pass, dest
-            self.curr_state = [2, 1] + [int(i in key_idx) for i in range(5)] + [1] * 4 + [0, passenger, destination]
+            self.curr_state = [2, 1] + [1 if i in key_idx else 2 for i in range(5)] + [1] * 4 + [1, passenger, destination]
 
     def get_object_list(self, state: int):
         state = self.get_factored_state(state)
@@ -190,7 +191,7 @@ class Prison(Environment):
 
         objects.append(Gem2D("gem", self.gem, gem_state))
 
-        objects.append(Passenger("pass", self.locations[passenger] if passenger < len(self.locations) else None, passenger))
+        objects.append(Passenger("pass", self.locations[passenger-1] if 0 < passenger < len(self.locations)+1 else None, passenger))
         objects.append(Destination("dest", self.locations[destination], destination))
 
         objects.append(Wall2D("wall", self.walls))
@@ -324,20 +325,20 @@ class Prison(Environment):
         # Pickup action
         elif action == 4:
             # If holding key or gem or passenger already, no change
-            if 2 in keys or gem == 1 or passenger == self.NUM_LOCATIONS:
+            if 0 in keys or gem == 0 or passenger == 0:
                 pass
             # Pickup a gem
             elif pos == self.gem:
-                next_gem = 1
+                next_gem = 0
             # Pickup a passenger
-            elif pos == self.locations[passenger]:
-                next_pass = self.NUM_LOCATIONS
+            elif pos == self.locations[passenger-1]:
+                next_pass = 0
             # Pickup a key
             else:
                 try:
                     key_idx = self.keys.index(pos)
                     if keys[key_idx] == 1:
-                        next_keys[key_idx] = 2
+                        next_keys[key_idx] = 0
                 except ValueError:
                     # No key to pick up
                     pass
@@ -345,7 +346,7 @@ class Prison(Environment):
         # Unlock action
         elif action == 5:
             # If not holding a key, no change
-            if 2 not in keys:
+            if 0 not in keys:
                 pass
             # Otherwise, check that a locked lock exists in the surrounding
             # location and that no wall exists between the agent and the lock
@@ -364,7 +365,7 @@ class Prison(Environment):
                         if locks[lock_idx] == 1:
                             # Unlock lock and consume held key
                             next_locks[lock_idx] = 0
-                            next_keys[keys.index(2)] = 0
+                            next_keys[keys.index(0)] = 2
                             break
                     except ValueError:
                         # No lock
@@ -372,7 +373,7 @@ class Prison(Environment):
         # Dropoff action
         elif action == 6:
             # Check if passenger is in taxi and taxi is on the destination
-            if passenger == self.NUM_LOCATIONS and pos == self.locations[destination]:
+            if passenger == 0 and pos == self.locations[destination]:
                 next_pass = self.NUM_LOCATIONS + 1
         else:
             raise ValueError(f"Action {action} not within range of {self.NUM_ACTIONS}")
@@ -473,10 +474,10 @@ class Prison(Environment):
         factored_s = self.get_factored_state(state)
         factored_ns = self.get_factored_state(next_state)
 
-        if factored_s[self.S_PASS] == self.NUM_LOCATIONS and factored_ns[self.S_PASS] == self.NUM_LOCATIONS + 1:
-            # Passenger was picked up
+        if factored_s[self.S_PASS] == 0 and factored_ns[self.S_PASS] == self.NUM_LOCATIONS + 1:
+            # Passenger was dropped off
             return self.R_SUCCESS
-        if factored_ns[self.S_GEM] > factored_s[self.S_GEM]:
+        if factored_ns[self.S_GEM] < factored_s[self.S_GEM]:
             # The gem was picked up
             return self.R_GEM
         if sum(factored_ns[self.S_LOCK_1: self.S_LOCK_4 + 1]) < sum(factored_s[self.S_LOCK_1: self.S_LOCK_4 + 1]):
@@ -551,18 +552,19 @@ class Prison(Environment):
                    thickness=-1, color=[0, 0, 0])
 
         # Draw gem
-        gem_x, gem_y = self.gem
-        cv2.circle(img, (int((gem_x + 0.5) * GRID_SIZE), int((HEIGHT - (gem_y + 0.5)) * GRID_SIZE)), int(GRID_SIZE * 0.25),
+        gem_x, gem_y = self.gem if state[self.S_GEM] == 1 else (taxi_x, taxi_y)
+        scale = 0.25 if state[self.S_GEM] == 1 else 0.2
+        cv2.circle(img, (int((gem_x + 0.5) * GRID_SIZE), int((HEIGHT - (gem_y + 0.5)) * GRID_SIZE)), int(GRID_SIZE * scale),
                    thickness=-1, color=[0.8, 0, 0])
 
         # Draw passenger
         passenger = state[self.S_PASS]
-        if passenger >= self.NUM_LOCATIONS:
+        if passenger == 0 or passenger == self.NUM_LOCATIONS+1:
             pass_x = taxi_x
             pass_y = taxi_y
         else:
-            pass_x = self.locations[passenger][0]
-            pass_y = self.locations[passenger][1]
+            pass_x = self.locations[passenger-1][0]
+            pass_y = self.locations[passenger-1][1]
 
         cv2.circle(img, (int((pass_x + 0.5) * GRID_SIZE), int((HEIGHT - (pass_y + 0.5)) * GRID_SIZE)), int(GRID_SIZE * 0.2),
                    thickness=-1, color=[0.5, 0.5, 0.5])
@@ -577,7 +579,7 @@ class Prison(Environment):
         # Draw keys
         key_values = state[self.S_KEY_1:self.S_KEY_5+1]
         for key, value in zip(self.keys, key_values):
-            if value == 0:  # Non existent key
+            if value == 2:  # Non existent key
                 continue
 
             key_x, key_y = key
