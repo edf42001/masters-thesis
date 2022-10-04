@@ -42,7 +42,7 @@ class SymbolicPolicy(Policy):
         """Uses breadth first search to find the goal using what it currently knows about transitions"""
 
         # List of visited states
-        visited = []
+        visited = set()
 
         # Queue to store in progress states
         q = deque()
@@ -57,9 +57,9 @@ class SymbolicPolicy(Policy):
         # print("Beginning breadth first search")
         while len(q) != 0:
             curr_state = q.popleft()
-            visited.append(curr_state)
+            visited.add(curr_state)
 
-            # print(f"Popped state: {self.model.env.get_factored_state(curr_state)}")
+            # print(f"Popped state {curr_state}: {self.model.env.get_factored_state(curr_state)}")
 
             # Generate all next states
             for action in range(self.num_actions):
@@ -93,8 +93,8 @@ class SymbolicPolicy(Policy):
                 effect = transitions[0].effect  # Assume only one effect, extract it from the transition
                 next_state = self.model.next_state(curr_state, effect)
 
-                # Already saw this state
-                if next_state in visited:
+                # Don't add if we already saw this state or it is already in the queue
+                if next_state in visited or next_state in q:
                     continue
 
                 # Update parents for this state. Need to do before otherwise it won't be in the list when we try
