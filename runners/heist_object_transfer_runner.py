@@ -21,7 +21,7 @@ class HeistObjectTransferRunner(Runner):
         self.exp_num = exp_num
 
         # Experiment parameters
-        self.max_steps = 50
+        self.max_steps = 100
         self.num_episodes = 1
         self.stochastic = False
         self.visualize = True
@@ -33,14 +33,14 @@ class HeistObjectTransferRunner(Runner):
         self.env = SymbolicHeist(stochastic=self.stochastic, shuffle_object_names=True)
 
         # Load previously learned model with different object names
-        with open("symbolic_heist_rules.pkl", 'rb') as f:
+        with open("symbolic_heist_rules_updated.pkl", 'rb') as f:
             symbolic_heist_rules = pickle.load(f)
 
         print(self.env.object_name_map)
 
         self.model = ObjectTransferModel(self.env, symbolic_heist_rules)
         self.planner = ObjectTransferPolicy(self.env.get_num_actions(), self.model)
-        self.learner = ObjectTransferLearner(self.env, self.model, self.planner, visualize=self.visualize, delay=1000)
+        self.learner = ObjectTransferLearner(self.env, self.model, self.planner, visualize=self.visualize, delay=10)
         self.plot = Plot(self, self.eval_episodes, self.eval_timer)
 
 

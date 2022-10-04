@@ -85,6 +85,8 @@ class ObjectTransferPolicy(Policy):
                     # We don't know what will happen, skip
                     continue
 
+                # TODO figure this out assert len(transitions) < 2, "Only 1 transition per state"
+
                 effect = transitions[0].effect  # Assume only one effect, extract it from the transition
                 next_state = self.model.next_state(curr_state, effect)
 

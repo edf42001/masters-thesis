@@ -34,7 +34,7 @@ class TaxiObjectTransferRunner(Runner):
         self.env = SymbolicTaxi(stochastic=self.stochastic, shuffle_object_names=True)
 
         # Load previously learned model with different object names
-        with open("symbolic_taxi_rules.pkl", 'rb') as f:
+        with open("symbolic_taxi_rules_updated.pkl", 'rb') as f:
             symbolic_taxi_ruleset = pickle.load(f)
 
         self.model = ObjectTransferModel(self.env, symbolic_taxi_ruleset)

@@ -216,8 +216,7 @@ class SymbolicHeist(Environment):
 
                             if ob2_idx in ob_index_name_map:
                                 new_name2 = ob_index_name_map[ob2_idx]
-                                print("YUP2")
-                                exit()
+                                assert False, "Just checking if this ever runs"
                             else:
                                 # Extract the class name, and append the id to the end of it
                                 ob_name = objects[ob2_idx].name
@@ -429,7 +428,7 @@ class SymbolicHeist(Environment):
         factored_s = self.get_factored_state(state)
         factored_ns = self.get_factored_state(next_state)
 
-        if factored_ns[self.S_GEM] > factored_s[self.S_GEM]:
+        if factored_ns[self.S_GEM] < factored_s[self.S_GEM]:
             # The gem was picked up
             return self.R_SUCCESS
         if sum(factored_ns[self.S_LOCK_1: self.S_LOCK_3 + 1]) < sum(factored_s[self.S_LOCK_1: self.S_LOCK_3 + 1]):
