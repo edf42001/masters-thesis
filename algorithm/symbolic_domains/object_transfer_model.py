@@ -50,11 +50,15 @@ class ObjectTransferModel(TransitionModel):
         print()
 
         # Pare down the object map
+        length_of_beliefs = sum(len(possibilities) for possibilities in self.object_map.values())
         new_object_map = determine_possible_object_maps(self.object_map, self.possible_assignments)
-
         self.object_map = new_object_map
+        new_lengths_of_beliefs = sum(len(possibilities) for possibilities in self.object_map.values())
 
-        if not self.solved and sum(len(possibilities) for possibilities in self.object_map.values()) == len(self.prior_object_names):
+        if new_lengths_of_beliefs != length_of_beliefs:
+            print("Learned something new")
+
+        if not self.solved and new_lengths_of_beliefs == len(self.prior_object_names):
             self.solved = True
 
         print("New object map:")

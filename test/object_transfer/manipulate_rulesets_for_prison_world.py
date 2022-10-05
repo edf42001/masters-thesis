@@ -42,6 +42,10 @@ if __name__ == "__main__":
     prison_world_ruleset.add_rule(symbolic_taxi_ruleset.rules[4])
     prison_world_ruleset.add_rule(symbolic_taxi_ruleset.rules[5])
 
+    # Prison world only has 2 destinations, update accordingly.
+    dropoff_passenger_rule: Rule = prison_world_ruleset.rules[9]
+    dropoff_passenger_rule.outcomes.outcomes[0].outcome = JointEffect(["taxi-IN-pass.state"], [SetToNumber(2, 2)])
+
     # Watch out, this also saves the new action as 6.
     with open("runners/symbolic_prison_rules.pkl", 'wb') as f:
         pickle.dump(prison_world_ruleset, f)

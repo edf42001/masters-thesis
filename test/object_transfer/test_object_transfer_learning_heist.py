@@ -87,9 +87,29 @@ def determine_possible_object_maps(object_map: dict, possible_assignments: List[
 
     # Basically, one or more assignment in each assignment list must be true, find which
     for assignment_list in possible_assignments:
+        # Create a list of whether or not each assignment is False. This helps us narrow down what must be true
+        are_false = [False] * len(assignment_list.assignments)
+        for i, assignment in enumerate(assignment_list.assignments):
+            has_positives = len(assignment.positives) > 0
+            has_negatives = len(assignment.negatives) > 0
+
+            assert not (has_positives and has_negatives), "Should never have both, I think"
+
+            # We can run different checks depending on whether or not this is a positive or negative assignment
+            if has_positives:
+                is_false = any(known not in object_map[unknown] for unknown, known in assignment.positives.items())
+                are_false[i] = is_false
+            else:
+                is_false = any((known in object_map[unknown] and len(object_map[unknown]) == 1)
+                               for unknown, knowns in assignment.negatives.items() for known in knowns)
+                are_false[i] = is_false
+
+        # Pick out only the ones that are definitely not false
+        not_false_assignments = [a for (a, is_false) in zip(assignment_list.assignments, are_false) if not is_false]
+
         # If the length is one, then we know that one must be true, so we can apply it
-        if len(assignment_list.assignments) == 1:
-            assignment = assignment_list.assignments[0]
+        if len(not_false_assignments) == 1:
+            assignment = not_false_assignments[0]
 
             # If we know it is one thing, set all of those to their correct value
             for unknown, known in assignment.positives.items():
@@ -104,16 +124,15 @@ def determine_possible_object_maps(object_map: dict, possible_assignments: List[
 
         # If there are two possible assignments, for now, let's just apply all of them
         # If there are multiple positives, say it could be either. If negatives, just remove all of those
-        # assert len(assignment_list.assignments) <= 1, "Do not know how to deal with multiple options yet"
-        elif len(assignment_list.assignments) > 1:
+        elif len(not_false_assignments) > 1:
             # print("Dealing with more than one assignment")
             # print(assignment_list)
-            # print()
+
             # Generate list of positive possibilities for each assignment
             # Narrow down the object map using this list
             positive_possibilities = dict()
             has_negatives = False
-            for assignment in assignment_list.assignments:
+            for assignment in not_false_assignments:
                 for unknown, known in assignment.positives.items():
                     if unknown not in positive_possibilities:
                         positive_possibilities[unknown] = [known]
