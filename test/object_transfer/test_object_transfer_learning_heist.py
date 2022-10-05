@@ -8,9 +8,10 @@ from environment.symbolic_heist import SymbolicHeist
 from symbolic_stochastic_domains.symbolic_classes import ExampleSet, Outcome, Example, RuleSet
 from test.object_transfer.test_object_transfer_functions import determine_bindings_for_same_outcome, determine_bindings_for_no_outcome
 from test.object_transfer.test_object_transfer_functions import ObjectAssignmentList
+from effects.effect import JointNoEffect
 
 
-def get_possible_object_assignments(example: Example, prev_ruleset: RuleSet) -> ObjectAssignmentList:
+def get_possible_object_assignments(example: Example, prev_ruleset: RuleSet) -> List[ObjectAssignmentList]:
     """
     Return possible unknown to known object assignments for this example
     and the previously known ruleset
@@ -33,33 +34,45 @@ def get_possible_object_assignments(example: Example, prev_ruleset: RuleSet) -> 
     # See determine_bindings_for_same_outcome for more info (when it returns None)
     found_an_assignment = False
 
-    all_assignments = ObjectAssignmentList([])
-    print(f"{len(applicable_rules)} applicable rules")
-    for rule in applicable_rules:
-        # Wait, could the same action have different outcomes depending on the situation?
-        outcome_occured = type(outcome.outcome) == type(rule.outcomes.outcomes[0].outcome)
+    all_all_assignments = []
+    # print(f"{len(applicable_rules)} applicable rules")
 
-        # Use different reasoning based on if we had a positive or negative example
-        if outcome_occured:
-            assignments = determine_bindings_for_same_outcome(rule.context, literals)
-        else:
+    # Nothing happened. In this case, and all the results from determine_bindings_for_no_outcome,
+    # Because none of them can be the case.
+    if type(outcome.outcome) == JointNoEffect:
+        for rule in applicable_rules:
             assignments = determine_bindings_for_no_outcome(rule.context, literals)
+            all_all_assignments.append(assignments)
+    else:
+        all_assignments = ObjectAssignmentList([])
+        for rule in applicable_rules:
+            # Wait, could the same action have different outcomes depending on the situation?
+            outcome_occured = type(outcome.outcome) == type(rule.outcomes.outcomes[0].outcome)
 
-        print(f"Assignments for\n{rule}:\n{assignments}")
-        print()
-        if assignments is not None:
-            found_an_assignment = True
-            all_assignments.add_assignments(assignments)
+            # Use different reasoning based on if we had a positive or negative example
+            if outcome_occured:
+                assignments = determine_bindings_for_same_outcome(rule.context, literals)
+            else:
+                assignments = determine_bindings_for_no_outcome(rule.context, literals)
 
-    assert not (len(applicable_rules) > 1 and not found_an_assignment), "At least one rule must not return None"
+            # print(f"Assignments for\n{rule}:\n{assignments}")
+            # print()
+            if assignments is not None:
+                found_an_assignment = True
+                all_assignments.add_assignments(assignments)
 
-    # Make sure all rules have the same outcome. What happens if they don't?
-    assert all(type(rule.outcomes.outcomes[0].outcome) ==
-               type(applicable_rules[0].outcomes.outcomes[0].outcome)
-               for rule in applicable_rules)
+        assert not (len(applicable_rules) > 1 and not found_an_assignment), "At least one rule must not return None"
 
-    print(f"All possible assignments: {all_assignments}")
-    return all_assignments
+        # Make sure all rules have the same outcome. What happens if they don't?
+        assert all(type(rule.outcomes.outcomes[0].outcome) ==
+                   type(applicable_rules[0].outcomes.outcomes[0].outcome)
+                   for rule in applicable_rules)
+
+        all_all_assignments = [all_assignments]
+
+    # print(f"All possible assignments: {all_assignments}")
+    # print(f"All All possible assignments: {all_all_assignments}")
+    return all_all_assignments
 
 
 def determine_possible_object_maps(object_map: dict, possible_assignments: List[ObjectAssignmentList]):
@@ -93,12 +106,13 @@ def determine_possible_object_maps(object_map: dict, possible_assignments: List[
         # If there are multiple positives, say it could be either. If negatives, just remove all of those
         # assert len(assignment_list.assignments) <= 1, "Do not know how to deal with multiple options yet"
         elif len(assignment_list.assignments) > 1:
-            # print("Dealing with more than one assigment")
+            # print("Dealing with more than one assignment")
             # print(assignment_list)
             # print()
             # Generate list of positive possibilities for each assignment
             # Narrow down the object map using this list
             positive_possibilities = dict()
+            has_negatives = False
             for assignment in assignment_list.assignments:
                 for unknown, known in assignment.positives.items():
                     if unknown not in positive_possibilities:
@@ -106,9 +120,17 @@ def determine_possible_object_maps(object_map: dict, possible_assignments: List[
                     else:
                         positive_possibilities[unknown].append(known)
 
+                # Note that negatives are lists.
+                if len(assignment.negatives) > 0:
+                    has_negatives = True
+
             # print(positive_possibilities)
-            for unknown, knowns in positive_possibilities.items():
-                object_map[unknown] = [value for value in object_map[unknown] if value in knowns]
+            # Only update if we don't have any negatives. This is because some of them could be the reason
+            # Technically we should ask if any of them are actually true, otherwise we can't do much
+            # If we don't know which one is the true one.
+            if not has_negatives:
+                for unknown, knowns in positive_possibilities.items():
+                    object_map[unknown] = [value for value in object_map[unknown] if value in knowns]
 
         # If length is 0 we don't have to do anything
 

@@ -47,7 +47,7 @@ if __name__ == "__main__":
         examples.add_example(example)
 
         assignments = get_possible_object_assignments(example, previous_ruleset)
-        possible_assignments.add(assignments)
+        possible_assignments.update(assignments)
         print("All assignments: ")
         print(possible_assignments)
         print()

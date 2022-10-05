@@ -120,13 +120,13 @@ class Prison(Environment):
         self.keys = [(0, 4), (1, 2), (2, 0), (4, 4), (5, 4)]
 
         # List of lock locations
-        self.locks = [(0, 0), (0, 1), (4, 1), (5, 1)]
+        self.locks = [(0, 0), (0, 1), (0, 2), (5, 1)]
 
         # Location of gem
         self.gem = (5, 0)
 
         # Passenger and destination locations
-        self.locations = [(4, 0), (1, 0)]
+        self.locations = [(1, 0), (4, 0)]
 
         # Object instance and class in state information
         self.generate_object_maps()
@@ -352,9 +352,9 @@ class Prison(Environment):
             # location and that no wall exists between the agent and the lock
             else:
                 # Get the (possibly illegal) surrounding locations N/E/S/W
-                surroundings = [(pos[0], pos[1] - 1),
+                surroundings = [(pos[0], pos[1] + 1),
                                 (pos[0] + 1, pos[1]),
-                                (pos[0], pos[1] + 1),
+                                (pos[0], pos[1] - 1),
                                 (pos[0] - 1, pos[1])]
 
                 for direction, walls in enumerate(self.walls.values()):

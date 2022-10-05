@@ -147,7 +147,7 @@ def determine_bindings_for_same_outcome(condition: PredicateTree, state: Predica
         return ObjectAssignmentList([assignment])
 
 
-def determine_bindings_for_no_outcome(condition: PredicateTree, state: PredicateTree):
+def determine_bindings_for_no_outcome(condition: PredicateTree, state: PredicateTree) -> ObjectAssignmentList:
     """
     Say we have a tree representing the condition for a rule.
     The other tree is a state, with different object names.

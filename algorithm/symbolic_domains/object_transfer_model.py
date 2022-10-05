@@ -44,7 +44,7 @@ class ObjectTransferModel(TransitionModel):
         print(example)
 
         assignments = get_possible_object_assignments(example, self.previous_ruleset)
-        self.possible_assignments.add(assignments)
+        self.possible_assignments.update(assignments)
         print("All assignments: ")
         print(self.possible_assignments)
         print()

@@ -315,9 +315,9 @@ class SymbolicHeist(Environment):
             # location and that no wall exists between the agent and the lock
             else:
                 # Get the (possibly illegal) surrounding locations N/E/S/W
-                surroundings = [(pos[0], pos[1] - 1),
+                surroundings = [(pos[0], pos[1] + 1),
                                 (pos[0] + 1, pos[1]),
-                                (pos[0], pos[1] + 1),
+                                (pos[0], pos[1] - 1),
                                 (pos[0] - 1, pos[1])]
 
                 for direction, walls in enumerate(self.walls.values()):
