@@ -12,7 +12,7 @@ import numpy as np
 from environment.symbolic_taxi import SymbolicTaxi
 from environment.symbolic_heist import SymbolicHeist
 
-from test.object_transfer.test_object_transfer_exploration import determine_transition_given_action
+from symbolic_stochastic_domains.object_transfer import determine_transition_given_action
 
 num_actions = 6
 

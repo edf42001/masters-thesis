@@ -3,7 +3,7 @@ from collections import deque
 
 from algorithm.transition_model import TransitionModel
 from policy.policy import Policy
-from test.object_transfer.test_object_transfer_exploration import information_gain_of_action
+from symbolic_stochastic_domains.object_transfer import information_gain_of_action
 
 
 class ObjectTransferPolicy(Policy):

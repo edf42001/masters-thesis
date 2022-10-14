@@ -5,8 +5,8 @@ from algorithm.transition_model import TransitionModel
 from common.structures import Transition
 
 from symbolic_stochastic_domains.symbolic_classes import Example, Outcome
-from test.object_transfer.test_object_transfer_learning_heist import get_possible_object_assignments, determine_possible_object_maps
-from test.object_transfer.test_object_transfer_exploration import determine_transition_given_action
+from symbolic_stochastic_domains.object_transfer import get_possible_object_assignments,\
+    determine_possible_object_maps, determine_transition_given_action
 
 
 class ObjectTransferModel(TransitionModel):

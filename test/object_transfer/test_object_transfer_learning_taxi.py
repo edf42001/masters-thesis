@@ -4,8 +4,8 @@ import pickle
 import numpy as np
 
 from environment.symbolic_taxi import SymbolicTaxi
-from symbolic_stochastic_domains.symbolic_classes import ExampleSet, Outcome, Example, RuleSet
-from test.object_transfer.test_object_transfer_learning_heist import get_possible_object_assignments, determine_possible_object_maps
+from symbolic_stochastic_domains.symbolic_classes import ExampleSet, Outcome, Example
+from symbolic_stochastic_domains.object_transfer import get_possible_object_assignments, determine_possible_object_maps
 
 
 if __name__ == "__main__":
