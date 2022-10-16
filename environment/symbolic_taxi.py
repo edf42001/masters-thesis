@@ -1,14 +1,15 @@
 import numpy as np
 import random
-from typing import List, Tuple, Union, Dict
+from typing import List, Tuple, Dict
 import cv2
 
-from effects.effect import JointEffect, EffectType, Effect, JointNoEffect
+from effects.effect import EffectType, Effect
 from environment.environment import Environment
 
 from symbolic_stochastic_domains.predicates_and_objects import Taxi, Wall, Passenger, Destination,\
     PredicateType, Predicate
 from symbolic_stochastic_domains.predicate_tree import PredicateTree
+from symbolic_stochastic_domains.symbolic_classes import Outcome
 from common.utils.utils import random_string_generator
 
 
@@ -228,7 +229,7 @@ class SymbolicTaxi(Environment):
         # each predicate to it's mappings: {Predicate: ["taxi0", "key1"]}, which might help with hashing
         return tree, ob_index_name_map
 
-    def step(self, action: int) -> Union[List[JointEffect], List[int]]:
+    def step(self, action: int) -> Tuple[PredicateTree, Outcome, dict]:
         """Stochastically apply action to environment"""
         x, y, passenger, destination = self.curr_state
         next_x, next_y, next_passenger = x, y, passenger
@@ -306,9 +307,9 @@ class SymbolicTaxi(Environment):
                 atts.append(identifier)
 
         if len(effects) == 0:
-            observation = JointNoEffect()
+            observation = Outcome([], [], no_effect=True)
         else:
-            observation = JointEffect(atts, effects)
+            observation = Outcome(atts, effects)
 
         # Update current state
         self.curr_state = next_state

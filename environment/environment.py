@@ -3,7 +3,7 @@ import numpy as np
 import logging
 
 from symbolic_stochastic_domains.predicate_tree import PredicateTree
-from effects.effect import JointEffect
+from symbolic_stochastic_domains.symbolic_classes import Outcome
 
 
 class Environment:
@@ -45,7 +45,7 @@ class Environment:
     def get_condition(self, state: Union[int, List[int]]) -> List[bool]:
         raise NotImplementedError()
 
-    def step(self, action: int) -> Union[List[JointEffect], List[int]]:
+    def step(self, action: int) -> Tuple[PredicateTree, Outcome, dict]:
         raise NotImplementedError()
 
     def get_reward(self, state: int, next_state: int, action: int) -> float:
@@ -75,8 +75,8 @@ class Environment:
     def get_state(self) -> int:
         return self.get_flat_state(self.curr_state)
 
-    def apply_effect(self, state: int, effect: JointEffect) -> Union[int, np.ndarray]:
-        if effect.is_empty():
+    def apply_effect(self, state: int, effect: Outcome) -> Union[int, np.ndarray]:
+        if effect.is_no_effect():
             return state
         try:
             factored_s = self.get_factored_state(state)

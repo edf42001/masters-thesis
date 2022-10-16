@@ -1,10 +1,8 @@
 from typing import List
 import logging
 import pickle
-import sys
 import time
 
-from effects.effect import JointEffect
 from algorithm.transition_model import TransitionModel
 from common.structures import Transition
 
@@ -33,11 +31,10 @@ class SymbolicModel(TransitionModel):
         # Need to init with a default rule or we get out of bounds errors with the list
         self.ruleset = RuleSet([Rule(action=-1, context=[], outcomes=OutcomeSet())])
 
-    def add_experience(self, action: int, state: int, obs: JointEffect):
+    def add_experience(self, action: int, state: int, outcome: Outcome):
         """Records experience of state action transition"""
 
         # Convert the observation to an outcome, combine with the set of literals to get an example to add to memory
-        outcome = Outcome(obs)
         literals, instance_name_map = self.env.get_literals(state)
         example = Example(action, literals, outcome)
         self.examples.add_example(example)
@@ -103,7 +100,7 @@ class SymbolicModel(TransitionModel):
         if rule is None:
             return transitions
 
-        effect = rule.outcomes.outcomes[0].outcome
+        effect = rule.outcomes.outcomes[0]
 
         atts = []
         outcomes = []
@@ -148,7 +145,7 @@ class SymbolicModel(TransitionModel):
 
         # Only create new effect if it isn't a JointNoEffect
         if len(atts) > 0:
-            effect = JointEffect(atts, outcomes)
+            effect = Outcome(atts, outcomes)
 
         transitions.append(Transition(effect, 1.0))
 

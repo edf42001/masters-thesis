@@ -4,7 +4,7 @@ import random
 from typing import List, Tuple, Union
 import cv2
 
-from effects.utils import eff_joint, get_effects
+from effects.utils import get_effects
 from effects.effect import JointEffect, NoChange
 from environment.environment import Environment
 

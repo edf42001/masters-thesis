@@ -10,8 +10,8 @@ part was necessary.
 """
 
 import pickle
-from symbolic_stochastic_domains.symbolic_classes import RuleSet, Rule
-from effects.effect import JointEffect, SetToNumber
+from symbolic_stochastic_domains.symbolic_classes import RuleSet, Rule, Outcome
+from effects.effect import SetToNumber
 
 
 if __name__ == "__main__":
@@ -20,7 +20,6 @@ if __name__ == "__main__":
 
     with open("runners/symbolic_heist_rules.pkl", 'rb') as f:
         symbolic_heist_ruleset = pickle.load(f)
-
 
     dropoff_passenger_rule: Rule = symbolic_taxi_ruleset.rules[5]
     dropoff_passenger_rule.action = 6  # More actions in prison world, need to increase action number
@@ -35,7 +34,7 @@ if __name__ == "__main__":
 
     # Prison world only has 2 destinations, update accordingly.
     dropoff_passenger_rule: Rule = prison_world_ruleset.rules[9]
-    dropoff_passenger_rule.outcomes.outcomes[0].outcome = JointEffect(["taxi-IN-pass.state"], [SetToNumber(2, 2)])
+    dropoff_passenger_rule.outcomes.outcomes[0] = Outcome(["taxi-IN-pass.state"], [SetToNumber(2, 2)])
 
     with open("runners/symbolic_prison_rules.pkl", 'wb') as f:
         pickle.dump(prison_world_ruleset, f)

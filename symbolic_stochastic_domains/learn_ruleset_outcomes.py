@@ -7,8 +7,6 @@ from symbolic_stochastic_domains.learn_outcomes import learn_outcomes
 from symbolic_stochastic_domains.predicate_tree import PredicateTree, Edge, Node
 from symbolic_stochastic_domains.predicates_and_objects import TouchLeft, TouchRight, TouchUp, TouchDown, Open, On, In, PredicateType
 
-from effects.effect import JointNoEffect
-
 # Mapping from level to possible contexts, so we don't have to regenerate them each time
 # What is the memory usage of this?
 NEW_CONTEXTS = dict()  # Disable it for now
@@ -93,7 +91,7 @@ class RulesetLearner:
         # In order for an object ot be in outcomes, MUST be in either action or conditions
         # Due to how we now implement outcomes with the digit appended to them, we need to remove that
         # The referenced object is the one at the end of the chain
-        objects_in_outcome = set([key.split(".")[0] for key in relevant_examples[0].outcome.outcome.value.keys()])
+        objects_in_outcome = set([key.split(".")[0] for key in relevant_examples[0].outcome.value.keys()])
 
         # print("Relevent")
         # for example in relevant_examples:
@@ -269,7 +267,7 @@ class RulesetLearner:
         # Find all the unique outcomes that have been experienced. Exclude JointNoEffect, we will assume
         # anything not covered by the other rules leads to no effect
         for example in examples.examples.keys():
-            if example.outcome in unique_outcomes or type(example.outcome.outcome) is JointNoEffect:
+            if example.outcome in unique_outcomes or example.outcome.is_no_effect():
                 continue
 
             unique_outcomes.append(example.outcome)

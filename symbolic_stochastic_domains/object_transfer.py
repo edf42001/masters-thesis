@@ -4,12 +4,11 @@ Created on 10/14/22 by Ethan Frank
 Utility functions for evaluating deterministic 1-to-1 object mapping
 """
 
-from typing import List
+from typing import List, Set
 import itertools
 
 import numpy as np
 
-from effects.effect import JointNoEffect
 from symbolic_stochastic_domains.symbolic_classes import RuleSet, Outcome, Example, PredicateTree
 
 
@@ -264,7 +263,7 @@ def information_gain_of_action(env, state: int, action: int, object_map, prev_ru
         # i.e., if it is missing edges that are relevant
 
         # If one rule applies, find that rule, otherwise, the effect will be NoEffect
-        outcome = Outcome(JointNoEffect())
+        outcome = Outcome([], [], no_effect=True)
         for rule in applicable_rules:
             # print(f"Rule: {rule}")
             assert len(rule.outcomes.outcomes) == 1, "Only deal with one possible outcome"
@@ -275,7 +274,7 @@ def information_gain_of_action(env, state: int, action: int, object_map, prev_ru
 
             if applicable:
                 # TODO Really you could put a break statement in here but I'm leaving in this assertion just to check
-                assert type(outcome.outcome) is JointNoEffect, "A second rule was applicable which doesn't make sense"
+                assert outcome.is_no_effect(), "A second rule was applicable which doesn't make sense"
                 outcome = rule.outcomes.outcomes[0]
 
         # print(f"Predicted outcome: {outcome}")
@@ -314,7 +313,7 @@ def information_gain_of_state(env, state: int, object_map, prev_ruleset: RuleSet
     return sum([information_gain_of_action(env, state, a, object_map, prev_ruleset) for a in range(env.get_num_actions())])
 
 
-def determine_transition_given_action(env, state: int, action: int, object_map, prev_ruleset: RuleSet):
+def determine_transition_given_action(env, state: int, action: int, object_map, prev_ruleset: RuleSet) -> Set[Outcome]:
     """
     Given a current state and current object map belief,
     what are the possible next states for a specific actions?
@@ -376,7 +375,7 @@ def determine_transition_given_action(env, state: int, action: int, object_map, 
 
     # Returns the outcome if something will happen, no effect if nothing was applicable to the rule
     # TODO: This returns the object names from the rule. It should probably replace those with the current object names
-    return set(rule.outcomes.outcomes[0] for rule in applicable_rules) if applicable_tracker else {Outcome(JointNoEffect())}
+    return set(rule.outcomes.outcomes[0] for rule in applicable_rules) if applicable_tracker else {Outcome([], [], no_effect=True)}
 
 
 def get_possible_object_assignments(example: Example, prev_ruleset: RuleSet) -> List[ObjectAssignmentList]:
@@ -407,7 +406,7 @@ def get_possible_object_assignments(example: Example, prev_ruleset: RuleSet) -> 
 
     # Nothing happened. In this case, and all the results from determine_bindings_for_no_outcome,
     # Because none of them can be the case.
-    if type(outcome.outcome) == JointNoEffect:
+    if outcome.is_no_effect():
         for rule in applicable_rules:
             assignments = determine_bindings_for_no_outcome(rule.context, literals)
             all_all_assignments.append(assignments)
@@ -415,7 +414,7 @@ def get_possible_object_assignments(example: Example, prev_ruleset: RuleSet) -> 
         all_assignments = ObjectAssignmentList([])
         for rule in applicable_rules:
             # Wait, could the same action have different outcomes depending on the situation?
-            outcome_occured = type(outcome.outcome) == type(rule.outcomes.outcomes[0].outcome)
+            outcome_occured = outcome.is_no_effect() == rule.outcomes.outcomes[0].is_no_effect()
 
             # Use different reasoning based on if we had a positive or negative example
             if outcome_occured:
@@ -432,8 +431,10 @@ def get_possible_object_assignments(example: Example, prev_ruleset: RuleSet) -> 
         assert not (len(applicable_rules) > 1 and not found_an_assignment), "At least one rule must not return None"
 
         # Make sure all rules have the same outcome. What happens if they don't?
-        assert all(type(rule.outcomes.outcomes[0].outcome) ==
-                   type(applicable_rules[0].outcomes.outcomes[0].outcome)
+        # Update: I don't even know if this is correct?
+        # No rules will have an outcome of no effect?
+        assert all(rule.outcomes.outcomes[0].is_no_effect() ==
+                   applicable_rules[0].outcomes.outcomes[0].is_no_effect()
                    for rule in applicable_rules)
 
         all_all_assignments = [all_assignments]

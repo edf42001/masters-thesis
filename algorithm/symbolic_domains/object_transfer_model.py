@@ -1,6 +1,5 @@
 from typing import List
 
-from effects.effect import JointEffect
 from algorithm.transition_model import TransitionModel
 from common.structures import Transition
 
@@ -32,11 +31,10 @@ class ObjectTransferModel(TransitionModel):
 
         self.possible_assignments = set()  # Possible objects that could be other objects or not
 
-    def add_experience(self, action: int, state: int, obs: JointEffect):
+    def add_experience(self, action: int, state: int, outcome: Outcome):
         """Records experience of state action transition"""
 
         # Convert the observation to an outcome, combine with the set of literals to get an example to add to memory
-        outcome = Outcome(obs)
         literals, instance_name_map = self.env.get_literals(state)
         example = Example(action, literals, outcome)
 
@@ -89,7 +87,7 @@ class ObjectTransferModel(TransitionModel):
             atts = []
             outcomes = []
 
-            effect = transition.outcome
+            effect = transition
 
             for ob_att_str, outcome in effect.value.items():
                 # obb_att_str is formatted either `taxi.y` or `taxi-IN-key.state`. In general, `ob1-pred1-ob2-pred2...-obn`
@@ -134,7 +132,7 @@ class ObjectTransferModel(TransitionModel):
 
             # Only create new effect if it isn't a JointNoEffect
             if len(atts) > 0:
-                effect = JointEffect(atts, outcomes)
+                effect = Outcome(atts, outcomes)
 
             all_effects.append(effect)
 

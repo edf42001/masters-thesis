@@ -9,11 +9,12 @@ import numpy as np
 import cv2
 from typing import List, Tuple, Dict
 
-from effects.effect import JointEffect, EffectType, Effect, JointNoEffect
+from effects.effect import EffectType, Effect
 from environment.environment import Environment
 from symbolic_stochastic_domains.predicates_and_objects import Taxi, Key, Lock, Wall, \
     Gem, Passenger, Destination, Predicate, PredicateType
 from symbolic_stochastic_domains.predicate_tree import PredicateTree
+from symbolic_stochastic_domains.symbolic_classes import Outcome
 from common.utils.utils import random_string_generator
 
 
@@ -302,7 +303,7 @@ class Prison(Environment):
         # # mapping from predicate referencing the object to the other predicate
         # # Would it be easier for predicate objects to have ids for each object as well as names?
 
-    def step(self, action: int) -> Tuple[PredicateTree, JointEffect]:
+    def step(self, action: int) -> Tuple[PredicateTree, Outcome, dict]:
         """Stochastically apply action to environment"""
         state = self.curr_state
         x, y, keys, locks, gem, passenger, destination = \
@@ -439,9 +440,9 @@ class Prison(Environment):
                 atts.append(identifier)
 
         if len(effects) == 0:
-            observation = JointNoEffect()
+            observation = Outcome([], [], no_effect=True)
         else:
-            observation = JointEffect(atts, effects)
+            observation = Outcome(atts, effects)
 
         # Update current state
         self.curr_state = next_state

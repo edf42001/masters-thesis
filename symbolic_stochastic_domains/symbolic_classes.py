@@ -1,37 +1,75 @@
-from typing import List, Dict, Tuple
+from typing import List, Dict
 
-from effects.effect import JointEffect
-from symbolic_stochastic_domains.predicates_and_objects import Predicate
+from effects.effect import Effect
 from symbolic_stochastic_domains.predicate_tree import PredicateTree
 
 
 class Outcome:
-    """An outcome is which attributes change and how"""
-    def __init__(self, outcome: JointEffect):
-        self.outcome = outcome
+    """
+    An outcome maps each attribute to an effect
+    If a state var does not appear, it is assumed to be constant
+    """
+    def __init__(self, att_list: List[int], eff_list: List[Effect], no_effect=False):
+        self.no_effect = no_effect
+        self.value = {}
+        self.hash = hash(frozenset(self.value))
 
-        # The "value" attribute is the dictionary of att/effect pairs
-        self.num_affected_atts = len(self.outcome.value)
+        d, temp = {}, []
+        for a, e in zip(att_list, eff_list):
+            # Only keep effects that are not NoEffect
+            if e.type:
+                d[a] = e
+                temp.append((a, e.type, e.value))
+            self.value = d
+            self.hash = hash(frozenset(temp))
+
+        self.num_affected_atts = len(self.value)
+
+    def is_no_effect(self):
+        return self.no_effect
 
     def get_num_affected_atts(self):
         return self.num_affected_atts
 
     def copy(self):
-        # Return a copy of this. TODO: Don't need to copy the join effect because we won't be editing it?
-        return Outcome(self.outcome)
+        # Return a copy of this.
+        return Outcome()
+
+    def apply_to(self, state: List[int]):
+        """Applies the joint effect to a state in-place"""
+        for att, effect in self.value.items():
+            state[att] = effect.apply_to(state[att])
 
     def __str__(self):
-        return str(self.outcome)
+        # Sometimes this is empty from dallans code
+        if self.no_effect:
+            return '<NoEffect>'
+        elif not self.value.items():
+            return '?'
+        else:
+            return '(' + ' '.join(f'<{a}, {str(e)}>' for a, e in self.value.items()) + ')'
 
     def __repr__(self):
         return self.__str__()
 
     def __eq__(self, other):
-        return self.outcome == other.outcome
+        # Make sure that the same number of attributes are included in each joint effect
+        if len(self.value) != len(other.value):
+            return False
+
+        # Make sure that each attribute has the same effect
+        # Checking the length allows us to only iterate over the keys of one
+        for att, eff in self.value.items():
+            try:
+                if other.value[att] != eff:
+                    return False
+            except KeyError:
+                return False
+
+        return True
 
     def __hash__(self):
-        # Inherit the unique hash from the joint effect
-        return self.outcome.__hash__()
+        return self.hash
 
 
 class OutcomeSet:
