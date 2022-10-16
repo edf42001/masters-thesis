@@ -43,3 +43,7 @@ if __name__ == '__main__':
 
     runner = HeistRunner(0)
     runner.run_experiment()
+
+    import pickle
+    with open("symbolic_heist_rules.pkl", 'wb') as f:
+        pickle.dump(runner.model.ruleset, f)

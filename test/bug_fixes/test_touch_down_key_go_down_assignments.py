@@ -38,8 +38,8 @@ if __name__ == "__main__":
     condition.add_node("wall0")
     condition.add_node("lock0")
 
-    condition.add_edge("taxi0", "wall0", PredicateType.TOUCH_DOWN2D, negative=True)
-    condition.add_edge("taxi0", "lock0", PredicateType.TOUCH_DOWN2D, negative=True)
+    condition.add_edge("taxi0", "wall0", PredicateType.TOUCH_DOWN, negative=True)
+    condition.add_edge("taxi0", "lock0", PredicateType.TOUCH_DOWN, negative=True)
 
     # The current state
     state = PredicateTree()
@@ -49,9 +49,9 @@ if __name__ == "__main__":
     state.add_node("tyyaw0")
 
     state.add_edge("taxi0", "idpyo0", PredicateType.IN)
-    state.add_edge("taxi0", "idpyo1", PredicateType.TOUCH_DOWN2D)
-    state.add_edge("taxi0", "tyyaw0", PredicateType.TOUCH_LEFT2D)
-    state.add_edge("taxi0", "tyyaw0", PredicateType.TOUCH_RIGHT2D)
+    state.add_edge("taxi0", "idpyo1", PredicateType.TOUCH_DOWN)
+    state.add_edge("taxi0", "tyyaw0", PredicateType.TOUCH_LEFT)
+    state.add_edge("taxi0", "tyyaw0", PredicateType.TOUCH_RIGHT)
 
     # For matching outcomes, determine which object must/must not be which
     assignments = determine_bindings_for_same_outcome(condition, state)
@@ -62,7 +62,7 @@ if __name__ == "__main__":
     condition.add_node("taxi0")
     condition.add_node("wall0")
     condition.add_node("lock0")
-    condition.add_edge("taxi0", "lock0", PredicateType.TOUCH_DOWN2D)
+    condition.add_edge("taxi0", "lock0", PredicateType.TOUCH_DOWN)
     condition.add_property("lock0", PredicateType.OPEN, True)
 
     assignments = determine_bindings_for_same_outcome(condition, state)

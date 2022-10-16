@@ -4,8 +4,8 @@ from typing import List, Tuple, Dict
 
 from effects.effect import JointEffect, EffectType, Effect, JointNoEffect
 from environment.environment import Environment
-from symbolic_stochastic_domains.predicates_and_objects import Taxi2D, Key2D, Lock2D, Wall2D,\
-    Gem2D, Predicate, PredicateType
+from symbolic_stochastic_domains.predicates_and_objects import Taxi, Key, Lock, Wall,\
+    Gem, Predicate, PredicateType
 from symbolic_stochastic_domains.predicate_tree import PredicateTree
 from common.utils.utils import random_string_generator
 
@@ -69,11 +69,11 @@ class SymbolicHeist(Environment):
     # For each predicate type, defines which objects are valid for each argument
     # This is basically just (taxi, everything else) except for the ones that are just params?
     PREDICATE_MAPPINGS = {
-        PredicateType.TOUCH_LEFT2D: [[OB_TAXI], [OB_KEY, OB_LOCK, OB_GEM]],
-        PredicateType.TOUCH_RIGHT2D: [[OB_TAXI], [OB_KEY, OB_LOCK, OB_GEM]],
-        PredicateType.TOUCH_UP2D: [[OB_TAXI], [OB_KEY, OB_LOCK, OB_GEM]],
-        PredicateType.TOUCH_DOWN2D: [[OB_TAXI], [OB_KEY, OB_LOCK, OB_GEM]],
-        PredicateType.ON2D: [[OB_TAXI], [OB_KEY, OB_LOCK, OB_GEM]],
+        PredicateType.TOUCH_LEFT: [[OB_TAXI], [OB_KEY, OB_LOCK, OB_GEM]],
+        PredicateType.TOUCH_RIGHT: [[OB_TAXI], [OB_KEY, OB_LOCK, OB_GEM]],
+        PredicateType.TOUCH_UP: [[OB_TAXI], [OB_KEY, OB_LOCK, OB_GEM]],
+        PredicateType.TOUCH_DOWN: [[OB_TAXI], [OB_KEY, OB_LOCK, OB_GEM]],
+        PredicateType.ON: [[OB_TAXI], [OB_KEY, OB_LOCK, OB_GEM]],
         PredicateType.IN: [[OB_TAXI], [OB_KEY, OB_GEM]],
         # PredicateType.OPEN: [[OB_LOCK]]
     }
@@ -153,17 +153,17 @@ class SymbolicHeist(Environment):
 
         objects = []
 
-        objects.append(Taxi2D("taxi", taxi))
+        objects.append(Taxi("taxi", taxi))
 
         # Instead of having str(i), we could just have key and then a mapping saying which key is the one that is true
         for i, (key_state, location) in enumerate(zip(keys, self.keys)):
-            objects.append(Key2D("key", location, key_state))
+            objects.append(Key("key", location, key_state))
 
         for i, (lock_open, location) in enumerate(zip(locks, self.locks)):
-            objects.append(Lock2D("lock", location, lock_open == 0))  # A locked lock has a value of 1
+            objects.append(Lock("lock", location, lock_open == 0))  # A locked lock has a value of 1
 
-        objects.append(Gem2D("gem", self.gem, gem_state))
-        objects.append(Wall2D("wall", self.walls))
+        objects.append(Gem("gem", self.gem, gem_state))
+        objects.append(Wall("wall", self.walls))
 
         return objects
 
@@ -232,7 +232,7 @@ class SymbolicHeist(Environment):
                             tree.add_edge("taxi0", new_name2, p_type)
 
                             # Handle properties separately
-                            if type(objects[ob2_idx]) is Lock2D:
+                            if type(objects[ob2_idx]) is Lock:
                                 pred = Predicate.create(PredicateType.OPEN, objects[ob2_idx], objects[ob2_idx])
                                 if pred.value:
                                     # node.add_edge(Edge(PredicateType.OPEN, Node("lock", new_name2[-1])))
@@ -246,8 +246,8 @@ class SymbolicHeist(Environment):
         # Walls are currently handled separately because they are static
         # TODO: Do walls need to be handled separately. Also technically this needs all the types, including on and in
 
-        for p_type in [PredicateType.TOUCH_LEFT2D, PredicateType.TOUCH_RIGHT2D,
-                       PredicateType.TOUCH_UP2D, PredicateType.TOUCH_DOWN2D]:
+        for p_type in [PredicateType.TOUCH_LEFT, PredicateType.TOUCH_RIGHT,
+                       PredicateType.TOUCH_UP, PredicateType.TOUCH_DOWN]:
             pred = Predicate.create(p_type, objects[self.OB_TAXI], objects[-1], walls=self.walls)  # Objects -1 is the wall
             if pred.value:
                 wall_name = self.anonymize_name("wall") + "0"

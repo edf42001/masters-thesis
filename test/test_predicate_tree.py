@@ -30,7 +30,7 @@ if __name__ == "__main__":
     tree = PredicateTree()
     tree.add_node("taxi0")
     tree.add_node("wall0")
-    tree.add_edge("taxi0", "wall0", PredicateType.TOUCH_RIGHT2D)
+    tree.add_edge("taxi0", "wall0", PredicateType.TOUCH_RIGHT)
 
     context = PredicateTree()
     context.add_node("taxi0")

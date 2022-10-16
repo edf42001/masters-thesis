@@ -22,17 +22,8 @@ if __name__ == "__main__":
         symbolic_heist_ruleset = pickle.load(f)
 
 
-    pickup_passenger_rule: Rule = symbolic_taxi_ruleset.rules[4]
-    pickup_passenger_rule.outcomes.outcomes[0].outcome = JointEffect(["taxi-ON2D-pass.state"], [SetToNumber(0, 0)])
     dropoff_passenger_rule: Rule = symbolic_taxi_ruleset.rules[5]
-    dropoff_passenger_rule.action = 6
-
-    pickup_key_rule: Rule = symbolic_heist_ruleset.rules[5]
-    pickup_key_rule.outcomes.outcomes[0].outcome = JointEffect(["taxi-ON2D-key.state"], [SetToNumber(0, 0)])
-    unlock_lock_rule: Rule = symbolic_heist_ruleset.rules[6]
-    unlock_lock_rule.outcomes.outcomes[0].outcome = JointEffect(["taxi-IN-key.state", "taxi-TOUCH_DOWN2D-lock.state"], [SetToNumber(2, 2), SetToNumber(0, 0)])
-    pickup_gem_rule: Rule = symbolic_heist_ruleset.rules[7]
-    pickup_gem_rule.outcomes.outcomes[0].outcome = JointEffect(["taxi-ON2D-gem.state"], [SetToNumber(0, 0)])
+    dropoff_passenger_rule.action = 6  # More actions in prison world, need to increase action number
 
     prison_world_ruleset = RuleSet([])
     for rule in symbolic_heist_ruleset.rules:
@@ -46,14 +37,11 @@ if __name__ == "__main__":
     dropoff_passenger_rule: Rule = prison_world_ruleset.rules[9]
     dropoff_passenger_rule.outcomes.outcomes[0].outcome = JointEffect(["taxi-IN-pass.state"], [SetToNumber(2, 2)])
 
-    # Watch out, this also saves the new action as 6.
     with open("runners/symbolic_prison_rules.pkl", 'wb') as f:
         pickle.dump(prison_world_ruleset, f)
 
-    with open("runners/symbolic_taxi_rules_updated.pkl", 'wb') as f:
-        pickle.dump(symbolic_taxi_ruleset, f)
-
-    with open("runners/symbolic_heist_rules_updated.pkl", 'wb') as f:
-        pickle.dump(symbolic_heist_ruleset, f)
-
+    print(symbolic_taxi_ruleset)
+    print()
+    print(symbolic_heist_ruleset)
+    print()
     print(prison_world_ruleset)

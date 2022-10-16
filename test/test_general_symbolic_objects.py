@@ -11,7 +11,7 @@ from environment.symbolic_heist import SymbolicHeist
 from environment.symbolic_taxi import SymbolicTaxi
 from symbolic_stochastic_domains.learn_ruleset_outcomes import RulesetLearner
 from symbolic_stochastic_domains.symbolic_classes import ExampleSet, Outcome, Example, Rule, OutcomeSet
-from symbolic_stochastic_domains.predicates_and_objects import In, Open, TouchDown2D, PredicateType, On2D
+from symbolic_stochastic_domains.predicates_and_objects import In, Open, TouchDown, PredicateType, On
 from symbolic_stochastic_domains.symbolic_utils import applicable, context_matches
 from symbolic_stochastic_domains.predicate_tree import PredicateTree, Edge, Node
 

@@ -5,7 +5,7 @@ from symbolic_stochastic_domains.symbolic_classes import ExampleSet, RuleSet, Ru
 from symbolic_stochastic_domains.symbolic_utils import context_matches, covers, applicable
 from symbolic_stochastic_domains.learn_outcomes import learn_outcomes
 from symbolic_stochastic_domains.predicate_tree import PredicateTree, Edge, Node
-from symbolic_stochastic_domains.predicates_and_objects import TouchLeft2D, TouchRight2D, TouchUp2D, TouchDown2D, Open, On2D, In, PredicateType
+from symbolic_stochastic_domains.predicates_and_objects import TouchLeft, TouchRight, TouchUp, TouchDown, Open, On, In, PredicateType
 
 from effects.effect import JointNoEffect
 
@@ -21,8 +21,8 @@ class RulesetLearner:
     def create_new_contexts_from_context(self, context: PredicateTree) -> List[PredicateTree]:
         new_contexts = []
 
-        p_types = [PredicateType.TOUCH_LEFT2D, PredicateType.TOUCH_RIGHT2D, PredicateType.TOUCH_DOWN2D,
-                   PredicateType.TOUCH_UP2D, PredicateType.ON2D, PredicateType.IN]
+        p_types = [PredicateType.TOUCH_LEFT, PredicateType.TOUCH_RIGHT, PredicateType.TOUCH_DOWN,
+                   PredicateType.TOUCH_UP, PredicateType.ON, PredicateType.IN]
 
         # Get the list of objects in the environment from the env. Modify it: no taxi, add wall
         # This is because we need a list of all objects the taxi can interact with

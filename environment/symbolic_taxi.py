@@ -6,7 +6,7 @@ import cv2
 from effects.effect import JointEffect, EffectType, Effect, JointNoEffect
 from environment.environment import Environment
 
-from symbolic_stochastic_domains.predicates_and_objects import Taxi2D, Wall2D, Passenger, Destination,\
+from symbolic_stochastic_domains.predicates_and_objects import Taxi, Wall, Passenger, Destination,\
     PredicateType, Predicate
 from symbolic_stochastic_domains.predicate_tree import PredicateTree
 from common.utils.utils import random_string_generator
@@ -58,11 +58,11 @@ class SymbolicTaxi(Environment):
     # For each predicate type, defines which objects are valid for each argument
     # This is basically just (taxi, everything else) except for the ones that are just params?
     PREDICATE_MAPPINGS = {
-        PredicateType.TOUCH_LEFT2D: [[OB_TAXI], [OB_PASS, OB_DEST]],
-        PredicateType.TOUCH_RIGHT2D: [[OB_TAXI], [OB_PASS, OB_DEST]],
-        PredicateType.TOUCH_UP2D: [[OB_TAXI], [OB_PASS, OB_DEST]],
-        PredicateType.TOUCH_DOWN2D: [[OB_TAXI], [OB_PASS, OB_DEST]],
-        PredicateType.ON2D: [[OB_TAXI], [OB_PASS, OB_DEST]],
+        PredicateType.TOUCH_LEFT: [[OB_TAXI], [OB_PASS, OB_DEST]],
+        PredicateType.TOUCH_RIGHT: [[OB_TAXI], [OB_PASS, OB_DEST]],
+        PredicateType.TOUCH_UP: [[OB_TAXI], [OB_PASS, OB_DEST]],
+        PredicateType.TOUCH_DOWN: [[OB_TAXI], [OB_PASS, OB_DEST]],
+        PredicateType.ON: [[OB_TAXI], [OB_PASS, OB_DEST]],
         PredicateType.IN: [[OB_TAXI], [OB_PASS, OB_DEST]],
         # PredicateType.OPEN: [[OB_LOCK]]
     }
@@ -139,10 +139,10 @@ class SymbolicTaxi(Environment):
         destination = state[self.S_DEST]
 
         objects = []
-        objects.append(Taxi2D("taxi", taxi))
+        objects.append(Taxi("taxi", taxi))
         objects.append(Passenger("pass", self.locations[passenger-1] if 0 < passenger < len(self.locations)+1 else None, passenger))
         objects.append(Destination("dest", self.locations[destination], destination))
-        objects.append(Wall2D("wall", self.walls))
+        objects.append(Wall("wall", self.walls))
 
         return objects
 
@@ -209,8 +209,8 @@ class SymbolicTaxi(Environment):
         # Walls are currently handled separately because they are static
         # TODO: Do walls need to be handled separately. Also technically this needs all the types, including on and in
 
-        for p_type in [PredicateType.TOUCH_LEFT2D, PredicateType.TOUCH_RIGHT2D,
-                       PredicateType.TOUCH_UP2D, PredicateType.TOUCH_DOWN2D]:
+        for p_type in [PredicateType.TOUCH_LEFT, PredicateType.TOUCH_RIGHT,
+                       PredicateType.TOUCH_UP, PredicateType.TOUCH_DOWN]:
             pred = Predicate.create(p_type, objects[self.OB_TAXI], objects[-1], walls=self.walls)  # Objects -1 is the wall
             if pred.value:
                 wall_name = self.anonymize_name("wall") + "0"

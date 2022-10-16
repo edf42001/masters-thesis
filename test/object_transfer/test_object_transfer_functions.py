@@ -34,10 +34,10 @@ def test_positive_positive():
     state.add_node("e0")
     state.add_node("f0")
 
-    state.add_edge("taxi0", "a0", PredicateType.TOUCH_UP2D)
+    state.add_edge("taxi0", "a0", PredicateType.TOUCH_UP)
     state.add_edge("taxi0", "b0", PredicateType.TOUCH_LEFT)
     state.add_edge("taxi0", "c0", PredicateType.TOUCH_RIGHT)
-    state.add_edge("taxi0", "d0", PredicateType.TOUCH_DOWN2D)
+    state.add_edge("taxi0", "d0", PredicateType.TOUCH_DOWN)
     state.add_edge("taxi0", "e0", PredicateType.ON, negative=False)
     state.add_edge("taxi0", "f0", PredicateType.IN, negative=False)
 
@@ -71,10 +71,10 @@ def test_positive_negative():
     state.add_node("e0")
     state.add_node("f0")
 
-    state.add_edge("taxi0", "a0", PredicateType.TOUCH_UP2D)
+    state.add_edge("taxi0", "a0", PredicateType.TOUCH_UP)
     state.add_edge("taxi0", "b0", PredicateType.TOUCH_LEFT)
     state.add_edge("taxi0", "c0", PredicateType.TOUCH_RIGHT)
-    state.add_edge("taxi0", "d0", PredicateType.TOUCH_DOWN2D)
+    state.add_edge("taxi0", "d0", PredicateType.TOUCH_DOWN)
     state.add_edge("taxi0", "e0", PredicateType.ON, negative=False)
     state.add_edge("taxi0", "f0", PredicateType.IN, negative=False)
 
