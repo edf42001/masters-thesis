@@ -108,24 +108,24 @@ class SymbolicModel(TransitionModel):
         # Maps unique object name in the tree, to the real instance index in the environment
         name_instance_map = {v: k for k, v in instance_name_map.items()}
 
-        for ob_att_str, outcome in effect.value.items():
+        for reference, outcome in effect.value.items():
             # obb_att_str is formatted either `taxi.y` or `taxi-IN-key.state`. In general, `ob1-pred1-ob2-pred2...-obn`
-            identifier_str, att_name_str = ob_att_str.split(".")
-
-            # We handle the taxi case seperatley, as it isn't attached to anything
-            if identifier_str == "taxi":
+            from_ob = reference.from_ob
+            edge_type = reference.edge_type
+            class_name = reference.to_ob
+            att_name = reference.att_name
+            # We handle the taxi case separately, as it isn't attached to anything
+            if edge_type is None:
                 unique_name = "taxi0"
             else:
                 # We have to find the correct match. A dictionary would be good for this
-                # Check for the match by lookng for all of that object, and finding the one with the matching connection
-                class_name = identifier_str.split("-")[-1]  # `taxi-IN-key`, will extract `key`
+                # Check for the match by looking for all of that object, and finding the one with the matching connection
                 test_id = 0
                 while True:
                     test_name = class_name + str(test_id)
                     node = literals.node_lookup[test_name]
                     edge = node.to_edges[0]
-                    test_identifier_str = f"{edge.from_node.object_name}-{str(edge)[:-1]}"  # Will be`taxi-IN-key`, maybe `taxi-ON-key`
-                    if test_identifier_str == identifier_str:  # Check for a match
+                    if from_ob == edge.from_node.object_name and edge_type == edge.type and class_name == edge.to_node.object_name:  # Check for a match
                         break
                     test_id += 1  # Try the next object of this type
                 # This the object that was being referenced
@@ -134,7 +134,7 @@ class SymbolicModel(TransitionModel):
             # Extract the name of the object class, and the identifier number
             class_name, id_str = unique_name[:-1], unique_name[-1]
             class_idx = self.env.OB_NAMES.index(class_name)
-            att_idx = self.env.ATT_NAMES[class_idx].index(att_name_str)
+            att_idx = self.env.ATT_NAMES[class_idx].index(att_name)
             instance_id = name_instance_map[unique_name]
 
             att_range = self.env.instance_index_map[instance_id]

@@ -91,8 +91,7 @@ class RulesetLearner:
         # In order for an object ot be in outcomes, MUST be in either action or conditions
         # Due to how we now implement outcomes with the digit appended to them, we need to remove that
         # The referenced object is the one at the end of the chain
-        objects_in_outcome = set([key.split(".")[0] for key in relevant_examples[0].outcome.value.keys()])
-
+        objects_in_outcome = set([key.reference_str() for key in relevant_examples[0].outcome.value.keys()])
         # print("Relevent")
         # for example in relevant_examples:
         #     print(example)

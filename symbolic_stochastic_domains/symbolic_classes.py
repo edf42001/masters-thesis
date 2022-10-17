@@ -1,7 +1,40 @@
 from typing import List, Dict
 
 from effects.effect import Effect
+from symbolic_stochastic_domains.predicates_and_objects import PredicateType
 from symbolic_stochastic_domains.predicate_tree import PredicateTree
+
+
+class DeicticReference:
+    def __init__(self, from_ob: str, edge_type: PredicateType, to_ob: str, att_name: str, att_num: int = -1):
+        self.from_ob = from_ob
+        self.edge_type = edge_type
+        self.to_ob = to_ob
+        self.att_name = att_name
+
+        # Used when this is just storing numbers to refer to state attribute instead of the actual reference
+        self.att_num = None if att_num == -1 else att_num
+
+        self.hash = hash(self.__str__())
+
+    def reference_str(self):
+        if self.edge_type is not None:
+            return f"{self.from_ob}-{self.edge_type.name}-{self.to_ob}"
+        else:
+            return self.from_ob
+
+    def __eq__(self, other):
+        return self.from_ob == other.from_ob and self.edge_type == other.edge_type and \
+               self.to_ob == other.to_ob and self.att_name == other.att_name
+
+    def __str__(self):
+        return f"{self.reference_str()}.{self.att_name}"
+
+    def __repr__(self):
+        return self.__str__()
+
+    def __hash__(self):
+        return self.hash
 
 
 class Outcome:
@@ -9,7 +42,7 @@ class Outcome:
     An outcome maps each attribute to an effect
     If a state var does not appear, it is assumed to be constant
     """
-    def __init__(self, att_list: List[int], eff_list: List[Effect], no_effect=False):
+    def __init__(self, att_list: List[DeicticReference], eff_list: List[Effect], no_effect=False):
         self.no_effect = no_effect
         self.value = {}
         self.hash = hash(frozenset(self.value))
@@ -36,7 +69,7 @@ class Outcome:
         return Outcome()
 
     def apply_to(self, state: List[int]):
-        """Applies the joint effect to a state in-place"""
+        """Applies the joint effect to a state in-place. Only when values stores ints instead of deictic references"""
         for att, effect in self.value.items():
             state[att] = effect.apply_to(state[att])
 

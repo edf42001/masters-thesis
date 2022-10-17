@@ -7,7 +7,7 @@ from environment.environment import Environment
 from symbolic_stochastic_domains.predicates_and_objects import Taxi, Key, Lock, Wall,\
     Gem, Predicate, PredicateType
 from symbolic_stochastic_domains.predicate_tree import PredicateTree
-from symbolic_stochastic_domains.symbolic_classes import Outcome
+from symbolic_stochastic_domains.symbolic_classes import Outcome, DeicticReference
 from common.utils.utils import random_string_generator
 
 
@@ -384,12 +384,15 @@ class SymbolicHeist(Environment):
                 # Make an exception for taxi, the taxi is already at the root of the tree. So there is nothing to chain
                 # We remove the numbers ([:-1]) from here, because those are not the defining feature, the defining feature
                 # is the relationship between the objects
+                att_name = self.ATT_NAMES[class_id][class_att_idx]
                 if len(node.to_edges) > 0:
                     to_edge = node.to_edges[0]
-                    from_object_name = to_edge.from_node.object_name
-                    identifier = f"{from_object_name}-{str(to_edge)[:-1]}.{self.ATT_NAMES[class_id][class_att_idx]}"
+                    from_name = to_edge.from_node.object_name
+                    to_name = to_edge.to_node.object_name
+                    identifier = DeicticReference(from_name, to_edge.type, to_name, att_name)
                 else:
-                    identifier = f"{unique_name[:-1]}.{self.ATT_NAMES[class_id][class_att_idx]}"
+                    from_name = unique_name[:-1]
+                    identifier = DeicticReference(from_name, None, "", att_name)
 
                 atts.append(identifier)
 

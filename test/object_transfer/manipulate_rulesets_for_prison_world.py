@@ -10,7 +10,8 @@ part was necessary.
 """
 
 import pickle
-from symbolic_stochastic_domains.symbolic_classes import RuleSet, Rule, Outcome
+from symbolic_stochastic_domains.symbolic_classes import RuleSet, Rule, Outcome, DeicticReference
+from symbolic_stochastic_domains.predicates_and_objects import PredicateType
 from effects.effect import SetToNumber
 
 
@@ -34,7 +35,7 @@ if __name__ == "__main__":
 
     # Prison world only has 2 destinations, update accordingly.
     dropoff_passenger_rule: Rule = prison_world_ruleset.rules[9]
-    dropoff_passenger_rule.outcomes.outcomes[0] = Outcome(["taxi-IN-pass.state"], [SetToNumber(2, 2)])
+    dropoff_passenger_rule.outcomes.outcomes[0] = Outcome([DeicticReference("taxi", PredicateType.IN, "pass", "state")], [SetToNumber(2, 2)])
 
     with open("runners/symbolic_prison_rules.pkl", 'wb') as f:
         pickle.dump(prison_world_ruleset, f)

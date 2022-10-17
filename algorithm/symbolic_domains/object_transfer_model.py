@@ -89,30 +89,28 @@ class ObjectTransferModel(TransitionModel):
 
             effect = transition
 
-            for ob_att_str, outcome in effect.value.items():
-                # obb_att_str is formatted either `taxi.y` or `taxi-IN-key.state`. In general, `ob1-pred1-ob2-pred2...-obn`
-                identifier_str, att_name_str = ob_att_str.split(".")
+            for reference, outcome in effect.value.items():
+                edge_type = reference.edge_type
+                to_ob = reference.to_ob
+                att_name = reference.att_name
 
                 unique_name = ""
                 # We handle the taxi case separately, as it isn't attached to anything
-                if identifier_str == "taxi":
+                if edge_type is None:
                     unique_name = "taxi0"
                     known_class_name = "taxi"  # This is only used so the env can say which attribute is which index
                 else:
-                    splits = identifier_str.split("-")
-
                     # Use the fact that only one object can be at the end of each relation to figure out what
                     # the desired object is in this state
-                    base_object_and_relation = splits[0] + "-" + splits[1]
                     for edge in literals.base_object.edges:
-                        edge_string = "taxi-" + edge.type.name  # Remove number
-                        if edge_string == base_object_and_relation:
+                        if edge.type == edge_type:
                             unique_name = edge.to_node.full_name()
+                            break
 
                     # This is only used so the env can say which attribute is which index
                     # `taxi-IN-key`, will extract `key`
                     # Probably this should be a helper function in the env
-                    known_class_name = splits[-1]
+                    known_class_name = to_ob
 
                     # unique_name = class_name + str(test_id)
                 assert unique_name != "", "We should have found a match"
@@ -121,7 +119,7 @@ class ObjectTransferModel(TransitionModel):
                 # so the env can directly modify the imagined state.
                 class_idx = self.env.OB_NAMES.index(known_class_name)
 
-                att_idx = self.env.ATT_NAMES[class_idx].index(att_name_str)
+                att_idx = self.env.ATT_NAMES[class_idx].index(att_name)
                 instance_id = name_instance_map[unique_name]
 
                 att_range = self.env.instance_index_map[instance_id]
