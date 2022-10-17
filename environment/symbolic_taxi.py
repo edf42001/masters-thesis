@@ -266,53 +266,11 @@ class SymbolicTaxi(Environment):
         else:
             self.last_reward = self.R_DEFAULT
 
-        tree, ob_id_name_map = self.get_literals(self.get_flat_state(self.curr_state))  # predicate_to_ob_map
-
         correct_types = [EffectType.INCREMENT] * 2 + [EffectType.SET_TO_NUMBER] * 2
-        effects = []
-        atts = []
-        obs_grounding = dict()  # class name to class unique identifier
-        unique_name_to_ob_id = dict()
-        for att, e_type in enumerate(correct_types):
-            if self.curr_state[att] != next_state[att]:
-                effects.append(Effect.create(e_type, self.curr_state[att], next_state[att]))
+        tree, observation, unique_name_to_ob_id = self.get_observation_and_tree(next_state, correct_types)
 
-                #  Whoops, this doesn't take into account the taxi has two variables
-                class_id = self.state_index_class_map[att]  # This one maps the att to the type of object
-                class_instance_id = self.state_index_instance_map[att]  # This one maps the att to the specific object
-                class_att_idx = self.state_index_class_index_map[att]  # If an object has many atts, this is which one
-
-                # Convert the class and att idx to a string. (For viewing only, this probably makes the code slower)
-                # identifier = f"{ob_id_name_map[class_instance_id]}.{self.ATT_NAMES[class_id][class_att_idx]}"
-                # identifier = f"{self.OB_NAMES[class_id]}{ob_id_name_map[class_instance_id]}.{self.ATT_NAMES[class_id][class_att_idx]}"
-                # obs_grounding[self.OB_NAMES[class_id]] = ob_id_name_map[class_instance_id]
-                unique_name_to_ob_id[ob_id_name_map[class_instance_id]] = class_instance_id
-
-                # We want to use deictic references to refer to objects. First we use the unique identifier to get the
-                # corresponding node in the tree
-                unique_name = ob_id_name_map[class_instance_id]
-                node = tree.node_lookup[unique_name]
-                # For now, assume there is only one path towards every object. i.e, no loops
-                # (except for walls, but those are static so it doesn't matter, their properties will never change)
-                # Make an exception for taxi, the taxi is already at the root of the tree. So there is nothing to chain
-                # We remove the numbers ([:-1]) from here, because those are not the defining feature, the defining feature
-                # is the relationship between the objects
-                att_name = self.ATT_NAMES[class_id][class_att_idx]
-                if len(node.to_edges) > 0:
-                    to_edge = node.to_edges[0]
-                    from_name = to_edge.from_node.object_name
-                    to_name = to_edge.to_node.object_name
-                    identifier = DeicticReference(from_name, to_edge.type, to_name, att_name)
-                else:
-                    from_name = unique_name[:-1]
-                    identifier = DeicticReference(from_name, None, "", att_name)
-
-                atts.append(identifier)
-
-        if len(effects) == 0:
-            observation = Outcome([], [], no_effect=True)
-        else:
-            observation = Outcome(atts, effects)
+        # Update current state, only after using it to determine the diff between the two
+        self.curr_state = next_state
 
         # Update current state
         self.curr_state = next_state
