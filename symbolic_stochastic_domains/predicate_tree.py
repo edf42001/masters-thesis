@@ -24,7 +24,7 @@ class PredicateTree:
         # Check for duplicates
         assert name not in self.node_lookup, f"already have node {name}"
 
-        new_node = Node(name, 0)
+        new_node = Node(name[:-1], int(name[-1]))
         self.nodes.append(new_node)
         self.node_lookup[name] = new_node
 
@@ -52,7 +52,8 @@ class PredicateTree:
             from_node.edges.append(edge)
 
         # Now that the object is being referenced, we can add how to the list of references objects
-        self.referenced_objects.add(f"{from_name[:-1]}-{str(type)[14:]}-{to_name[:-1]}")
+
+        self.referenced_objects.add(f"{from_node.object_name}-{type.name}-{to_node.object_name}")
 
     def add_property(self, node_name, type, value):
         self.node_lookup[node_name].properties[type] = value
@@ -62,17 +63,17 @@ class PredicateTree:
         ret = PredicateTree()
 
         for node in self.nodes:
-            ret.add_node(node.object_name)
+            ret.add_node(node.full_name())
 
             for k, v in node.properties.items():
-                ret.add_property(node.object_name, k, v)
+                ret.add_property(node.full_name(), k, v)
 
         for node in self.nodes:
             for edge in node.edges:
-                ret.add_edge(node.object_name, edge.to_node.object_name, edge.type)
+                ret.add_edge(node.full_name(), edge.to_node.full_name(), edge.type)
 
             for edge in node.negative_edges:
-                ret.add_edge(node.object_name, edge.to_node.object_name, edge.type, negative=True)
+                ret.add_edge(node.full_name(), edge.to_node.full_name(), edge.type, negative=True)
 
         return ret
 
@@ -84,17 +85,17 @@ class PredicateTree:
         ret = PredicateTree()
 
         for node in self.nodes:
-            ret.add_node(replace(node.object_name, mapping))
+            ret.add_node(replace(node.full_name(), mapping))
 
             for k, v in node.properties.items():
-                ret.add_property(replace(node.object_name, mapping), k, v)
+                ret.add_property(replace(node.full_name(), mapping), k, v)
 
         for node in self.nodes:
             for edge in node.edges:
-                ret.add_edge(replace(node.object_name, mapping), replace(edge.to_node.object_name, mapping), edge.type)
+                ret.add_edge(replace(node.full_name(), mapping), replace(edge.to_node.full_name(), mapping), edge.type)
 
             for edge in node.negative_edges:
-                ret.add_edge(replace(node.object_name, mapping), replace(edge.to_node.object_name, mapping), edge.type, negative=True)
+                ret.add_edge(replace(node.full_name(), mapping), replace(edge.to_node.full_name(), mapping), edge.type, negative=True)
 
         return ret
 
@@ -172,12 +173,12 @@ class PredicateTree:
     def print_tree(self):
         for node in self.nodes:
             ret = ""
-            ret += node.object_name + ": "
+            ret += node.full_name() + ": "
 
             for edge in node.edges:
                 ret += f"{edge} "
             for edge in node.negative_edges:
-                ret += f"{edge} {edge.to_node.object_name}"
+                ret += f"{edge} {edge.to_node.full_name()}"
 
             print(ret)
 
@@ -219,13 +220,16 @@ class Node:
         for negative_edge in node.negative_edges:
             # If there are any matches, that is failure, return false
             for edge in self.edges:
-                if negative_edge.type == edge.type and negative_edge.to_node.object_name[:-1] == edge.to_node.object_name[:-1]:  # Remove the id from the node, we only care about class type
+                if negative_edge.type == edge.type and negative_edge.to_node.object_name == edge.to_node.object_name:
                     return False
 
         return True
 
     def has_edge_with(self, type, name: str):
-        """Checks if there is a positive or negative edge of the specified type and to object"""
+        """
+        Checks if there is a positive or negative edge of the specified type and to object.
+        name is like "taxi", with no identifier number.
+        """
         for edge in self.edges:
             if edge.type == type and edge.to_node.object_name == name:
                 return True
@@ -248,7 +252,7 @@ class Node:
                 # The node at the end's graph must also be contained.
                 if (
                     edge.type == edge2.type and
-                    edge.to_node.object_name[:-1] == edge2.to_node.object_name[:-1] and  # Remove the id from the node, we only care about class type here
+                    edge.to_node.object_name == edge2.to_node.object_name and  # We care about class type here, not id
                     edge2.to_node.contains(edge.to_node)
                 ):
                     found = True  # TODO: Could put a break here?
@@ -272,20 +276,23 @@ class Node:
         # Otherwise, success if we get down here
         return True
 
+    def full_name(self):
+        return self.object_name + str(self.object_id)
+
     def str_helper(self):
         ret = ""
 
         for edge in self.edges:
-            ret += f"{self.object_name}-{edge}"
+            ret += f"{self.full_name()}-{edge}"
             ret += "," if len(edge.to_node.edges) == 0 else ""  # Indicate the ends of chains of objects
             # Add in negative edges here. There is no recursion, because they represent not interacting with an object
             if len(self.negative_edges) > 0:
                 # Extra dot on end for same reason, otherwise it gets chopped
-                ret += ", ".join(f"~{self.object_name}-{edge}" for edge in self.negative_edges) + ","
+                ret += ", ".join(f"~{self.full_name()}-{edge}" for edge in self.negative_edges) + ","
 
             # Add properties in here
             if len(self.properties) > 0:
-                ret += ", ".join(f"{str(key)[14:]}-{value}" for key, value in self.properties) + ", "
+                ret += ", ".join(f"{key.name}-{value}" for key, value in self.properties) + ", "
 
             ret += " " + edge.to_node.str_helper()
 
@@ -293,10 +300,10 @@ class Node:
         # work if there are no edges, so include them here in that case
         if len(self.negative_edges) > 0 and len(self.edges) == 0:
             # Have to add two dots at the end because we chop two off because of trailing commas. May need to rethink
-            ret += ", ".join([f"~{self.object_name}-{edge}" for edge in self.negative_edges]) + ".."
+            ret += ", ".join([f"~{self.full_name()}-{edge}" for edge in self.negative_edges]) + ".."
 
         if len(self.properties) > 0 and len(self.edges) == 0:
-            ret += ", ".join(f"{self.object_name}-{str(key)[14:]}-{value}" for key, value in self.properties.items()) + ", "
+            ret += ", ".join(f"{self.full_name()}-{key.name}-{value}" for key, value in self.properties.items()) + ", "
 
         return ret
 
@@ -315,7 +322,7 @@ class Edge:
         self.from_node = None  # Where this edge came from. Used for traveling backwards up the chain
 
     def __str__(self):
-        return f"{str(self.type)[14:]}-{self.to_node.object_name}"  # Remove the PredicateType. prefix from the enum
+        return f"{self.type.name}-{self.to_node.full_name()}"  # Remove the PredicateType. prefix from the enum
 
     def __repr__(self):
         return self.__str__()

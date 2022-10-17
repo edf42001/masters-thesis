@@ -69,14 +69,14 @@ class SymbolicPolicy(Policy):
                 if self.path_to_experience is None:
                     literals, _ = self.model.env.get_literals(curr_state)  # TODO: we already get this in compute possible transitions, is a waste
                     for edge in literals.base_object.edges:
-                        to_object = edge.to_node.object_name[:-1]
+                        to_object = edge.to_node.object_name
 
                         # A hacky hack to include properties in experience so the agent can try going throw a lock that opens
                         edge_type = str(edge.type)[14:] + ("_OPEN_" + str(edge.to_node.properties[PredicateType.OPEN]) if len(edge.to_node.properties) > 0 else "")
 
                         # Check if we haven't tried it
                         if to_object not in self.model.experience or edge_type not in self.model.experience[to_object] or action not in self.model.experience[to_object][edge_type]:
-                            print(f"Found an experience: {str(edge.type)[14:]}-{to_object}, {action}")
+                            print(f"Found an experience: {edge.type.name}-{to_object}, {action}")
                             # Path to the current state, plus add the new action on
                             path = self.get_path(curr_state, parents)
                             path.insert(0, action)

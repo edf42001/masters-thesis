@@ -433,7 +433,7 @@ class Prison(Environment):
                 if len(node.to_edges) > 0:
                     to_edge = node.to_edges[0]
                     from_object_name = to_edge.from_node.object_name
-                    identifier = f"{from_object_name[:-1]}-{str(to_edge)[:-1]}.{self.ATT_NAMES[class_id][class_att_idx]}"
+                    identifier = f"{from_object_name}-{str(to_edge)[:-1]}.{self.ATT_NAMES[class_id][class_att_idx]}"
                 else:
                     identifier = f"{unique_name[:-1]}.{self.ATT_NAMES[class_id][class_att_idx]}"
 

@@ -114,7 +114,7 @@ def determine_bindings_for_same_outcome(condition: PredicateTree, state: Predica
                     if value != other_value:
                         return None
 
-                assignment.add_positive(edge2.to_node.object_name[:-1], edge.to_node.object_name[:-1])
+                assignment.add_positive(edge2.to_node.object_name, edge.to_node.object_name)
                 found = True
                 break
 
@@ -128,7 +128,7 @@ def determine_bindings_for_same_outcome(condition: PredicateTree, state: Predica
     for edge in condition.base_object.negative_edges:
         for edge2 in state.base_object.edges:
             if edge.type == edge2.type:
-                assignment.add_negative(edge2.to_node.object_name[:-1], edge.to_node.object_name[:-1])
+                assignment.add_negative(edge2.to_node.object_name, edge.to_node.object_name)
                 break
 
     # For later down the line, it'll be easier if the list is completely empty, instead of having and empty object
@@ -184,7 +184,7 @@ def determine_bindings_for_no_outcome(condition: PredicateTree, state: Predicate
         for edge2 in state.base_object.edges:  # (Could probably combine this with the above, then throw out if bad?)
             if edge.type == edge2.type:
                 assignment = ObjectAssignment()
-                assignment.add_negative(edge2.to_node.object_name[:-1], edge.to_node.object_name[:-1])
+                assignment.add_negative(edge2.to_node.object_name, edge.to_node.object_name)
                 assignments.append(assignment)
                 break
 
@@ -192,7 +192,7 @@ def determine_bindings_for_no_outcome(condition: PredicateTree, state: Predicate
         for edge2 in state.base_object.edges:
             if edge.type == edge2.type:
                 assignment = ObjectAssignment()
-                assignment.add_positive(edge2.to_node.object_name[:-1], edge.to_node.object_name[:-1])
+                assignment.add_positive(edge2.to_node.object_name, edge.to_node.object_name)
                 assignments.append(assignment)
                 break
 

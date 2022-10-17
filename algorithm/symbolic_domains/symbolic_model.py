@@ -59,13 +59,13 @@ class SymbolicModel(TransitionModel):
 
         # To start with, only look at objects connected to the base object, taxi
         for edge in example.state.base_object.edges:
-            to_object = edge.to_node.object_name[:-1]
+            to_object = edge.to_node.object_name
 
             if to_object not in self.experience:
                 self.experience[to_object] = dict()
 
             # This is a hacky hack to include the properties of the object in this dictionary
-            edge_type = str(edge.type)[14:] + ("_OPEN_" + str(edge.to_node.properties[PredicateType.OPEN]) if len(edge.to_node.properties) > 0 else "")
+            edge_type = edge.type.name + ("_OPEN_" + str(edge.to_node.properties[PredicateType.OPEN]) if len(edge.to_node.properties) > 0 else "")
             if edge_type not in self.experience[to_object]:
                 self.experience[to_object][edge_type] = dict()
 
@@ -124,7 +124,7 @@ class SymbolicModel(TransitionModel):
                     test_name = class_name + str(test_id)
                     node = literals.node_lookup[test_name]
                     edge = node.to_edges[0]
-                    test_identifier_str = f"{edge.from_node.object_name[:-1]}-{str(edge)[:-1]}"  # Will be`taxi-IN-key`, maybe `taxi-ON-key`
+                    test_identifier_str = f"{edge.from_node.object_name}-{str(edge)[:-1]}"  # Will be`taxi-IN-key`, maybe `taxi-ON-key`
                     if test_identifier_str == identifier_str:  # Check for a match
                         break
                     test_id += 1  # Try the next object of this type

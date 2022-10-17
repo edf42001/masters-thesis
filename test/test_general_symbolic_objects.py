@@ -15,8 +15,6 @@ from symbolic_stochastic_domains.predicates_and_objects import In, Open, TouchDo
 from symbolic_stochastic_domains.symbolic_utils import applicable, context_matches
 from symbolic_stochastic_domains.predicate_tree import PredicateTree, Edge, Node
 
-from effects.effect import JointNoEffect
-
 # import cProfile
 # import pstats
 
@@ -30,12 +28,12 @@ def update_experience_dict(experience: dict, example: Example):
     # To start with, only look at objects connected to the base object, taxi
     # TODO: tuples instead of nested dicts?
     for edge in example.state.base_object.edges:
-        to_object = edge.to_node.object_name[:-1]
+        to_object = edge.to_node.object_name
 
         if to_object not in experience:
             experience[to_object] = dict()
 
-        edge_type = str(edge.type)[14:] + ("_OPEN_" + str(edge.to_node.properties[PredicateType.OPEN]) if len(edge.to_node.properties) > 0 else "")
+        edge_type = edge.type.name + ("_OPEN_" + str(edge.to_node.properties[PredicateType.OPEN]) if len(edge.to_node.properties) > 0 else "")
         if edge_type not in experience[to_object]:
             experience[to_object][edge_type] = dict()
 
@@ -64,12 +62,12 @@ if __name__ == "__main__":
         action = random.randint(0, env.get_num_actions()-1)
         curr_state = env.get_state()
         # literals = env.get_literals(curr_state)
-        literals, observation, name_id_map = env.step(action)  # , predicate_to_ob_map, obs_grounding
+        literals, outcome, name_id_map = env.step(action)  # , predicate_to_ob_map, obs_grounding
 
         # if i > 3110:
         print(literals)
         print(name_id_map)
-        print(observation)
+        print(outcome)
         print()
 
             # graph = graphviz.Digraph(format='png')
@@ -80,7 +78,6 @@ if __name__ == "__main__":
             #
         # env.draw_world(curr_state, delay=1)
 
-        outcome = Outcome(observation)
         example = Example(action, literals, outcome)
         examples.add_example(example)
 

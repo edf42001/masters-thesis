@@ -105,9 +105,9 @@ class ObjectTransferModel(TransitionModel):
                     # the desired object is in this state
                     base_object_and_relation = splits[0] + "-" + splits[1]
                     for edge in literals.base_object.edges:
-                        edge_string = "taxi-" + str(edge.type)[14:]  # Remove number
+                        edge_string = "taxi-" + edge.type.name  # Remove number
                         if edge_string == base_object_and_relation:
-                            unique_name = edge.to_node.object_name
+                            unique_name = edge.to_node.full_name()
 
                     # This is only used so the env can say which attribute is which index
                     # `taxi-IN-key`, will extract `key`
