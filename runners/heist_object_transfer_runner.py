@@ -3,8 +3,9 @@ import numpy as np
 import logging
 import sys
 import pickle
+from datetime import datetime
 
-from common.plotting.plot import Plot
+from common.data_recorder import DataRecorder
 from runners.runner import Runner
 from algorithm.symbolic_domains.object_transfer_model import ObjectTransferModel
 from algorithm.symbolic_domains.object_transfer_learner import ObjectTransferLearner
@@ -13,11 +14,11 @@ from policy.object_transfer_policy import ObjectTransferPolicy
 
 
 class HeistObjectTransferRunner(Runner):
-    def __init__(self, exp_num):
+    def __init__(self, exp_num, start_time):
         super().__init__()
 
-        self.name = 'taxi'
-        self.pkl_name = 'taxi'
+        self.name = 'heist'
+        self.exp_name = 'object_transfer'
         self.exp_num = exp_num
 
         # Experiment parameters
@@ -25,10 +26,6 @@ class HeistObjectTransferRunner(Runner):
         self.num_episodes = 1
         self.stochastic = False
         self.visualize = True
-
-        # For testing (I think I have to set both or the keys spawn in different areas)
-        random.seed(6)
-        np.random.seed(6)
 
         self.env = SymbolicHeist(stochastic=self.stochastic, shuffle_object_names=True)
 
@@ -41,11 +38,19 @@ class HeistObjectTransferRunner(Runner):
         self.model = ObjectTransferModel(self.env, symbolic_heist_rules)
         self.planner = ObjectTransferPolicy(self.env.get_num_actions(), self.model)
         self.learner = ObjectTransferLearner(self.env, self.model, self.planner, visualize=self.visualize, delay=10)
-        self.plot = Plot(self, self.eval_episodes, self.eval_timer)
+        self.data_recorder = DataRecorder(self, start_time)
 
 
 if __name__ == '__main__':
     logging.basicConfig(level=logging.DEBUG, stream=sys.stdout)
 
-    runner = HeistObjectTransferRunner(0)
-    runner.run_experiment()
+    random.seed(1)
+    np.random.seed(1)
+
+    num_experiments = 50
+
+    experiments_start_time = datetime.now()  # Used for putting all experiments in common folder
+
+    for i in range(num_experiments):
+        runner = HeistObjectTransferRunner(i, start_time=experiments_start_time)
+        runner.run_experiment(save_training=True)

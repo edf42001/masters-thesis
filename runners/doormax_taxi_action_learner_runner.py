@@ -3,7 +3,7 @@ import logging
 import sys
 import pickle
 
-from common.plotting.plot import Plot
+from common.data_recorder import DataRecorder
 from runners.runner import Runner
 from algorithm.action_learning.action_learning_model import ActionLearningModel
 from algorithm.action_learning.action_learner import ActionLearner

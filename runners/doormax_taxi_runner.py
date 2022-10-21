@@ -2,7 +2,7 @@ import random
 import logging
 import sys
 
-from common.plotting.plot import Plot
+from common.data_recorder import DataRecorder
 from runners.runner import Runner
 from policy.value_iteration import ValueIteration
 from algorithm.doormax.doormax_ruleset import DoormaxRuleset

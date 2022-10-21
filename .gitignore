@@ -11,6 +11,7 @@
 data
 np_save_data
 media
+training
 
 # Log files
 *.log

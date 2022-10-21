@@ -6,7 +6,7 @@ from typing import Tuple
 class Runner:
     def __init__(self):
         self.name = None
-        self.pkl_name = None
+        self.exp_name = None
         self.exp_num = None
 
         self.max_steps = None
@@ -19,14 +19,16 @@ class Runner:
         self.policy = None
         self.sampler = None
         self.learner = None
-        self.plot = None
+        self.data_recorder = None
 
-    def run_experiment(self, save_policy: bool = False, show: bool = False, save_training: bool = False):
+    def run_experiment(self, save_policy: bool = False, save_training: bool = False):
         total_steps = 0
         start_time = time.time()
         for _ in range(self.num_episodes):
+            episode_start_time = time.time()
             steps, reward = self.run_episode(True)
-            # self.plot.update(steps, reward)
+            episode_end_time = time.time()
+            self.data_recorder.update(steps, reward, episode_end_time - episode_start_time)
             total_steps += steps
         end_time = time.time()
 
@@ -37,14 +39,8 @@ class Runner:
         print(f'Total steps:        {total_steps}')
         print('Steps per second: {:.2f}'.format(total_steps / (end_time - start_time)))
 
-        rewards, steps = self.plot.finalize(show=show)
-        with open(f'{self.name}_{self.pkl_name}_{self.exp_num}.pkl', 'wb') as f:
-            pickle.dump((rewards, steps), f)
-
         if save_training:
-            rewards, steps = self.plot.get_training()
-            with open(f'training_{self.name}_{self.pkl_name}_{self.exp_num}.pkl', 'wb') as f:
-                pickle.dump((rewards, steps), f)
+            self.data_recorder.save_training()
 
     def run_episode(self, is_learning: bool, max_steps: int = None) -> Tuple[int, float]:
         """Runs an episode and returns steps taken and reward"""

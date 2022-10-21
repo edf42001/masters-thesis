@@ -2,7 +2,7 @@ import random
 import logging
 import sys
 
-from common.plotting.plot import Plot
+from common.data_recorder import DataRecorder
 from runners.runner import Runner
 from algorithm.symbolic_domains.symbolic_model import SymbolicModel
 from algorithm.symbolic_domains.symbolic_learner import SymbolicLearner
