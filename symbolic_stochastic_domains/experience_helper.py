@@ -11,14 +11,12 @@ import itertools
 
 from symbolic_stochastic_domains.predicate_tree import PredicateTree
 from symbolic_stochastic_domains.symbolic_classes import Example
-from symbolic_stochastic_domains.predicates_and_objects import PredicateType
 
 
 class ExperienceHelper:
     def __init__(self):
-        # Experiences containing only 1/2 literals
-        self.experiences_1 = {}
-        self.experiences_2 = {}
+        # Each dictionary keeps track of experiences using n combinations of literals
+        self.experiences = [{}, {}]
 
     @staticmethod
     def extract_experiences(tree: PredicateTree, n: int) -> List[str]:
@@ -51,18 +49,19 @@ class ExperienceHelper:
 
         return experiences
 
-    def update_experience_dict(self, example: Example):
+    def update_experience_dict(self, example: Example, n: int):
         # Experience dict is a list of how many times we have tried for every object, every way to interacti with that
         # object, for every action, how many times we've tried each
 
         action = example.action
         literals = example.state
+        experiences = self.experiences[n-1]
 
-        for experience in ExperienceHelper.extract_experiences(literals, n=1):
-            if experience not in self.experiences_1:
-                self.experiences_1[experience] = dict()
+        for experience in ExperienceHelper.extract_experiences(literals, n=n):
+            if experience not in experiences:
+                experiences[experience] = dict()
 
-            if action not in self.experiences_1[experience]:
-                self.experiences_1[experience][action] = 1
+            if action not in experiences[experience]:
+                experiences[experience][action] = 1
             else:
-                self.experiences_1[experience][action] += 1
+                experiences[experience][action] += 1

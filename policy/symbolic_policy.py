@@ -17,7 +17,9 @@ class SymbolicPolicy(Policy):
         self.path = []
 
         # Used to transfer information from the closest path to a new experience from the breadth first function
+        # Keep track of level 1 and 2 experiences
         self.path_to_experience = []
+        self.path_to_experience_2 = []
 
         # Store previous ruleset so we can research whenever it changes
         self.last_ruleset = None
@@ -53,10 +55,10 @@ class SymbolicPolicy(Policy):
 
             # If it is still 0, mark that we weren't able to find it, and we should just keep taking
             # random actions until the ruleset changes. This may break down in cases of stochasticity.
-            if len(self.path_to_experience) == 0:
-                self.unable_to_find = True
+            # Commented out because we need to try level 2 experiences first
+            # if len(self.path_to_experience) == 0:
+            #     self.unable_to_find = True
 
-        # Secondary check: Were we able to find a path to a new experience?
         if len(self.path_to_experience) > 0:
             action = self.path_to_experience[-1]
             print(f"Found path to experience taking action {action}, {self.path_to_experience}")
@@ -64,6 +66,22 @@ class SymbolicPolicy(Policy):
             return action
 
         print("Couldn't find path to new experience")
+
+        if len(self.path_to_experience_2) == 0 and not self.unable_to_find:
+            self.path = self.breadth_first_search_to_goal(curr_state)  # TODO: Need to research for new experience?
+
+            # If it is still 0, mark that we weren't able to find it, and we should just keep taking
+            # random actions until the ruleset changes. This may break down in cases of stochasticity.
+            if len(self.path_to_experience_2) == 0:
+                self.unable_to_find = True
+
+        if len(self.path_to_experience_2) > 0:
+            action = self.path_to_experience_2[-1]
+            print(f"Found path to experience 2 taking action {action}, {self.path_to_experience_2}")
+            del self.path_to_experience_2[-1]
+            return action
+
+        print("Couldn't find path to new experience 2")
 
         # If we couldn't find a path, choose a random action
         return random.randint(0, self.num_actions-1)
@@ -94,15 +112,29 @@ class SymbolicPolicy(Policy):
 
             # Generate all next states. Check if each is a new experience. Pick a new experience at random
             new_experiences = [False] * self.num_actions
+            new_experiences_2 = [False] * self.num_actions
             for action in range(self.num_actions):
                 # Check if we haven't tried this action yet with the current combination of objects
                 # We do this at the same time as searching for a goal to save processing power
 
                 if len(self.path_to_experience) == 0:
+                    experiences = self.model.experience_helper.experiences[0]  # Level 1 experience
                     for experience in self.model.experience_helper.extract_experiences(literals, n=1):
-                        if experience not in self.model.experience_helper.experiences_1 or action not in self.model.experience_helper.experiences_1[experience]:
+                        if experience not in experiences or action not in experiences[experience]:
                             print(f"Found an experience: {experience}, {action}")
                             new_experiences[action] = True
+
+                            # This action is a new experience, we don't need to process the others.
+                            # Eventually, if one action gets more new experiences than others, take that first.
+                            break
+
+                # Also record level 2 experiences. These will be tried if no state has a level 1 experience
+                if len(self.path_to_experience_2) == 0 and not any(new_experiences):
+                    experiences = self.model.experience_helper.experiences[1]  # Level 2 experience
+                    for experience in self.model.experience_helper.extract_experiences(literals, n=2):
+                        if experience not in experiences or action not in experiences[experience]:
+                            print(f"Found an experience 2: {experience}, {action}")
+                            new_experiences_2[action] = True
 
                             # This action is a new experience, we don't need to process the others.
                             # Eventually, if one action gets more new experiences than others, take that first.
@@ -140,6 +172,12 @@ class SymbolicPolicy(Policy):
                 path = self.get_path(curr_state, parents)
                 path.insert(0, random.choice(new_experience_actions))
                 self.path_to_experience = path
+
+            if any(new_experiences_2):
+                new_experience_actions = [i for i, v in enumerate(new_experiences_2) if v]
+                path = self.get_path(curr_state, parents)
+                path.insert(0, random.choice(new_experience_actions))
+                self.path_to_experience_2 = path
 
         # If we get down here, there is no path, so return empty
         return []

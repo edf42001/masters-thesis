@@ -39,7 +39,9 @@ class SymbolicModel(TransitionModel):
         example = Example(action, literals, outcome)
         self.examples.add_example(example)
 
-        self.experience_helper.update_experience_dict(example)
+        # Keep track of combinations of 1 and 2 literals. This is a arbitrary input to the program.
+        self.experience_helper.update_experience_dict(example, 1)
+        self.experience_helper.update_experience_dict(example, 2)
 
         # Currently, update the model on every step. I wonder how it would work to update it based
         # on the existing ruleset

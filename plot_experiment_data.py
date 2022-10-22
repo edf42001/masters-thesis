@@ -24,8 +24,9 @@ def load_data(experiment_name: str):
     for filename in glob.glob(f"{path}/*"):
         with open(filename, "rt") as f:
             try:
-                f.readline()  # Ignore reward on first line
-                length = float(f.readline()[:-1])  # Read episode length, remove \n
+                reward = float(f.readline()[:-1])  # Reward on first line, remove \n
+                length = float(f.readline()[:-1])  # Read episode length
+                elapsed_time = float(f.readline()[:-1])  # Read time
                 episode_lengths.append(length)
             except Exception as e:
                 print(f"Error when parsing {filename}, {e}")
@@ -40,11 +41,11 @@ if __name__ == "__main__":
     print(f"Read {len(episode_lengths)} experiments successfully")
 
     n = max(100, int((1 + (max(episode_lengths) // 100)) * 100))
-    plt.hist(episode_lengths, range=[0, n], bins=n)
+    plt.hist(episode_lengths, range=[0, n], bins=n, density=True)
 
     for name in experiment_names_to_compare:
         episode_lengths = load_data(name)
-        plt.hist(episode_lengths, range=[0, n], bins=n)
+        plt.hist(episode_lengths, range=[0, n], bins=n, density=True)
 
     plt.xlabel("Single Episode Duration")
     plt.ylabel("Frequency")
