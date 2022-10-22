@@ -74,13 +74,15 @@ class SymbolicModel(TransitionModel):
             else:
                 self.experience[to_object][edge_type][example.action] += 1
 
-    def compute_possible_transitions(self, state: int, action: int) -> List[Transition]:
+    def compute_possible_transitions(self, state: int, action: int, literals=None, instance_name_map=None) -> List[Transition]:
         """
         Returns the effects (transitions) of taking the action given the condition
         If unknown, return None
         """
 
-        literals, instance_name_map = self.env.get_literals(state)
+        # This is computational expensive, so if we can pass them as params to the function, let's do so
+        if literals is None or instance_name_map is None:
+            literals, instance_name_map = self.env.get_literals(state)
 
         transitions = []
 
