@@ -99,15 +99,9 @@ class SymbolicPolicy(Policy):
                 # We do this at the same time as searching for a goal to save processing power
 
                 if len(self.path_to_experience) == 0:
-                    for edge in literals.base_object.edges:
-                        to_object = edge.to_node.object_name
-
-                        # A hacky hack to include properties in experience so the agent can try going throw a lock that opens
-                        edge_type = str(edge.type)[14:] + ("_OPEN_" + str(edge.to_node.properties[PredicateType.OPEN]) if len(edge.to_node.properties) > 0 else "")
-
-                        # Check if we haven't tried it
-                        if to_object not in self.model.experience or edge_type not in self.model.experience[to_object] or action not in self.model.experience[to_object][edge_type]:
-                            print(f"Found an experience: {edge.type.name}-{to_object}, {action}")
+                    for experience in self.model.experience_helper.extract_experiences(literals, n=1):
+                        if experience not in self.model.experience_helper.experiences_1 or action not in self.model.experience_helper.experiences_1[experience]:
+                            print(f"Found an experience: {experience}, {action}")
                             new_experiences[action] = True
 
                             # This action is a new experience, we don't need to process the others.

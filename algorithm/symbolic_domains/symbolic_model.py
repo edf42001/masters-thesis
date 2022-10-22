@@ -9,7 +9,7 @@ from common.structures import Transition
 from symbolic_stochastic_domains.symbolic_classes import Example, Outcome, ExampleSet, RuleSet, Rule, OutcomeSet
 from symbolic_stochastic_domains.learn_ruleset_outcomes import RulesetLearner
 from symbolic_stochastic_domains.symbolic_utils import context_matches
-from symbolic_stochastic_domains.predicates_and_objects import PredicateType
+from symbolic_stochastic_domains.experience_helper import ExperienceHelper
 
 
 class SymbolicModel(TransitionModel):
@@ -24,8 +24,8 @@ class SymbolicModel(TransitionModel):
         # Store memory of interactions with environment
         self.examples = ExampleSet()
 
-        # An experience dict storing specifically object, interaction, action, counts
-        self.experience = dict()
+        # An experience helper keeps track of object, predicate, action, counts
+        self.experience_helper = ExperienceHelper()
 
         # Current beleived set of rules that describe environment
         # Need to init with a default rule or we get out of bounds errors with the list
@@ -39,7 +39,7 @@ class SymbolicModel(TransitionModel):
         example = Example(action, literals, outcome)
         self.examples.add_example(example)
 
-        self.update_experience_dict(example)
+        self.experience_helper.update_experience_dict(example)
 
         # Currently, update the model on every step. I wonder how it would work to update it based
         # on the existing ruleset
@@ -52,27 +52,6 @@ class SymbolicModel(TransitionModel):
         print("New model:")
         self.print_model()
         print()
-
-    def update_experience_dict(self, example: Example):
-        # Experience dict is a list of how many times we have tried for every object, every way to interacti with that
-        # object, for every action, how many times we've tried each
-
-        # To start with, only look at objects connected to the base object, taxi
-        for edge in example.state.base_object.edges:
-            to_object = edge.to_node.object_name
-
-            if to_object not in self.experience:
-                self.experience[to_object] = dict()
-
-            # This is a hacky hack to include the properties of the object in this dictionary
-            edge_type = edge.type.name + ("_OPEN_" + str(edge.to_node.properties[PredicateType.OPEN]) if len(edge.to_node.properties) > 0 else "")
-            if edge_type not in self.experience[to_object]:
-                self.experience[to_object][edge_type] = dict()
-
-            if example.action not in self.experience[to_object][edge_type]:
-                self.experience[to_object][edge_type][example.action] = 1
-            else:
-                self.experience[to_object][edge_type][example.action] += 1
 
     def compute_possible_transitions(self, state: int, action: int, literals=None, instance_name_map=None) -> List[Transition]:
         """
