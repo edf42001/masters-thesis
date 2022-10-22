@@ -13,7 +13,9 @@ class ObjectTransferPolicy(Policy):
         self.model = model
 
         # Used to transfer information from the closest path to a new experience from the breadth first function
-        self.path_to_experience = None
+        self.path = []
+
+        self.last_object_map = {}
 
     def choose_action(self, curr_state: int, is_learning: bool = True) -> int:
         # For now, return random actions until we can figure out which object is which
@@ -22,23 +24,40 @@ class ObjectTransferPolicy(Policy):
         # Step 1: Do breadth first search to a state where we have positive information gain
         # But if we know what each object is, then do normal breadth first search to find reward states.
 
-        # # Ok, here's the current plan. Use breadth first search to try and make it to the goal state
-        # # (state with the max reward). If we can't make it, take a random action.
-        #
-        # # Search for a way to the goal. If one exists, execute the first action (the path is reversed)
+        # Ok, here's the current plan. Use breadth first search to try and make it to the goal state
+        # (state with the max reward). If we can't make it, take a random action.
+
+        # If an object map change occured, we need to replan
+        replan = False
+        if str(self.last_object_map) != str(self.model.object_map):
+            print("Model changed, replanning")
+            self.last_object_map = self.model.object_map
+            self.path = self.breadth_first_search_to_goal(curr_state)
+            replan = True
+
         if not self.model.solved:
             print("Not solved, looking for information")
-            path = self.breadth_first_search_to_information_gain(curr_state)
-            if len(path) > 0:
-                print(f"Found path to info gain taking action {path[-1]}, {path}")
-                return path[-1]
+            if replan or len(self.path) == 0:
+                self.path = self.breadth_first_search_to_information_gain(curr_state)
+
+            if len(self.path) > 0:
+                action = self.path[-1]
+                print(f"Found path to info gain taking action {action}, {self.path}")
+                del self.path[-1]
+                return action
+
             print("Couldn't find path to info gain")
         else:
             print("Solved, looking for goal")
-            path = self.breadth_first_search_to_goal(curr_state)
-            if len(path) > 0:
-                print(f"Found path to goal taking action {path[-1]}, {path}")
-                return path[-1]
+            if replan or len(self.path) == 0:
+                self.path = self.breadth_first_search_to_goal(curr_state)
+
+            if len(self.path) > 0:
+                action = self.path[-1]
+                print(f"Found path to goal taking action {action}, {self.path}")
+                del self.path[-1]
+                return action
+
             print("Couldn't find path to goal")
 
         # If we couldn't find a path, choose a random action
@@ -66,6 +85,7 @@ class ObjectTransferPolicy(Policy):
         while len(q) != 0:
             curr_state = q.popleft()
             visited.add(curr_state)
+            literals, instance_name_map = self.model.env.get_literals(curr_state)
 
             # print(f"Popped state {curr_state}: {self.model.env.get_factored_state(curr_state)}")
 
@@ -78,8 +98,10 @@ class ObjectTransferPolicy(Policy):
                     path.insert(0, action)
                     return path
 
-                # Compute the next state, or don't do anything if we don't know
-                transitions = self.model.compute_possible_transitions(curr_state, action)  # TODO: only need to compute literals once, not for each action
+                # Compute the next state, or don't do anything if we don't know. Pass literals for efficiency
+                transitions = self.model.compute_possible_transitions(
+                    curr_state, action, literals=literals, instance_name_map=instance_name_map
+                )
 
                 if len(transitions) == 0:
                     # We don't know what will happen, skip
@@ -127,12 +149,15 @@ class ObjectTransferPolicy(Policy):
         while len(q) != 0:
             curr_state = q.popleft()
             visited.add(curr_state)
+            literals, instance_name_map = self.model.env.get_literals(curr_state)
 
             # print(f"Popped state {curr_state}: {self.model.env.get_factored_state(curr_state)}")
             # Generate all next states
             for action in range(self.num_actions):
                 # Compute the next state, or don't do anything if we don't know
-                transitions = self.model.compute_possible_transitions(curr_state, action)  # TODO: only need to compute literals once, not for each action
+                transitions = self.model.compute_possible_transitions(
+                    curr_state, action, literals=literals, instance_name_map=instance_name_map
+                )
 
                 if len(transitions) == 0:
                     # We don't know, skip

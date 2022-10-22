@@ -313,7 +313,7 @@ def information_gain_of_state(env, state: int, object_map, prev_ruleset: RuleSet
     return sum([information_gain_of_action(env, state, a, object_map, prev_ruleset) for a in range(env.get_num_actions())])
 
 
-def determine_transition_given_action(env, state: int, action: int, object_map, prev_ruleset: RuleSet) -> Set[Outcome]:
+def determine_transition_given_action(env, state: int, action: int, object_map, prev_ruleset: RuleSet, literals=None) -> Set[Outcome]:
     """
     Given a current state and current object map belief,
     what are the possible next states for a specific actions?
@@ -325,7 +325,8 @@ def determine_transition_given_action(env, state: int, action: int, object_map, 
     # In fact, all this code is the exact same, because in order to know what info we learn we
     # have to figure out what the transition was base on the previous rule.
 
-    literals, _ = env.get_literals(state)
+    if literals is None:
+        literals, _ = env.get_literals(state)
 
     # Get the rules that apply to this situation
     applicable_rules = [rule for rule in prev_ruleset.rules if rule.action == action]
