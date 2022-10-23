@@ -1,11 +1,11 @@
-from typing import List, Dict
+from typing import List
+
 import numpy as np
 
+from symbolic_stochastic_domains.predicate_tree import PredicateTree
+from symbolic_stochastic_domains.predicates_and_objects import PredicateType
 from symbolic_stochastic_domains.symbolic_classes import ExampleSet, RuleSet, Rule, OutcomeSet, Outcome, Example
-from symbolic_stochastic_domains.symbolic_utils import context_matches, covers, applicable
-from symbolic_stochastic_domains.learn_outcomes import learn_outcomes
-from symbolic_stochastic_domains.predicate_tree import PredicateTree, Edge, Node
-from symbolic_stochastic_domains.predicates_and_objects import TouchLeft, TouchRight, TouchUp, TouchDown, Open, On, In, PredicateType
+from symbolic_stochastic_domains.symbolic_utils import context_matches, applicable
 
 # Mapping from level to possible contexts, so we don't have to regenerate them each time
 # What is the memory usage of this?
@@ -26,7 +26,6 @@ class RulesetLearner:
         # This is because we need a list of all objects the taxi can interact with
         object_names = self.env.get_object_names()
         object_names.remove("taxi")
-        # object_names.append("wall")  I included wall in the above function
 
         for p_type in p_types:
             for object_name in object_names:
@@ -59,22 +58,43 @@ class RulesetLearner:
                         new_contexts.append(copy3)
                         new_contexts.append(copy4)
 
-        # Manually handle the addition of variables for locks being open. In the future, this should be done automatically
-        len_contexts = len(new_contexts)  # Store length since we will be appending
-        # for i in range(len_contexts):
-        # Check if the context has a lock being mentioned
-        # for e, edge in enumerate(context.base_object.edges):
-        #     if edge.to_node.object_name[:-1] == "lock":
-        #         copy1 = context.copy()
-        #         copy2 = context.copy()
-        #
-        #         copy1.add_property(edge.to_node.object_name, PredicateType.OPEN, True)
-        #         copy2.add_property(edge.to_node.object_name, PredicateType.OPEN, False)
-        #
-        #         new_contexts.append(copy1)
-        #         new_contexts.append(copy2)
-
         return new_contexts
+
+    def initialize_deictic_rules(self, outcome: Outcome) -> List[PredicateTree]:
+        """
+        Because we know that any object mentioned in the outcome must have a rule in the tree,
+        we can initialize the rule as such to save processing.
+        """
+
+        tree = PredicateTree()
+        tree.add_node("taxi0")
+        for reference in outcome.value.keys():
+            if reference.edge_type is not None:  # Ones where only the taxi changed
+
+                # Make sure we get a unique name for the object
+                identifier = 0
+                while (reference.to_ob + str(identifier)) in tree.node_lookup:
+                    identifier += 1
+                tree.add_node(reference.to_ob + str(identifier))
+                tree.add_edge("taxi0", reference.to_ob + str(identifier), reference.edge_type)
+
+        contexts = [tree]
+
+        # Check for any locks to add properties to. We have to do this here, otherwise
+        # it will not ever check both property rules for locks
+        for edge in tree.base_object.edges:
+            object_name = edge.to_node.object_name
+            if object_name == "lock":
+                copy1 = tree.copy()
+                copy2 = tree.copy()
+
+                copy1.add_property(edge.to_node.full_name(), PredicateType.OPEN, True)
+                copy2.add_property(edge.to_node.full_name(), PredicateType.OPEN, False)
+
+                contexts.append(copy1)
+                contexts.append(copy2)
+
+        return contexts
 
     def find_rule_by_first_order_inductive_logic(self, examples: ExampleSet, relevant_examples: List[Example], irrelevant_examples: List[Example]):
         # See https://www.geeksforgeeks.org/first-order-inductive-learner-foil-algorithm/
@@ -87,11 +107,7 @@ class RulesetLearner:
         outcomes = OutcomeSet()
         outcomes.add_outcome(relevant_examples[0].outcome, 1.0)
 
-        # Find the list of objects referred to in the outcomes that we must have deictic references for
-        # In order for an object ot be in outcomes, MUST be in either action or conditions
-        # Due to how we now implement outcomes with the digit appended to them, we need to remove that
-        # The referenced object is the one at the end of the chain
-        objects_in_outcome = set([key.reference_str() for key in relevant_examples[0].outcome.value.keys()])
+
         # print("Relevent")
         # for example in relevant_examples:
         #     print(example)
@@ -100,25 +116,15 @@ class RulesetLearner:
         #     print(example)
         # print()
 
-        # Initial rule with empty context. Initialize how many negative examples it covers
-        tree = PredicateTree()
-        tree.add_node("taxi0")
-        contexts = [tree]
-        rule = Rule(action=action, context=contexts[0], outcomes=outcomes)
-        new_rule_negatives = [example for example in irrelevant_examples if context_matches(rule.context, example.state)]
+        # In order for an object ot be in outcomes, MUST be in either action or conditions
+        # Start with contexts that specifically mentions diectic references. Modify as needed
+        new_contexts = self.initialize_deictic_rules(outcomes.outcomes[0])
+        rule = Rule(action=action, context=new_contexts[0], outcomes=outcomes)
+        new_rule_negatives = irrelevant_examples
 
-        # Wait, could I replace rule.context with just context?
-
-        # TODO: Idea: start with a context that specifically mentions diectic references. Modify as needed
-        # For the first learning add the properties to existing contexts, otherwise add as needed
-
-        # Our goal is learn the best rule that covers the most of the positive examples, and none of the negative examples
-        lit_counter = 1  # How many lits have been addded, used for checking when deictic references should be used
-        # End when deictic references are met and the rule covers no negatives
-        while len(new_rule_negatives) > 0 or not \
-              all((obj == "taxi" or obj in rule.context.referenced_objects) for obj in objects_in_outcome):
-            # Generate all candidate literals to add to the new rule
-            new_contexts = self.create_new_contexts_from_context(rule.context)
+        # Goal is learn the best rule that covers the most of the positive examples, and none of the negative examples
+        # End when the rule covers no negatives
+        while len(new_rule_negatives) > 0:
 
             # Pick the best one based on the FOIL gain metric
             # L is the candidate literal to add to rule R. p0 = number of positive bindings of R
@@ -131,27 +137,16 @@ class RulesetLearner:
 
             scores = []
             for context in new_contexts:
-                # Verify we have all the correct deictic references in this context.
-                # We assume there is no way to get a deictic reference later? Taxi is referenced in the action
-                # TODO: Needs to be the `exact` object referenced in the outcome, i.e. if there is a lock being unlocked
-                # below us, on lock isn't the same lock. Whoops, this fails when there are two objects mentioned, because
-                # we can't reference both of them at once. Perhaps only activate this when the number of literals is
-                # equal to the number of references? I don't know if this is a hack or valid.
-                # Could say, the rule needs to reference at least one of them? That would also speed it up
-                have_correct_deictic_references = all(
-                    (obj == "taxi" or obj in context.referenced_objects) for obj in objects_in_outcome
-                )
-
-                if lit_counter >= len(objects_in_outcome) and not have_correct_deictic_references:
-                    # print(f"Did not have references: {objects_in_outcome}, {context.referenced_objects}")
-                    scores.append(-10)  # Is negative 10 small enough?
-                    continue
-
+                # Find p1 and n1
                 p1 = sum([examples.examples[ex] for ex in relevant_examples if context_matches(context, ex.state)])
                 n1 = sum([examples.examples[ex] for ex in irrelevant_examples if context_matches(context, ex.state)])
 
-                # t = number of positive bindings of R also covered by R + L. TODO: how to reduce duplicate calculations
-                t = sum([examples.examples[ex] for ex in relevant_examples if context_matches(context, ex.state) and context_matches(rule.context, ex.state)])
+                # t = number of positive bindings of R also covered by R + L.
+                # t = sum([examples.examples[ex] for ex in relevant_examples if (context_matches(context, ex.state) and context_matches(rule.context, ex.state))])
+                # I think this is always true, rule.context will match ex.state, that's why ex is in relevant examples
+                # But I'm not sure about this, the examples are only there because the outcome matches
+                # assert t == p1, f"{p1}, {n1}, {t}"  # A check to make sure
+                t = p1
 
                 if p1 != 0:  # If the new rule covers no examples that leads to invalid value in log2
                     gain = t * (np.log2(p1 / (p1 + n1)) - np.log2(p0 / (p0 + n0)))
@@ -178,10 +173,6 @@ class RulesetLearner:
 
             # In case of ties, find one that matches diectic references. Start with end of the list just in case
             best_context = new_contexts[-1]
-            for context in best_contexts:
-                if any(obj in context.referenced_objects for obj in objects_in_outcome):
-                    best_context = context
-                    break
 
             # print("Chose best context:")
             # print(best_context)
@@ -192,8 +183,9 @@ class RulesetLearner:
             # Update the negative examples this still covers
             new_rule_negatives = [example for example in new_rule_negatives if context_matches(rule.context, example.state)]
 
-            # We've added another literal
-            lit_counter += 1
+            # If not done, add more candidate literals to the rule
+            if len(new_rule_negatives) > 0:
+                new_contexts = self.create_new_contexts_from_context(rule.context)
 
             # print("New rule negatives:")
             # for ex in new_rule_negatives:
@@ -274,11 +266,6 @@ class RulesetLearner:
         # print("Unique outcomes:")
         # print(unique_outcomes)
         # unique_outcomes = [unique_outcomes[4]]  # test learning issues
-        # unique_outcomes = [unique_outcomes[1]]  # test learning issues
-        # unique_outcomes = [unique_outcomes[0]]  # test learning issues
-        # unique_outcomes = [unique_outcomes[5]]  # test learning issues
-
-        # del unique_outcomes[1]
 
         # Learn the rules for each outcome
         rules = []

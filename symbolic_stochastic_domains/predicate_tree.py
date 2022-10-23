@@ -255,7 +255,8 @@ class Node:
                     edge.to_node.object_name == edge2.to_node.object_name and  # We care about class type here, not id
                     edge2.to_node.contains(edge.to_node)
                 ):
-                    found = True  # TODO: Could put a break here?
+                    found = True
+                    break
 
             # If we couldn't find anything, return failure. Otherwise, keep checking
             if not found:
