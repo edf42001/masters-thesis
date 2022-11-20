@@ -13,8 +13,9 @@ NEW_CONTEXTS = dict()  # Disable it for now
 
 
 class RulesetLearner:
-    def __init__(self, env):
+    def __init__(self, env, use_prior_names: bool = False):
         self.env = env
+        self.use_prior_names = use_prior_names  # Learning in terms of the names we know or the new names we don't
 
     def create_new_contexts_from_context(self, context: PredicateTree) -> List[PredicateTree]:
         new_contexts = []
@@ -24,8 +25,15 @@ class RulesetLearner:
 
         # Get the list of objects in the environment from the env. Modify it: no taxi, add wall
         # This is because we need a list of all objects the taxi can interact with
-        object_names = self.env.get_object_names()
-        object_names.remove("taxi")
+        # My new learning method uses the previous objects names when finding literals
+        # So now which names we use depends on this
+        if self.use_prior_names:
+            object_names = self.env.OB_NAMES.copy()
+            object_names.append("wall")
+            object_names.remove("taxi")
+        else:
+            object_names = self.env.get_object_names()
+            object_names.remove("taxi")
 
         for p_type in p_types:
             for object_name in object_names:

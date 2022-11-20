@@ -42,6 +42,16 @@ class Effect:
         """Returns the result of applying this effect to s_var"""
         raise NotImplementedError()
 
+    def copy(self):
+        if self.type == EffectType.INCREMENT:
+            return Increment(0, self.value)
+        elif self.type == EffectType.SET_TO_NUMBER:
+            return SetToNumber(0, self.value)
+        elif self.type == EffectType.NO_CHANGE:
+            return NoChange()
+        else:
+            raise ValueError(f'Unrecognized effect type: {self.type}')
+
 
 class NoChange(Effect):
     def __init__(self):

@@ -23,6 +23,9 @@ class DeicticReference:
         else:
             return self.from_ob
 
+    def copy(self):
+        return DeicticReference(self.from_ob, self.edge_type, self.to_ob, self.att_name, self.att_num)
+
     def __eq__(self, other):
         return self.from_ob == other.from_ob and self.edge_type == other.edge_type and \
                self.to_ob == other.to_ob and self.att_name == other.att_name
@@ -65,8 +68,8 @@ class Outcome:
         return self.num_affected_atts
 
     def copy(self):
-        # Return a copy of this.
-        return Outcome()
+        ret = Outcome([key.copy() for key in self.value.keys()], [value.copy() for value in self.value.values()], no_effect=self.no_effect)
+        return ret
 
     def apply_to(self, state: List[int]):
         """Applies the joint effect to a state in-place. Only when values stores ints instead of deictic references"""
