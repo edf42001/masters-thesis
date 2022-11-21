@@ -39,22 +39,22 @@ def main():
 
     ruleset_learner = RulesetLearner(env, use_prior_names=True)
 
-    for i in range(100):
+    for i in range(300):
         # Take a step
         action = random.randint(0, env.get_num_actions()-1)
         literals, outcome, name_id_map = env.step(action)
         example = Example(action, literals, outcome)
 
-        # Generate all possible objet combinations of this example
-        state_objects = set([diectic_obj.split("-")[-1] for diectic_obj in literals.referenced_objects])
+        print()
+        print(i, example)
+
+        # Sets are unordered so we need to sort this one and convert it to a list so our mappings are consistent
+        state_objects = sorted(list(set([diectic_obj.split("-")[-1] for diectic_obj in literals.referenced_objects])))
 
         mappings_to_choose_from = (prior_object_names for _ in state_objects)
         permutations = itertools.product(*mappings_to_choose_from)
-
         store_permutations = []
         complexities = []
-
-        print(example)
 
         for permutation in permutations:
             # Remove ones where there is a duplicate assignment. Two objects can not be mapped to the same
@@ -67,10 +67,22 @@ def main():
 
             new_literals = literals.copy_replace_names(mapping)
             new_example = Example(action, new_literals, outcome)
-            new_examples = taxi_examples.copy()
-            new_examples.add_example(new_example)
 
-            new_ruleset = ruleset_learner.learn_ruleset(new_examples)
+            # TODO: need to somehow use hashing or some other way of figuring this out
+            found = False
+            for ex in taxi_examples.examples:
+                if action == ex.action and new_literals == ex.state and outcome != ex.outcome:
+                    print("Whoops, that's a contradiction!", new_literals, ex.state, outcome, ex.outcome)
+                    found = True
+                    break
+
+            if found:
+                continue
+
+            # Add the example, learn the new ruleset, then remove the example for the next
+            taxi_examples.add_example(new_example)
+            new_ruleset = ruleset_learner.learn_ruleset(taxi_examples)
+            taxi_examples.remove_example(new_example)
 
             # TODO: Needs to take into account properties
             complexity = sum([len(rule.context.nodes) for rule in new_ruleset.rules])

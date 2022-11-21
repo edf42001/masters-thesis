@@ -115,7 +115,6 @@ class RulesetLearner:
         outcomes = OutcomeSet()
         outcomes.add_outcome(relevant_examples[0].outcome, 1.0)
 
-
         # print("Relevent")
         # for example in relevant_examples:
         #     print(example)

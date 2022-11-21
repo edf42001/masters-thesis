@@ -197,6 +197,14 @@ class ExampleSet:
         else:
             self.examples[example] += 1
 
+    def remove_example(self, example):
+        assert example in self.examples, "Needs to be there to remove it"
+
+        if self.examples[example] == 1:
+            del self.examples[example]
+        else:
+            self.examples[example] -= 1
+
     def copy(self):
         ret = ExampleSet()
         ret.examples = {example.copy(): count for example, count in self.examples.items()}

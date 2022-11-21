@@ -188,6 +188,10 @@ class PredicateTree:
     def __repr__(self):
         return self.__str__()
 
+    def __hash__(self):
+        # Due to sorting, identical trees will always have the same strs
+        return hash(self.str_repr)
+
     def __eq__(self, other):
         # Convert to strings to compare
         if self.str_repr is None:
@@ -283,7 +287,8 @@ class Node:
     def str_helper(self):
         ret = ""
 
-        for edge in self.edges:
+        # Sort so that when we print the order is always the same
+        for edge in sorted(self.edges, key=lambda x: str(x)):
             ret += f"{self.full_name()}-{edge}"
             ret += "," if len(edge.to_node.edges) == 0 else ""  # Indicate the ends of chains of objects
             # Add in negative edges here. There is no recursion, because they represent not interacting with an object
