@@ -40,7 +40,7 @@ if __name__ == '__main__':
     random.seed(1)
     np.random.seed(1)
 
-    num_experiments = 50
+    num_experiments = 1
 
     experiments_start_time = datetime.now()  # Used for putting all experiments in common folder
 
@@ -48,6 +48,9 @@ if __name__ == '__main__':
         runner = HeistRunner(i, start_time=experiments_start_time)
         runner.run_experiment(save_training=True)
 
-    # import pickle
-    # with open("symbolic_heist_rules.pkl", 'wb') as f:
-    #     pickle.dump(runner.model.ruleset, f)
+    import pickle
+    with open("symbolic_heist_rules.pkl", 'wb') as f:
+        pickle.dump(runner.model.ruleset, f)
+
+    with open("heist_examples.pkl", 'wb') as f:
+        pickle.dump(runner.model.examples, f)
