@@ -79,23 +79,31 @@ class PredicateTree:
 
     def copy_replace_names(self, mapping):
         """Create a copy of this tree, but replace the names with the mapping defined in mapping"""
-        def replace(name, mapping):
-            return mapping[name[:-1]] + name[-1]
+        def replace(name):
+            uid = int(name[-1])
+            # Make sure to get a unique id
+            while mapping[name[:-1]] + str(uid) in ret.node_lookup:
+                uid += 1
+
+            return mapping[name[:-1]] + str(uid)
 
         ret = PredicateTree()
 
+        new_node_names = dict()  # Store new names # TODO: walls need unique ids?
+
         for node in self.nodes:
-            ret.add_node(replace(node.full_name(), mapping))
+            new_node_names[node.full_name] = replace(node.full_name())
+            ret.add_node(new_node_names[node.full_name])
 
             for k, v in node.properties.items():
-                ret.add_property(replace(node.full_name(), mapping), k, v)
+                ret.add_property(new_node_names[node.full_name], k, v)
 
         for node in self.nodes:
             for edge in node.edges:
-                ret.add_edge(replace(node.full_name(), mapping), replace(edge.to_node.full_name(), mapping), edge.type)
+                ret.add_edge(new_node_names[node.full_name], new_node_names[edge.to_node.full_name], edge.type)
 
             for edge in node.negative_edges:
-                ret.add_edge(replace(node.full_name(), mapping), replace(edge.to_node.full_name(), mapping), edge.type, negative=True)
+                ret.add_edge(new_node_names[node.full_name], new_node_names[edge.to_node.full_name], edge.type, negative=True)
 
         return ret
 

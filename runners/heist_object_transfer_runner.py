@@ -30,7 +30,7 @@ class HeistObjectTransferRunner(Runner):
         self.env = SymbolicHeist(stochastic=self.stochastic, shuffle_object_names=True)
 
         # Load previously learned model with different object names
-        with open("symbolic_heist_rules.pkl", 'rb') as f:
+        with open("data/heist_rules.pkl", 'rb') as f:
             symbolic_heist_rules = pickle.load(f)
 
         print(self.env.object_name_map)

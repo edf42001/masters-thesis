@@ -46,10 +46,10 @@ def run_single_experiment(experiment_num: int):
     runner.run_experiment(save_training=True)
 
     import pickle
-    with open("symbolic_taxi_rules.pkl", 'wb') as f:
+    with open("data/symbolic_taxi_rules.pkl", 'wb') as f:
         pickle.dump(runner.model.ruleset, f)
 
-    with open("taxi_examples.pkl", 'wb') as f:
+    with open("data/taxi_examples.pkl", 'wb') as f:
         pickle.dump(runner.model.examples, f)
 
 

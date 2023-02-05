@@ -9,11 +9,51 @@ import pickle
 import random
 import numpy as np
 import itertools
+from typing import List
 
 from environment.symbolic_taxi import SymbolicTaxi
 from environment.symbolic_heist import SymbolicHeist
 from symbolic_stochastic_domains.symbolic_classes import Example, ExampleSet, Rule, RuleSet, DeicticReference, Outcome
 from symbolic_stochastic_domains.learn_ruleset_outcomes import RulesetLearner
+
+
+def remap_examples(examples: ExampleSet, mapping: dict, previous_examples: ExampleSet) -> List[Example]:
+    new_example_list = []
+    for example in examples.examples.keys():
+        state = example.state
+        action = example.action
+        outcome = example.outcome
+
+        # Replace objects referenced in outcome and literals with their new name
+        new_literals = state.copy_replace_names(mapping)
+
+        # Copy outcome but replace names. Has to be a cleaner way to do this.
+        # Problem is we only calculate the hash in the constructor
+        new_outcome = Outcome(
+            [DeicticReference(key.from_ob, key.edge_type, mapping[key.to_ob] if key.to_ob != '' else '', key.att_name, key.att_num)
+             for key in outcome.value.keys()],
+            list(outcome.value.values()),
+            outcome.no_effect)
+
+        # Create new example
+        new_example = Example(example.action, new_literals, new_outcome)
+
+        # TODO: need to somehow use hashing or some more effecient way of figuring this out
+        # TODO: What to do when there is a contradiction? Set to 0 probability?
+        # Check if there is a contradiction: We have experienced this exact set before but had a different outcome
+        found = False
+        for ex in previous_examples.examples:
+            if action == ex.action and new_literals == ex.state and new_outcome != ex.outcome:
+                print("Whoops, that's a contradiction!", new_literals, ex.state, new_outcome, ex.outcome)
+                found = True
+                break
+
+        if found:
+            continue
+
+        new_example_list.append(new_example)
+
+    return new_example_list
 
 
 def main():
@@ -41,6 +81,12 @@ def main():
 
     ruleset_learner = RulesetLearner(env, use_prior_names=True)
 
+    # Stores examples experienced so far
+    new_examples = ExampleSet()
+
+    # Names of objects that have been seen so far, so we can do permutations
+    current_object_names = set()
+
     # env.restart(init_state=[1, 1])
 
     # Create object map: This is our belief for what object is what other object
@@ -48,25 +94,36 @@ def main():
     object_map_counts = {unknown: {name: 0 for name in prior_object_names} for unknown in env.get_object_names() if unknown != "taxi"}
     print(object_map_counts)
 
-    for i in range(200):
+    actions = [0, 0, 1, 0, 3, 3, 4, 1, 1, 1, 2, 2, 4]
+    for i in range(len(actions)):
 
         # Take a step
         curr_state = env.get_state()
         action = random.randint(0, env.get_num_actions()-1)
+        action = actions[i]
         literals, outcome, name_id_map = env.step(action)
         example = Example(action, literals, outcome)
         env.draw_world(curr_state, delay=0)
 
-        # if i < 29:
+        # if i < 120:
         #     continue
 
         print()
         print(i, example)
+        new_examples.add_example(example)
 
         # Sets are unordered so we need to sort this one and convert it to a list so our mappings are consistent
+        # Wait, why do we need to sort it?
         state_objects = sorted(list(set([diectic_obj.split("-")[-1] for diectic_obj in literals.referenced_objects])))
 
-        mappings_to_choose_from = (prior_object_names for _ in state_objects)
+        # Keep track of all objects seen so far
+        current_object_names.update(state_objects)
+        print(current_object_names)
+
+        # mappings_to_choose_from = (prior_object_names for _ in state_objects)
+        # mappings_to_choose_from = (prior_object_names + [f"object{i}"] for i in range(len(current_object_names)))
+        mappings_to_choose_from = (prior_object_names for _ in current_object_names)
+
         permutations = itertools.product(*mappings_to_choose_from)
         store_permutations = []
         complexities = []
@@ -75,47 +132,22 @@ def main():
         initial_complexity = sum([len(rule.context.nodes) for rule in taxi_ruleset.rules])
 
         for permutation in permutations:
-            # Remove ones where there is a duplicate assignment. Two objects can not be mapped to the same
-            # Technically there should be no reason why not but it breaks literals.copy_replace_names
-            if len(set(permutation)) != len(permutation):
-                continue
-
             mapping = {state_object: permute_object for state_object, permute_object in zip(state_objects, permutation)}
             mapping["taxi"] = "taxi"  # Taxi has to be there but always maps to itself
 
-            # print(mapping)
+            print(mapping)
 
-            # Replace objects referenced in outcome and literals with their new name
-            new_literals = literals.copy_replace_names(mapping)
-
-            # Copy outcome but replace names. Has to be a cleaner way to do this.
-            # Problem is we only calculate the hash in the constructor
-            new_outcome = Outcome(
-                [DeicticReference(key.from_ob, key.edge_type, mapping[key.to_ob] if key.to_ob != '' else '', key.att_name, key.att_num)
-                 for key in outcome.value.keys()],
-                list(outcome.value.values()),
-                outcome.no_effect)
-
-            # Create new example
-            new_example = Example(action, new_literals, new_outcome)
-
-            # TODO: need to somehow use hashing or some more effecient way of figuring this out
-            # TODO: What to do when there is a contradiction? Set to 0 probability?
-            # Check if there is a contradiction: We have experienced this exact set before but had a different outcome
-            found = False
-            for ex in taxi_examples.examples:
-                if action == ex.action and new_literals == ex.state and new_outcome != ex.outcome:
-                    print("Whoops, that's a contradiction!", new_literals, ex.state, new_outcome, ex.outcome)
-                    found = True
-                    break
-
-            if found:
-                continue
+            remaped_examples = remap_examples(new_examples, mapping, taxi_examples)
+            for example in remaped_examples:
+                print(example)
+            print()
 
             # Add the example, learn the new ruleset, then remove the example for the next
-            taxi_examples.add_example(new_example)
+            for example in remaped_examples:
+                taxi_examples.add_example(example)
             new_ruleset = ruleset_learner.learn_ruleset(taxi_examples)
-            taxi_examples.remove_example(new_example)
+            for example in remaped_examples:
+                taxi_examples.remove_example(example)
 
             # TODO: Needs to take into account properties
             complexity = sum([len(rule.context.nodes) for rule in new_ruleset.rules])
@@ -134,20 +166,33 @@ def main():
         for complexity, permutation in zip(complexities, store_permutations):
             print(f"{complexity}: {state_objects}->{permutation}")
 
-        # Update the counts
-        for complexity, permutation in zip(complexities, store_permutations):
-            for unknown, known in zip(state_objects, permutation):
-                object_map_counts[unknown][known] += 1 if complexity > 0 else 0
+        min_complexity = min(complexities)
+        print(f"Min complexity: {min_complexity}")
+        assert min_complexity == 0, "Not yet deal with a changing ruleset"
 
-        print(object_map_counts)
+        # Here, I penalize a combination for having a high complexity
+        # Instead, lets reward for having a low complexity
+        # Figure out what it is, instead of what it isn't
+        # for complexity, permutation in zip(complexities, store_permutations):
+        #     for unknown, known in zip(state_objects, permutation):
+        #         object_map_counts[unknown][known] += 1 if complexity > 0 else 0
+
+        # Skip if nothing gained any information
+        if not all([c == min_complexity for c in complexities]):
+            for complexity, permutation in zip(complexities, store_permutations):
+                for unknown, known in zip(state_objects, permutation):
+                    object_map_counts[unknown][known] += 1 if complexity == min_complexity else 0
+
+        for unknown, knowns in object_map_counts.items():
+            print(unknown, ", ".join([f"{c}" for c in knowns.values()]))
 
         # Compute probabilities from complexities:
-        alpha = 1  # exponent base
-        for unknown, knowns in object_map_counts.items():
-            counts = -np.array(list(knowns.values()))
-            probabilities = np.exp(counts / alpha)
-            probabilities = probabilities / np.sum(probabilities)
-            print(unknown, ", ".join(f"{a:.3f}" for a in probabilities))
+        # alpha = 1  # exponent base
+        # for unknown, knowns in object_map_counts.items():
+        #     counts = -np.array(list(knowns.values()))
+        #     probabilities = np.exp(counts / alpha)
+        #     probabilities = probabilities / np.sum(probabilities)
+        #     print(unknown, ", ".join(f"{a:.3f}" for a in probabilities))
 
 
 if __name__ == "__main__":

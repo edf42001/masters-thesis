@@ -38,7 +38,7 @@ class DoormaxTaxiActionLearnerRunner(Runner):
         self.env = TaxiWorld(stochastic=self.stochastic, shuffle_actions=True)
 
         # Assume transition model is already known
-        with open("taxi-doormax-model.pkl", 'rb') as f:
+        with open("data/taxi-doormax-model.pkl", 'rb') as f:
             self.doormax_model = pickle.load(f)
 
         self.model = ActionLearningModel(self.env, self.doormax_model)

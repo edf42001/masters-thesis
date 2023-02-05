@@ -11,7 +11,7 @@ from environment.symbolic_heist import SymbolicHeist
 
 
 if __name__ == "__main__":
-    with open("/home/edf42001/Documents/College/Thesis/masters-thesis/runners/heist_runner_examples_freeze.pkl", 'rb') as f:
+    with open("/runners/data/heist_runner_examples_freeze.pkl", 'rb') as f:
         examples = pickle.load(f)
 
     env = SymbolicHeist(stochastic=False)
