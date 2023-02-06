@@ -30,10 +30,9 @@ class HeistSimplestExplanationRunner(Runner):
         # Experiment parameters
         self.max_steps = 100
         self.num_episodes = 1
-        self.stochastic = False
         self.visualize = True
 
-        self.env = SymbolicHeist(stochastic=self.stochastic, shuffle_object_names=True)
+        self.env = SymbolicHeist(False, shuffle_object_names=True)
 
         with open("data/heist_rules.pkl", 'rb') as f:
             heist_rules = pickle.load(f)

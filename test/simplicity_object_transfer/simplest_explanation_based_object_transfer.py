@@ -56,15 +56,46 @@ def remap_examples(examples: ExampleSet, mapping: dict, previous_examples: Examp
     return new_example_list
 
 
+def get_object_permutation_rule_complexities(mappings_to_choose_from, old_ruleset, old_examples, new_examples, learner, objects):
+    permutations = itertools.product(*mappings_to_choose_from)
+    store_permutations = []
+    complexities = []
+
+    # Initial complexity of the ruleset
+    initial_complexity = sum([len(rule.context.nodes) for rule in old_ruleset.rules])
+
+    for permutation in permutations:
+        mapping = {state_object: permute_object for state_object, permute_object in zip(objects, permutation)}
+        mapping["taxi"] = "taxi"  # Taxi has to be there but always maps to itself
+
+        remaped_examples = remap_examples(new_examples, mapping, old_examples)
+
+        # Add the example, learn the new ruleset, then remove the example for the next
+        for example in remaped_examples:
+            old_examples.add_example(example)
+        new_ruleset = learner.learn_ruleset(old_examples)
+        for example in remaped_examples:
+            old_examples.remove_example(example)
+
+        # TODO: Needs to take into account properties
+        complexity = sum([len(rule.context.nodes) for rule in new_ruleset.rules])
+        complexity = complexity - initial_complexity
+
+        complexities.append(complexity)
+        store_permutations.append(permutation)
+
+    return complexities, store_permutations
+
+
 def main():
     random.seed(2)
     np.random.seed(2)
 
     # Load previous taxi examples and rules
-    with open("runners/symbolic_heist_rules.pkl", 'rb') as f:
+    with open("runners/data/heist_rules.pkl", 'rb') as f:
         taxi_ruleset: RuleSet = pickle.load(f)
 
-    with open("runners/heist_examples.pkl", 'rb') as f:
+    with open("runners/data/heist_examples.pkl", 'rb') as f:
         taxi_examples: ExampleSet = pickle.load(f)
 
     # Copy so hashes are updated
@@ -94,7 +125,7 @@ def main():
     object_map_counts = {unknown: {name: 0 for name in prior_object_names} for unknown in env.get_object_names() if unknown != "taxi"}
     print(object_map_counts)
 
-    actions = [0, 0, 1, 0, 3, 3, 4, 1, 1, 1, 2, 2, 4]
+    actions = [1, 0, 1, 0, 3, 3, 4, 1, 1, 1, 2, 2, 4]
     for i in range(len(actions)):
 
         # Take a step
@@ -122,77 +153,30 @@ def main():
 
         # mappings_to_choose_from = (prior_object_names for _ in state_objects)
         # mappings_to_choose_from = (prior_object_names + [f"object{i}"] for i in range(len(current_object_names)))
+        print(prior_object_names, current_object_names)
+        # TODO: Notice this maps ones that aren't in the current state? (in current_objects_names)
+        # Should we only care about checking things that are in the current state? or always the full thing?
         mappings_to_choose_from = (prior_object_names for _ in current_object_names)
 
-        permutations = itertools.product(*mappings_to_choose_from)
-        store_permutations = []
-        complexities = []
+        complexities, permutations = get_object_permutation_rule_complexities(
+            mappings_to_choose_from, taxi_ruleset, taxi_examples, new_examples, ruleset_learner, state_objects
+        )
 
-        # Initial complexity of the ruleset
-        initial_complexity = sum([len(rule.context.nodes) for rule in taxi_ruleset.rules])
-
-        for permutation in permutations:
-            mapping = {state_object: permute_object for state_object, permute_object in zip(state_objects, permutation)}
-            mapping["taxi"] = "taxi"  # Taxi has to be there but always maps to itself
-
-            print(mapping)
-
-            remaped_examples = remap_examples(new_examples, mapping, taxi_examples)
-            for example in remaped_examples:
-                print(example)
-            print()
-
-            # Add the example, learn the new ruleset, then remove the example for the next
-            for example in remaped_examples:
-                taxi_examples.add_example(example)
-            new_ruleset = ruleset_learner.learn_ruleset(taxi_examples)
-            for example in remaped_examples:
-                taxi_examples.remove_example(example)
-
-            # TODO: Needs to take into account properties
-            complexity = sum([len(rule.context.nodes) for rule in new_ruleset.rules])
-            complexity = complexity - initial_complexity
-
-            complexities.append(complexity)
-            store_permutations.append(permutation)
-
-            # print(complexity)
-            # print(new_ruleset)
-            # print()
-
-            # Perhaps when the new rule doesn't mention the object we don't count it
-            # because it has nothing to do with it.
-
-        for complexity, permutation in zip(complexities, store_permutations):
+        for complexity, permutation in zip(complexities, permutations):
             print(f"{complexity}: {state_objects}->{permutation}")
 
         min_complexity = min(complexities)
         print(f"Min complexity: {min_complexity}")
         assert min_complexity == 0, "Not yet deal with a changing ruleset"
 
-        # Here, I penalize a combination for having a high complexity
-        # Instead, lets reward for having a low complexity
-        # Figure out what it is, instead of what it isn't
-        # for complexity, permutation in zip(complexities, store_permutations):
-        #     for unknown, known in zip(state_objects, permutation):
-        #         object_map_counts[unknown][known] += 1 if complexity > 0 else 0
-
         # Skip if nothing gained any information
         if not all([c == min_complexity for c in complexities]):
-            for complexity, permutation in zip(complexities, store_permutations):
+            for complexity, permutation in zip(complexities, permutations):
                 for unknown, known in zip(state_objects, permutation):
                     object_map_counts[unknown][known] += 1 if complexity == min_complexity else 0
 
         for unknown, knowns in object_map_counts.items():
             print(unknown, ", ".join([f"{c}" for c in knowns.values()]))
-
-        # Compute probabilities from complexities:
-        # alpha = 1  # exponent base
-        # for unknown, knowns in object_map_counts.items():
-        #     counts = -np.array(list(knowns.values()))
-        #     probabilities = np.exp(counts / alpha)
-        #     probabilities = probabilities / np.sum(probabilities)
-        #     print(unknown, ", ".join(f"{a:.3f}" for a in probabilities))
 
 
 if __name__ == "__main__":

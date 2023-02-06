@@ -10,8 +10,9 @@ from algorithm.transition_model import TransitionModel
 from common.structures import Transition
 
 from symbolic_stochastic_domains.symbolic_classes import Example, Outcome, RuleSet, ExampleSet
-from symbolic_stochastic_domains.object_transfer import get_possible_object_assignments, \
-    determine_possible_object_maps, determine_transition_given_action
+from symbolic_stochastic_domains.learn_ruleset_outcomes import RulesetLearner
+from symbolic_stochastic_domains.object_transfer import determine_transition_given_action
+from test.simplicity_object_transfer.simplest_explanation_based_object_transfer import get_object_permutation_rule_complexities
 
 
 class SimplestExplanationModel(TransitionModel):
@@ -27,6 +28,10 @@ class SimplestExplanationModel(TransitionModel):
         self.previous_ruleset = previous_ruleset
         self.previous_examples = previous_examples
 
+        # New, updated ruleset and examples (in anonymized object land)
+        # self.new_ruleset = RuleSet([])
+        self.new_examples = ExampleSet()
+
         # List of known object names without taxi and with wall (wall is static so is not in the list normally)
         self.prior_object_names = env.OB_NAMES.copy()
         self.prior_object_names.append("wall")
@@ -36,10 +41,11 @@ class SimplestExplanationModel(TransitionModel):
         self.object_map = {unknown: self.prior_object_names.copy() for unknown in current_object_names if unknown != "taxi"}
         self.solved = False  # Whether the object_map is now one to one
 
-        self.possible_assignments = set()  # Possible objects that could be other objects or not
-
         # Keeps track of the complexity that the ruleset would increase by for all types of object assignments
         self.object_map_counts = {unknown: {name: 0 for name in self.prior_object_names} for unknown in env.get_object_names() if unknown != "taxi"}
+
+        # Collection of all object names seen so far. Used for permutations
+        self.seen_objects = set()
 
     def add_experience(self, action: int, state: int, outcome: Outcome):
         """Records experience of state action transition"""
@@ -48,30 +54,76 @@ class SimplestExplanationModel(TransitionModel):
         literals, instance_name_map = self.env.get_literals(state)
         example = Example(action, literals, outcome)
 
+        self.new_examples.add_example(example)
+
+        # Get all objects referenced in the current state and add to our running total
+        state_objects = set([diectic_obj.split("-")[-1] for diectic_obj in literals.referenced_objects])
+        self.seen_objects.update(state_objects)
+
+        # Convert to list so they are in a consistent order, so the permutations can be associated with them
+        state_objects = list(self.seen_objects)
+
         print("Experienced Example:")
         print(example)
 
-        assignments = get_possible_object_assignments(example, self.previous_ruleset)
-        self.possible_assignments.update(assignments)
-        print("All assignments: ")
-        print(self.possible_assignments)
-        print()
+        # Notice this maps ones that aren't in the current state?
+        # mappings_to_choose_from = (self.prior_object_names for _ in self.seen_objects)
+        # Options are only what we think it is
+        # mappings_to_choose_from = (self.object_map[unknown] for unknown in self.seen_objects)
+        mappings_to_choose_from = (self.object_map[unknown] for unknown in state_objects)
 
-        # Pare down the object map
+        learner = RulesetLearner(self.env, use_prior_names=True)
+        complexities, permutations = get_object_permutation_rule_complexities(
+            mappings_to_choose_from, self.previous_ruleset, self.previous_examples,
+            self.new_examples, learner, state_objects
+        )
+
+        for complexity, permutation in zip(complexities, permutations):
+            print(f"{complexity}: {state_objects}->{permutation}")
+
+        min_complexity = min(complexities)
+        # print(f"Min complexity: {min_complexity}")
+        assert min_complexity == 0, "Not yet deal with a changing ruleset"
+
+        # Update object map based on complexity values
+        # The least complex ones get to be kept
+        self.object_map_counts = {unknown: {name: 0 for name in self.prior_object_names} for unknown in self.env.get_object_names() if unknown != "taxi"}
+
+        for complexity, permutation in zip(complexities, permutations):
+            for unknown, known in zip(state_objects, permutation):
+                self.object_map_counts[unknown][known] += 1 if complexity == min_complexity else 0
+
+        for unknown, counts in self.object_map_counts.items():
+            print(unknown, ", ".join([f"{c}" for c in counts.values()]))
+
         length_of_beliefs = sum(len(possibilities) for possibilities in self.object_map.values())
-        new_object_map = determine_possible_object_maps(self.object_map, self.possible_assignments)
-        self.object_map = new_object_map
-        new_lengths_of_beliefs = sum(len(possibilities) for possibilities in self.object_map.values())
 
-        if new_lengths_of_beliefs != length_of_beliefs:
-            print("Learned something new")
+        # Update object map based on above
+        for unknown, counts in self.object_map_counts.items():
+            max_for_object = max(counts.values())
+            self.object_map[unknown] = [known for known in self.object_map[unknown] if counts[known] == max_for_object]
 
-        if not self.solved and new_lengths_of_beliefs == len(self.prior_object_names):
-            self.solved = True
+        # Remove duplicates for now. TODO: make it so this isn't a necesssity, (because we knew what wall was it ruled it out of the others)
+        # Which caused an information gain of 13->10
+        for known, unknowns in self.object_map.items():
+            if len(unknowns) == 1:
+                unknown = unknowns[0]
+                for known2, unknowns2 in self.object_map.items():
+                    if known2 != known and unknown in unknowns2:
+                        unknowns2.remove(unknown)
 
         print("New object map:")
         for key, value in self.object_map.items():
             print(f"{key}: {value}")
+        print()
+
+        new_lengths_of_beliefs = sum(len(possibilities) for possibilities in self.object_map.values())
+
+        if new_lengths_of_beliefs != length_of_beliefs:
+            print("Learned something new")
+        #
+        if not self.solved and new_lengths_of_beliefs == len(self.prior_object_names):
+            self.solved = True
 
     def compute_possible_transitions(self, state: int, action: int, literals=None, instance_name_map=None) -> List[Transition]:
         """
