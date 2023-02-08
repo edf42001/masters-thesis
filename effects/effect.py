@@ -93,9 +93,3 @@ class SetToNumber(Effect):
 
     def __str__(self):
         return f'SetToNumber({self.value})'
-
-
-class NoiseEffect:
-    """No Effect: the entire state does not change"""
-    def __init__(self):
-        super().__init__([], [])
