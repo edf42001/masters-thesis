@@ -1,11 +1,11 @@
 from algorithm.simulator import Simulator
+from algorithm.symbolic_domains.object_transfer_model import ObjectTransferModel
 from environment.environment import Environment
-from algorithm.transition_model import TransitionModel
 from policy.policy import Policy
 
 
 class ObjectTransferLearner(Simulator):
-    def __init__(self, env: Environment, model: TransitionModel, planner: Policy, visualize: bool = False, delay: int = 100):
+    def __init__(self, env: Environment, model: ObjectTransferModel, planner: Policy, visualize: bool = False, delay: int = 100):
         self.env = env
         self.model = model
         self.planner = planner

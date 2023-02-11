@@ -3,7 +3,6 @@ import logging
 import pickle
 import time
 
-from algorithm.transition_model import TransitionModel
 from common.structures import Transition
 
 from symbolic_stochastic_domains.symbolic_classes import Example, Outcome, ExampleSet, RuleSet, Rule, OutcomeSet
@@ -12,7 +11,7 @@ from symbolic_stochastic_domains.symbolic_utils import context_matches
 from symbolic_stochastic_domains.experience_helper import ExperienceHelper
 
 
-class SymbolicModel(TransitionModel):
+class SymbolicModel:
     """Tracks interactions with the world with Examples and Experience"""
 
     def __init__(self, env):

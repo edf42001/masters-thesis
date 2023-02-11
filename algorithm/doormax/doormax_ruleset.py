@@ -3,7 +3,6 @@ import logging
 import pickle
 
 from effects.effect import JointEffect, EffectType, JointNoEffect
-from algorithm.transition_model import TransitionModel
 from algorithm.doormax.doormax_rule import DoormaxRule
 from common.structures import Transition
 
@@ -11,7 +10,7 @@ from algorithm.doormax.utils import find_matching_prediction, boolean_arr_to_str
     condition_matches, commute_condition_strings, check_conditions_overlap, incompatible_effects
 
 
-class DoormaxRuleset(TransitionModel):
+class DoormaxRuleset:
     """Tracks all conditions and effects for each action/attribute pair"""
 
     def __init__(self, env):

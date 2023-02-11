@@ -6,7 +6,6 @@ Model for simplest explanation object discovery
 
 from typing import List
 
-from algorithm.transition_model import TransitionModel
 from common.structures import Transition
 
 from symbolic_stochastic_domains.symbolic_classes import Example, Outcome, RuleSet, ExampleSet
@@ -15,7 +14,7 @@ from symbolic_stochastic_domains.object_transfer import determine_transition_giv
 from test.simplicity_object_transfer.simplest_explanation_based_object_transfer import get_object_permutation_rule_complexities
 
 
-class SimplestExplanationModel(TransitionModel):
+class SimplestExplanationModel:
     """Tracks interactions with the world with Examples and Experience"""
 
     def __init__(self, env, previous_ruleset: RuleSet, previous_examples: ExampleSet):

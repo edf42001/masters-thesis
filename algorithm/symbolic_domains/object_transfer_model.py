@@ -1,6 +1,5 @@
 from typing import List
 
-from algorithm.transition_model import TransitionModel
 from common.structures import Transition
 
 from symbolic_stochastic_domains.symbolic_classes import Example, Outcome
@@ -8,7 +7,7 @@ from symbolic_stochastic_domains.object_transfer import get_possible_object_assi
     determine_possible_object_maps, determine_transition_given_action
 
 
-class ObjectTransferModel(TransitionModel):
+class ObjectTransferModel:
     """Tracks interactions with the world with Examples and Experience"""
 
     def __init__(self, env, previous_ruleset):

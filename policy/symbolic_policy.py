@@ -1,13 +1,12 @@
 import random
 from collections import deque
 
-from algorithm.transition_model import TransitionModel
 from policy.policy import Policy
-from symbolic_stochastic_domains.predicates_and_objects import PredicateType
+from algorithm.symbolic_domains.symbolic_model import SymbolicModel
 
 
 class SymbolicPolicy(Policy):
-    def __init__(self, actions: int, model: TransitionModel):
+    def __init__(self, actions: int, model: SymbolicModel):
         self.num_actions = actions
 
         self.model = model

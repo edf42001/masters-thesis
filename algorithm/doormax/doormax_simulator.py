@@ -2,12 +2,11 @@ import logging
 
 from algorithm.simulator import Simulator
 from environment.environment import Environment
-from algorithm.transition_model import TransitionModel
 from policy.policy import Policy
 
 
 class DoormaxSimulator(Simulator):
-    def __init__(self, env: Environment, model: TransitionModel, planner: Policy, visualize: bool = False):
+    def __init__(self, env: Environment, model, planner: Policy, visualize: bool = False):
         self.env = env
         self.model = model
         self.planner = planner
@@ -56,4 +55,3 @@ class DoormaxSimulator(Simulator):
 
     def choose_action(self, is_learning: bool):
         return self.planner.choose_action(self.curr_state, is_learning)
-
