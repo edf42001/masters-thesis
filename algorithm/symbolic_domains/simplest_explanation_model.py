@@ -37,6 +37,10 @@ class SimplestExplanationModel(TransitionModel):
         self.prior_object_names.append("wall")
         self.prior_object_names.remove("taxi")
 
+        # TODO: need to figure out how to organize this properly
+        self.prior_object_names.remove("pass")
+        self.prior_object_names.remove("dest")
+
         current_object_names = self.env.get_object_names()
         self.object_map = {unknown: self.prior_object_names.copy() for unknown in current_object_names if unknown != "taxi"}
         self.solved = False  # Whether the object_map is now one to one
@@ -102,15 +106,6 @@ class SimplestExplanationModel(TransitionModel):
         for unknown, counts in self.object_map_counts.items():
             max_for_object = max(counts.values())
             self.object_map[unknown] = [known for known in self.object_map[unknown] if counts[known] == max_for_object]
-
-        # Remove duplicates for now. TODO: make it so this isn't a necesssity, (because we knew what wall was it ruled it out of the others)
-        # Which caused an information gain of 13->10
-        for known, unknowns in self.object_map.items():
-            if len(unknowns) == 1:
-                unknown = unknowns[0]
-                for known2, unknowns2 in self.object_map.items():
-                    if known2 != known and unknown in unknowns2:
-                        unknowns2.remove(unknown)
 
         print("New object map:")
         for key, value in self.object_map.items():

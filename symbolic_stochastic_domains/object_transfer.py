@@ -199,7 +199,7 @@ def determine_bindings_for_no_outcome(condition: PredicateTree, state: Predicate
     return ObjectAssignmentList(assignments)
 
 
-def information_gain_of_action(env, state: int, action: int, object_map, prev_ruleset: RuleSet) -> float:
+def information_gain_of_action(env, state: int, action: int, object_map, prev_ruleset: RuleSet, remove_duplicates=True) -> float:
     """
     Returns the expected information gain from taking an action, given the current knowledge of the world.
     measured based on net decrease in number of possibilities in object map (wrong, it's better to have one go to 0
@@ -287,7 +287,7 @@ def information_gain_of_action(env, state: int, action: int, object_map, prev_ru
         # print("Previous object map:")
         # print(object_map)
 
-        new_object_map = determine_possible_object_maps(object_map, possible_assignment)
+        new_object_map = determine_possible_object_maps(object_map, possible_assignment, remove_duplicates)
         prev_num_options = sum(len(possibilities) for possibilities in object_map.values())
         new_num_options = sum(len(possibilities) for possibilities in new_object_map.values())
 
@@ -445,7 +445,7 @@ def get_possible_object_assignments(example: Example, prev_ruleset: RuleSet) -> 
     return all_all_assignments
 
 
-def determine_possible_object_maps(object_map: dict, possible_assignments: List[ObjectAssignmentList]):
+def determine_possible_object_maps(object_map: dict, possible_assignments: List[ObjectAssignmentList], remove_duplicates=True):
     """
     Tries to figure out which assignments are the true ones and which are not,
     in the process learning which object is which
@@ -525,16 +525,17 @@ def determine_possible_object_maps(object_map: dict, possible_assignments: List[
 
     # Check if any objects have been brought to 1, if so, remove those from the others
     # If this causes another to go to one, continue looping
-    changed = True
-    while changed:
-        changed = False
-        for known, unknowns in object_map.items():
-            if len(unknowns) == 1:
-                unknown = unknowns[0]
-                for known2, unknowns2 in object_map.items():
-                    if known2 != known and unknown in unknowns2:
-                        unknowns2.remove(unknown)
-                        changed = True
+    if remove_duplicates:
+        changed = True
+        while changed:
+            changed = False
+            for known, unknowns in object_map.items():
+                if len(unknowns) == 1:
+                    unknown = unknowns[0]
+                    for known2, unknowns2 in object_map.items():
+                        if known2 != known and unknown in unknowns2:
+                            unknowns2.remove(unknown)
+                            changed = True
 
     # Verify no lists went to 0, which indicates a conflict in rules somewhere
     for known, unknowns in object_map.items():

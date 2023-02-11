@@ -99,7 +99,8 @@ class SimplestExplanationPolicy(Policy):
             for action in range(self.num_actions):
                 # If we find an action with a positive info gain, then return the path to take that action
                 # Otherwise, generate next states
-                if information_gain_of_action(self.model.env, curr_state, action, self.model.object_map, self.model.previous_ruleset) > 0:
+                if information_gain_of_action(self.model.env, curr_state, action, self.model.object_map,
+                                              self.model.previous_ruleset, remove_duplicates=False) > 0:
                     path = self.get_path(curr_state, parents)
                     path.insert(0, action)
                     return path

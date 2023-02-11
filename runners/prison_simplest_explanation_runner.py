@@ -1,7 +1,7 @@
 """
-Created on 2/5/23 by Ethan Frank
+Created on 2/6/23 by Ethan Frank
 
-Runs simplest explanation rule object transfer learning on Heist
+Simplest explanation runner on prison world. Currently, I give it the ruleset from heist world
 """
 
 import random
@@ -15,25 +15,26 @@ from common.data_recorder import DataRecorder
 from runners.runner import Runner
 from algorithm.symbolic_domains.simplest_explanation_model import SimplestExplanationModel
 from algorithm.symbolic_domains.simplest_explanation_learner import SimplestExplanationLearner
-from environment.symbolic_heist import SymbolicHeist
+from environment.prison_world import Prison
 from policy.simplest_explanation_policy import SimplestExplanationPolicy
 
 
-class HeistSimplestExplanationRunner(Runner):
+class PrisonSimplestExplanationRunner(Runner):
     def __init__(self, exp_num, start_time):
         super().__init__()
 
-        self.name = 'heist'
+        self.name = 'prison'
         self.exp_name = 'simplest_explanation'
         self.exp_num = exp_num
 
         # Experiment parameters
-        self.max_steps = 100
+        self.max_steps = 65
         self.num_episodes = 1
         self.visualize = True
 
-        self.env = SymbolicHeist(False, shuffle_object_names=True)
+        self.env = Prison(False, shuffle_object_names=True)
 
+        # Load heist rules to see if it can discover the new objects
         with open("data/heist_rules.pkl", 'rb') as f:
             heist_rules = pickle.load(f)
 
@@ -63,5 +64,5 @@ if __name__ == '__main__':
     experiments_start_time = datetime.now()  # Used for putting all experiments in common folder
 
     for i in range(num_experiments):
-        runner = HeistSimplestExplanationRunner(i, start_time=experiments_start_time)
+        runner = PrisonSimplestExplanationRunner(i, start_time=experiments_start_time)
         runner.run_experiment(save_training=False)

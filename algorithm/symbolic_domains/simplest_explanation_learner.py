@@ -38,12 +38,12 @@ class SimplestExplanationLearner(Simulator):
             reward = self.env.get_last_reward()
             next_state = self.env.get_state()
 
+            if is_learning:
+                self.model.add_experience(action, self.curr_state, observation)
+
             # Display environment if need be
             if self.visualize:
                 self.env.visualize(delay=self.delay)
-
-            if is_learning:
-                self.model.add_experience(action, self.curr_state, observation)
 
             # Update bookkeeping
             total_reward += reward
