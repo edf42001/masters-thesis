@@ -19,7 +19,7 @@ if __name__ == "__main__":
     print(examples)
     print()
     start_time = time.perf_counter()
-    learner = RulesetLearner(env)
+    learner = RulesetLearner()
     ruleset = learner.learn_ruleset(examples)
     end_time = time.perf_counter()
     print(f"Ruleset learning took {end_time - start_time:.3f} (# of examples {len(examples.examples)})")

@@ -30,7 +30,6 @@ class SymbolicLearner(Simulator):
             # Perform action and observe the effects / get next state
             _, observation, _ = self.env.step(action)
             reward = self.env.get_last_reward()
-            next_state = self.env.get_state()
 
             # Display environment if need be
             if self.visualize:
@@ -43,7 +42,6 @@ class SymbolicLearner(Simulator):
             # Update bookkeeping
             total_reward += reward
             steps += 1
-            self.curr_state = next_state
 
         # Final values to return for episode
         self.last_episode_steps = steps

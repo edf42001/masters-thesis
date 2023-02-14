@@ -78,7 +78,7 @@ if __name__ == "__main__":
     # for i in range(10):
     # profiler = cProfile.Profile()
     # profiler.enable()
-    solver = RulesetLearner(env)
+    solver = RulesetLearner()
     ruleset = solver.learn_ruleset(examples)
     # profiler.disable()
     # stats = pstats.Stats(profiler)

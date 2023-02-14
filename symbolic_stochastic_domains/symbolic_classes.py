@@ -205,6 +205,14 @@ class ExampleSet:
         else:
             self.examples[example] -= 1
 
+    def add_examples(self, examples: List[Example]):
+        for example in examples:
+            self.add_example(example)
+
+    def remove_examples(self, examples: List[Example]):
+        for example in examples:
+            self.remove_example(example)
+
     def copy(self):
         ret = ExampleSet()
         ret.examples = {example.copy(): count for example, count in self.examples.items()}

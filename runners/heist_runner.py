@@ -49,8 +49,6 @@ if __name__ == '__main__':
         runner.run_experiment(save_training=True)
 
     import pickle
-    with open("data/heist_rules.pkl", 'wb') as f:
-        pickle.dump(runner.model.ruleset, f)
-
-    with open("data/heist_examples.pkl", 'wb') as f:
-        pickle.dump(runner.model.examples, f)
+    with open("data/heist_learned_data.pkl", 'wb') as f:
+        data = (runner.model.ruleset, runner.model.examples, runner.model.experience_helper)
+        pickle.dump(data, f)

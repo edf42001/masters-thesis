@@ -45,7 +45,7 @@ class SymbolicModel:
         # Currently, update the model on every step. I wonder how it would work to update it based
         # on the existing ruleset
         start_time = time.perf_counter()
-        learner = RulesetLearner(self.env)
+        learner = RulesetLearner()
         self.ruleset = learner.learn_ruleset(self.examples)
         end_time = time.perf_counter()
         print(f"Ruleset learning took {end_time - start_time:.3f} (# of examples {len(self.examples.examples)})")

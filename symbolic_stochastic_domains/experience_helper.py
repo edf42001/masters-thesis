@@ -45,6 +45,8 @@ class ExperienceHelper:
         combinations = itertools.combinations(interactions, n)
 
         # Sort so the order is always the same and they will always hash the same
+        # TODO: will this become a problem?
+        # Am using string representation. Should I instead use predicate tree, or diectic reference?
         experiences = [", ".join(sorted(combination)) for combination in combinations]
 
         return experiences
@@ -65,3 +67,11 @@ class ExperienceHelper:
                 experiences[experience][action] = 1
             else:
                 experiences[experience][action] += 1
+
+    def copy(self):
+        print(self.experiences)
+        helper = ExperienceHelper()
+        helper.experiences[0] = self.experiences[0].copy()
+        helper.experiences[1] = self.experiences[1].copy()
+
+        return helper

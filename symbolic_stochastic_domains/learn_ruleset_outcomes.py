@@ -13,9 +13,8 @@ NEW_CONTEXTS = dict()  # Disable it for now
 
 
 class RulesetLearner:
-    def __init__(self, env, use_prior_names: bool = False):
-        self.env = env
-        self.use_prior_names = use_prior_names  # Learning in terms of the names we know or the new names we don't
+    def __init__(self):
+        self.object_names = set()  # List of objects referred to in exampels
 
     def create_new_contexts_from_context(self, context: PredicateTree) -> List[PredicateTree]:
         new_contexts = []
@@ -27,13 +26,7 @@ class RulesetLearner:
         # This is because we need a list of all objects the taxi can interact with
         # My new learning method uses the previous objects names when finding literals
         # So now which names we use depends on this
-        if self.use_prior_names:
-            object_names = self.env.OB_NAMES.copy()
-            object_names.append("wall")
-            object_names.remove("taxi")
-        else:
-            object_names = self.env.get_object_names()
-            object_names.remove("taxi")
+        object_names = self.object_names
 
         for p_type in p_types:
             for object_name in object_names:
@@ -56,7 +49,8 @@ class RulesetLearner:
                     new_contexts.append(copy1)
                     new_contexts.append(copy2)
 
-                    if object_name == "lock":
+                    # TODO It's because I'm not adding properties??
+                    if object_name == "lock" or object_name == "pumzg":
                         copy3 = copy1.copy()
                         copy4 = copy1.copy()
 
@@ -92,7 +86,7 @@ class RulesetLearner:
         # it will not ever check both property rules for locks
         for edge in tree.base_object.edges:
             object_name = edge.to_node.object_name
-            if object_name == "lock":
+            if object_name == "lock" or object_name == "pumzg":
                 copy1 = tree.copy()
                 copy2 = tree.copy()
 
@@ -166,8 +160,9 @@ class RulesetLearner:
             idxs = np.argsort(scores)
             scores = [scores[i] for i in idxs]
             new_contexts = [new_contexts[i] for i in idxs]
+
             # print()
-            # for score, context in zip(scores[-5:], new_contexts[-5:]):
+            # for score, context in zip(scores[-3:], new_contexts[-3:]):
             #     print(f"{context}: {score:.4f}")
 
             # Extract the best score to look for ties
@@ -256,6 +251,14 @@ class RulesetLearner:
         Given a set of training examples, learns the optimal ruleset to explain them
         For each outcome, finds the minimal set of rules that explains that and only that (for deterministic world)
         """
+
+        # A list of names that are referenced in the example set. Obviously, this is not a very efficient way to do this
+        object_names = set()
+        for example in examples.examples.keys():
+            for name in example.state.referenced_objects:
+                object_names.add(name.split("-")[-1])
+
+        self.object_names = object_names
 
         # Ruleset for an example form a if (A ^ B) v (~C) v (D) structure where the rules are or'd.
 

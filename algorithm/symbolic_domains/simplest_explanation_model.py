@@ -12,34 +12,38 @@ from symbolic_stochastic_domains.symbolic_classes import Example, Outcome, RuleS
 from symbolic_stochastic_domains.learn_ruleset_outcomes import RulesetLearner
 from symbolic_stochastic_domains.object_transfer import determine_transition_given_action
 from test.simplicity_object_transfer.simplest_explanation_based_object_transfer import get_object_permutation_rule_complexities
+from symbolic_stochastic_domains.experience_helper import ExperienceHelper
 
 
 class SimplestExplanationModel:
     """Tracks interactions with the world with Examples and Experience"""
 
-    def __init__(self, env, previous_ruleset: RuleSet, previous_examples: ExampleSet):
+    def __init__(self, env, previous_ruleset: RuleSet, previous_examples: ExampleSet,
+                 previous_experiences: ExperienceHelper):
         self.env = env
 
         self.num_actions = self.env.get_num_actions()
         self.num_atts = self.env.NUM_ATT
 
-        # Learned rules from taxi world but with different object names
+        # Learned rules, examples, and experiences from source domain
         self.previous_ruleset = previous_ruleset
         self.previous_examples = previous_examples
+        self.previous_experiences = previous_experiences
 
         # New, updated ruleset and examples (in anonymized object land)
         # self.new_ruleset = RuleSet([])
         self.new_examples = ExampleSet()
+        self.new_experience_helper = ExperienceHelper()  # Keeps track of object, predicate, action, counts
 
         # List of known object names without taxi and with wall (wall is static so is not in the list normally)
+        # TODO: need to figure out how to organize this properly
         self.prior_object_names = env.OB_NAMES.copy()
         self.prior_object_names.append("wall")
         self.prior_object_names.remove("taxi")
-
-        # TODO: need to figure out how to organize this properly
         self.prior_object_names.remove("pass")
         self.prior_object_names.remove("dest")
 
+        # Could also get this from examples?
         current_object_names = self.env.get_object_names()
         self.object_map = {unknown: self.prior_object_names.copy() for unknown in current_object_names if unknown != "taxi"}
         self.solved = False  # Whether the object_map is now one to one
@@ -50,6 +54,9 @@ class SimplestExplanationModel:
         # Collection of all object names seen so far. Used for permutations
         self.seen_objects = set()
 
+        # True if all permutations on previous object mappings required a ruleset with increased complexity
+        self.ruleset_had_to_change = False
+
     def add_experience(self, action: int, state: int, outcome: Outcome):
         """Records experience of state action transition"""
 
@@ -58,6 +65,8 @@ class SimplestExplanationModel:
         example = Example(action, literals, outcome)
 
         self.new_examples.add_example(example)
+        self.new_experience_helper.update_experience_dict(example, 1)
+        self.new_experience_helper.update_experience_dict(example, 2)
 
         # Get all objects referenced in the current state and add to our running total
         state_objects = set([diectic_obj.split("-")[-1] for diectic_obj in literals.referenced_objects])
@@ -75,7 +84,7 @@ class SimplestExplanationModel:
         # mappings_to_choose_from = (self.object_map[unknown] for unknown in self.seen_objects)
         mappings_to_choose_from = (self.object_map[unknown] for unknown in state_objects)
 
-        learner = RulesetLearner(self.env, use_prior_names=True)
+        learner = RulesetLearner()
         complexities, permutations = get_object_permutation_rule_complexities(
             mappings_to_choose_from, self.previous_ruleset, self.previous_examples,
             self.new_examples, learner, state_objects
@@ -85,8 +94,36 @@ class SimplestExplanationModel:
             print(f"{complexity}: {state_objects}->{permutation}")
 
         min_complexity = min(complexities)
-        # print(f"Min complexity: {min_complexity}")
-        assert min_complexity == 0, "Not yet deal with a changing ruleset"
+
+        # If we already did the update step, then don't do it again
+        if not self.ruleset_had_to_change and min_complexity != 0:
+            self.ruleset_had_to_change = True
+            print("Ruleset changed! Trying again with new object map")
+
+            # Try adding unknown object to each and seeing the difference:
+            for i, unknown in enumerate(state_objects):
+                if unknown not in self.object_map[unknown]:
+                    self.object_map[unknown].append(unknown)
+
+            # Weird hacks going on here need to be figured out
+            print(state_objects)
+            mappings_to_choose_from = (self.object_map[unknown] for unknown in state_objects)
+
+            for known, unknown in self.object_map.items():
+                print(known, unknown)
+
+            learner = RulesetLearner()
+            complexities, permutations = get_object_permutation_rule_complexities(
+                mappings_to_choose_from, self.previous_ruleset, self.previous_examples,
+                self.new_examples, learner, state_objects
+            )
+
+            for complexity, permutation in zip(complexities, permutations):
+                print(f"{complexity}: {state_objects}->{permutation}")
+
+            min_complexity = min(complexities)
+
+        # assert min_complexity == 0, "Not yet deal with a changing ruleset"
 
         # Update object map based on complexity values
         # The least complex ones get to be kept
@@ -94,6 +131,8 @@ class SimplestExplanationModel:
 
         for complexity, permutation in zip(complexities, permutations):
             for unknown, known in zip(state_objects, permutation):
+                if known not in self.object_map_counts[unknown]:
+                    self.object_map_counts[unknown][known] = 1
                 self.object_map_counts[unknown][known] += 1 if complexity == min_complexity else 0
 
         for unknown, counts in self.object_map_counts.items():
