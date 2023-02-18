@@ -154,7 +154,7 @@ class SimplestExplanationPolicy(Policy):
             # Search for reward state, return if found
             for action in range(self.num_actions):
                 next_state = next_states[action]
-                if next_state != -1 and not too_many_transitions[action] and self.model.get_reward(curr_state, next_state, action) > 0:
+                if next_state != -1 and self.model.get_reward(curr_state, next_state, action) > 0:
                     path = self.get_path(next_state, parents)
                     print("Found path to reward")
                     return path

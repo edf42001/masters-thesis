@@ -1,13 +1,14 @@
 import random
 from collections import deque
 
-from algorithm.transition_model import TransitionModel
 from policy.policy import Policy
+
 from symbolic_stochastic_domains.object_transfer import information_gain_of_action
+from algorithm.symbolic_domains.object_transfer_model import ObjectTransferModel
 
 
 class ObjectTransferPolicy(Policy):
-    def __init__(self, actions: int, model: TransitionModel):
+    def __init__(self, actions: int, model: ObjectTransferModel):
         self.num_actions = actions
 
         self.model = model

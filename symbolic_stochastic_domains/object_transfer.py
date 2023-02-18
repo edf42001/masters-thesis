@@ -349,6 +349,7 @@ def determine_transition_given_action(env, state: int, action: int, object_map, 
     for permutation in permutations:
         # Remove ones where there is a duplicate assignment. Two objects can not be mapped to the same
         # Technically there should be no reason why not but it breaks literals.copy_replace_names
+        # TODO: Disable this or not? Make it a parameter?
         if len(set(permutation)) != len(permutation):
             continue
 
@@ -377,6 +378,50 @@ def determine_transition_given_action(env, state: int, action: int, object_map, 
     # Returns the outcome if something will happen, no effect if nothing was applicable to the rule
     # TODO: This returns the object names from the rule. It should probably replace those with the current object names
     return set(rule.outcomes.outcomes[0] for rule in applicable_rules) if applicable_tracker else {Outcome([], [], no_effect=True)}
+
+
+def determine_transition_given_action_2(action: int, object_map, prev_ruleset: RuleSet, literals) -> Outcome:
+    """
+    A version of the above where we assume a specific object mapping
+    (so like, it won't return two outcomes one for key and one for gem)
+    """
+    applicable_rules = [rule for rule in prev_ruleset.rules if rule.action == action]
+
+    # Objects that are currently in the state
+    state_objects = set([diectic_obj.split("-")[-1] for diectic_obj in literals.referenced_objects])
+
+    mappings_to_choose_from = (object_map[unknown_object] for unknown_object in state_objects)
+    permutations = itertools.product(*mappings_to_choose_from)
+
+    outcomes = []
+    for permutation in permutations:
+        mapping = {state_object: permute_object for state_object, permute_object in zip(state_objects, permutation)}
+        mapping["taxi"] = "taxi"  # Taxi has to be there but always maps to itself
+
+        new_literals = literals.copy_replace_names(mapping)
+
+        outcome = None
+        for i, rule in enumerate(applicable_rules):
+            assert len(rule.outcomes.outcomes) == 1, "Only deal with one possible outcome"
+
+            applicable = new_literals.base_object.contains(rule.context.base_object)
+
+            if applicable and outcome is None:
+                outcome = rule.outcomes.outcomes[0]
+            elif applicable:
+                assert False, "Can't have more than two rules apply"
+
+        if outcome is None:
+            outcomes.append(Outcome([], [], no_effect=True))
+        else:
+            outcomes.append(outcome)
+
+    all_the_same = all(outcome == outcomes[0] for outcome in outcomes)
+
+    if all_the_same:
+        return outcomes[0]
+    else:
+        return None
 
 
 def get_possible_object_assignments(example: Example, prev_ruleset: RuleSet) -> List[ObjectAssignmentList]:

@@ -8,9 +8,9 @@ from typing import List
 
 from common.structures import Transition
 
-from symbolic_stochastic_domains.symbolic_classes import Example, Outcome, RuleSet, ExampleSet
+from symbolic_stochastic_domains.symbolic_classes import Example, Outcome, RuleSet, ExampleSet, PredicateTree
 from symbolic_stochastic_domains.learn_ruleset_outcomes import RulesetLearner
-from symbolic_stochastic_domains.object_transfer import determine_transition_given_action
+from symbolic_stochastic_domains.object_transfer import determine_transition_given_action, determine_transition_given_action_2
 from test.simplicity_object_transfer.simplest_explanation_based_object_transfer import get_object_permutation_rule_complexities
 from symbolic_stochastic_domains.experience_helper import ExperienceHelper
 
@@ -30,10 +30,12 @@ class SimplestExplanationModel:
         self.previous_examples = previous_examples
         self.previous_experiences = previous_experiences
 
-        # New, updated ruleset and examples (in anonymized object land)
-        # self.new_ruleset = RuleSet([])
+        # New examples in target task
         self.new_examples = ExampleSet()
         self.new_experience_helper = ExperienceHelper()  # Keeps track of object, predicate, action, counts
+
+        # List of every ruleset that the agent believes is optimal. Keys are the permutation that produced them
+        self.best_rulesets = {(): (self.previous_ruleset, [])}
 
         # List of known object names without taxi and with wall (wall is static so is not in the list normally)
         # TODO: need to figure out how to organize this properly
@@ -46,7 +48,6 @@ class SimplestExplanationModel:
         # Could also get this from examples?
         current_object_names = self.env.get_object_names()
         self.object_map = {unknown: self.prior_object_names.copy() for unknown in current_object_names if unknown != "taxi"}
-        self.solved = False  # Whether the object_map is now one to one
 
         # Keeps track of the complexity that the ruleset would increase by for all types of object assignments
         self.object_map_counts = {unknown: {name: 0 for name in self.prior_object_names} for unknown in env.get_object_names() if unknown != "taxi"}
@@ -85,7 +86,7 @@ class SimplestExplanationModel:
         mappings_to_choose_from = (self.object_map[unknown] for unknown in state_objects)
 
         learner = RulesetLearner()
-        complexities, permutations = get_object_permutation_rule_complexities(
+        complexities, permutations, rulesets = get_object_permutation_rule_complexities(
             mappings_to_choose_from, self.previous_ruleset, self.previous_examples,
             self.new_examples, learner, state_objects
         )
@@ -95,6 +96,12 @@ class SimplestExplanationModel:
 
         min_complexity = min(complexities)
 
+        # I store them in a hacky tuple because I just want some way to store the mapping, but dicts aren't hashable
+        self.best_rulesets = {permutation: (ruleset, state_objects) for ruleset, complexity, permutation in
+                         zip(rulesets, complexities, permutations) if complexity == min_complexity}
+
+        print(f"Number of best rulesets: {len(self.best_rulesets)}")
+
         # If we already did the update step, then don't do it again
         if not self.ruleset_had_to_change and min_complexity != 0:
             self.ruleset_had_to_change = True
@@ -103,8 +110,8 @@ class SimplestExplanationModel:
             # Try adding unknown object to each and seeing the difference:
             # TODO: a cheat for testing purposes
             for i, unknown in enumerate(state_objects):
-                if unknown not in self.object_map[unknown]:
-                # if unknown in ["oixzh", "tyyaw"] and unknown not in self.object_map[unknown]:
+                # if unknown not in self.object_map[unknown]:
+                if unknown in ["oixzh", "tyyaw"] and unknown not in self.object_map[unknown]:
                     self.object_map[unknown].append(unknown)
 
             # Weird hacks going on here need to be figured out
@@ -115,7 +122,7 @@ class SimplestExplanationModel:
                 print(known, unknown)
 
             learner = RulesetLearner()
-            complexities, permutations = get_object_permutation_rule_complexities(
+            complexities, permutations, rulesets = get_object_permutation_rule_complexities(
                 mappings_to_choose_from, self.previous_ruleset, self.previous_examples,
                 self.new_examples, learner, state_objects
             )
@@ -124,8 +131,10 @@ class SimplestExplanationModel:
                 print(f"{complexity}: {state_objects}->{permutation}")
 
             min_complexity = min(complexities)
+            self.best_rulesets = {permutation: (ruleset, state_objects)  for ruleset, complexity, permutation in
+                             zip(rulesets, complexities, permutations) if complexity == min_complexity}
 
-        # assert min_complexity == 0, "Not yet deal with a changing ruleset"
+            print(f"Number of best rulesets: {len(self.best_rulesets)}")
 
         # Update object map based on complexity values
         # The least complex ones get to be kept
@@ -134,7 +143,7 @@ class SimplestExplanationModel:
         for complexity, permutation in zip(complexities, permutations):
             for unknown, known in zip(state_objects, permutation):
                 if known not in self.object_map_counts[unknown]:
-                    self.object_map_counts[unknown][known] = 1
+                    self.object_map_counts[unknown][known] = 0
                 self.object_map_counts[unknown][known] += 1 if complexity == min_complexity else 0
 
         for unknown, counts in self.object_map_counts.items():
@@ -156,9 +165,6 @@ class SimplestExplanationModel:
 
         if new_lengths_of_beliefs != length_of_beliefs:
             print("Learned something new")
-        #
-        if not self.solved and new_lengths_of_beliefs == len(self.prior_object_names):
-            self.solved = True
 
     def compute_possible_transitions(self, state: int, action: int, literals=None, instance_name_map=None) -> List[Transition]:
         """
@@ -170,7 +176,7 @@ class SimplestExplanationModel:
         if literals is None or instance_name_map is None:
             literals, instance_name_map = self.env.get_literals(state)
 
-        transitions = determine_transition_given_action(self.env, state, action, self.object_map, self.previous_ruleset, literals=literals)
+        transitions = self.get_outcomes_using_rulesets(state, action, literals)
 
         if transitions is None:
             return []
@@ -239,6 +245,28 @@ class SimplestExplanationModel:
         all_transitions = [Transition(effect, probability) for effect in all_effects]
 
         return all_transitions
+
+    def get_outcomes_using_rulesets(self, state: int, action: int, literals: PredicateTree) -> List[Outcome]:
+        # Iterate over each ruleset. Reduce the object map as required. Pass that into the thingy. Does the permutations
+
+        all_outcomes = []
+        for permutation, (ruleset, seen_objects) in self.best_rulesets.items():
+            object_map = {key: value.copy() for key, value in self.object_map.items()}
+
+            for seen_object, permute_object in zip(seen_objects, permutation):
+                object_map[seen_object] = [permute_object]
+
+            # It considers applicable rules to be ones with the same action, that's why it returns all types
+            outcome = determine_transition_given_action_2(action, object_map, ruleset, literals)
+
+            all_outcomes.append(outcome)
+
+        # Only compare result to see if the outcomes are the same
+        # TODO: this should really compare diectic references, or remap back to original,
+        all_the_same = all(outcome is not None and list(outcome.value.values()) == list(all_outcomes[0].value.values()) for outcome in all_outcomes)
+        all_outcomes = all_outcomes if all_the_same else None
+
+        return all_outcomes
 
     def get_reward(self, state: int, next_state: int, action: int):
         """Assumes all rewards are known in advance"""
