@@ -69,7 +69,6 @@ class ExperienceHelper:
                 experiences[experience][action] += 1
 
     def copy(self):
-        print(self.experiences)
         helper = ExperienceHelper()
         helper.experiences[0] = self.experiences[0].copy()
         helper.experiences[1] = self.experiences[1].copy()

@@ -101,8 +101,10 @@ class SimplestExplanationModel:
             print("Ruleset changed! Trying again with new object map")
 
             # Try adding unknown object to each and seeing the difference:
+            # TODO: a cheat for testing purposes
             for i, unknown in enumerate(state_objects):
                 if unknown not in self.object_map[unknown]:
+                # if unknown in ["oixzh", "tyyaw"] and unknown not in self.object_map[unknown]:
                     self.object_map[unknown].append(unknown)
 
             # Weird hacks going on here need to be figured out

@@ -43,8 +43,6 @@ class PrisonSimplestExplanationRunner(Runner):
         heist_examples = examples.copy()
         heist_experiences = experience_helper.copy()
 
-        print(self.env.object_name_map)
-
         self.model = SimplestExplanationModel(self.env, heist_rules, heist_examples, heist_experiences)
         self.planner = SimplestExplanationPolicy(self.env.get_num_actions(), self.model)
         self.learner = SimplestExplanationLearner(self.env, self.model, self.planner, visualize=self.visualize, delay=10)

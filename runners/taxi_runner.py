@@ -45,12 +45,10 @@ def run_single_experiment(experiment_num: int):
     runner = TaxiRunner(experiment_num, start_time=experiments_start_time)
     runner.run_experiment(save_training=True)
 
-    import pickle
-    with open("data/symbolic_taxi_rules.pkl", 'wb') as f:
-        pickle.dump(runner.model.ruleset, f)
-
-    with open("data/taxi_examples.pkl", 'wb') as f:
-        pickle.dump(runner.model.examples, f)
+    # import pickle
+    # with open("data/taxi_learned_data.pkl", 'wb') as f:
+    #     data = (runner.model.ruleset, runner.model.examples, runner.model.experience_helper)
+    #     pickle.dump(data, f)
 
 
 if __name__ == '__main__':
@@ -58,7 +56,7 @@ if __name__ == '__main__':
 
     # Using a random seed makes all the processes have the same seed
 
-    num_experiments = 1
+    num_experiments = 100
 
     experiments_start_time = datetime.now()  # Used for putting all experiments in common folder
 

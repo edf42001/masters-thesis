@@ -1,8 +1,10 @@
 import random
-import numpy as np
 import logging
 import sys
 from datetime import datetime
+from multiprocessing import Pool
+
+import numpy as np
 
 from common.data_recorder import DataRecorder
 from runners.runner import Runner
@@ -34,16 +36,29 @@ class PrisonRunner(Runner):
         self.data_recorder = DataRecorder(self, start_time)
 
 
+def run_single_experiment(experiment_num: int):
+    # I don't know how to pass additional args, so experiments_start_time will just be read
+    # from the below scope.
+
+    # Also, reset the random seed, otherwise, they all have the same seed
+    np.random.seed(None)
+    random.seed()
+    runner = PrisonRunner(experiment_num, start_time=experiments_start_time)
+    runner.run_experiment(save_training=True)
+
+
 if __name__ == '__main__':
     logging.basicConfig(level=logging.DEBUG, stream=sys.stdout)
 
-    random.seed(1)
-    np.random.seed(1)
-
-    num_experiments = 50
+    # Using a random seed makes all the processes have the same seed
+    num_experiments = 100
 
     experiments_start_time = datetime.now()  # Used for putting all experiments in common folder
 
-    for i in range(num_experiments):
-        runner = PrisonRunner(i, start_time=experiments_start_time)
-        runner.run_experiment(save_training=True)
+    experiment_numbers = np.arange(num_experiments, dtype=int)
+
+    with Pool(processes=6) as pool:
+        results = pool.imap_unordered(run_single_experiment, experiment_numbers, chunksize=5)
+
+        for _ in results:
+            pass

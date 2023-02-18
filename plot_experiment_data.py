@@ -13,15 +13,15 @@ HOME_FOLDER = "/home/edf42001/Documents/College/Thesis/masters-thesis"
 TRAIN_FOLDER = "training"
 
 experiment_type = "symbolic_learning"
-experiment_name = "heist_2022_10_21_11_17_44"
-experiment_names_to_compare = ["heist_2022_10_21_12_31_45"]
+experiment_name = "heist_2023_02_16_10_55_28"
+experiment_names_to_compare = []
 
 
 def load_data(experiment_name: str):
     episode_lengths = []
 
     path = f"{HOME_FOLDER}/{TRAIN_FOLDER}/{experiment_type}/{experiment_name}"
-    for filename in glob.glob(f"{path}/*"):
+    for filename in glob.glob(f"{path}/exp_*"):
         with open(filename, "rt") as f:
             try:
                 reward = float(f.readline()[:-1])  # Reward on first line, remove \n
@@ -39,6 +39,7 @@ if __name__ == "__main__":
     episode_lengths = load_data(experiment_name)
 
     print(f"Read {len(episode_lengths)} experiments successfully")
+    print(f"Mean length: {np.mean(episode_lengths)}")
 
     n = max(100, int((1 + (max(episode_lengths) // 100)) * 100))
     plt.hist(episode_lengths, range=[0, n], bins=n, density=True)
