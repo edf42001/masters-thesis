@@ -43,6 +43,8 @@ class PrisonSimplestExplanationRunner(Runner):
         heist_examples = examples.copy()
         heist_experiences = experience_helper.copy()
 
+        print(self.env.object_name_map)
+
         self.model = SimplestExplanationModel(self.env, heist_rules, heist_examples, heist_experiences)
         self.planner = SimplestExplanationPolicy(self.env.get_num_actions(), self.model)
         self.learner = SimplestExplanationLearner(self.env, self.model, self.planner, visualize=self.visualize, delay=10)
@@ -60,5 +62,15 @@ if __name__ == '__main__':
     experiments_start_time = datetime.now()  # Used for putting all experiments in common folder
 
     for i in range(num_experiments):
+        import cProfile
+        import pstats
+
+        # profiler = cProfile.Profile()
+        # profiler.enable()
+
         runner = PrisonSimplestExplanationRunner(i, start_time=experiments_start_time)
         runner.run_experiment(save_training=False)
+
+        # profiler.disable()
+        # stats = pstats.Stats(profiler)
+        # stats.dump_stats("simplest_explanation_runner_1.prof")

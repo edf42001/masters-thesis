@@ -206,14 +206,6 @@ class DoormaxRuleset:
     def next_state(self, state: int, observation) -> int:
         return self.env.apply_effect(state, observation)
 
-    def print_action_predictions(self, state: int):
-        condition = self.env.get_condition(state)
-        pass
-
-    def print_parent_predictions(self, state: int, action: int):
-        condition = self.env.get_condition(state)
-        pass
-
     def unreachable_state(self, from_state: int, to_state: int) -> bool:
         return self.env.unreachable_state(from_state, to_state)
 
