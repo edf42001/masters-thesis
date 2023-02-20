@@ -252,13 +252,7 @@ class RulesetLearner:
         For each outcome, finds the minimal set of rules that explains that and only that (for deterministic world)
         """
 
-        # A list of names that are referenced in the example set. Obviously, this is not a very efficient way to do this
-        object_names = set()
-        for example in examples.examples.keys():
-            for name in example.state.referenced_objects:
-                object_names.add(name.split("-")[-1])
-
-        self.object_names = object_names
+        self.object_names = examples.referenced_object_names()
 
         # Ruleset for an example form a if (A ^ B) v (~C) v (D) structure where the rules are or'd.
 

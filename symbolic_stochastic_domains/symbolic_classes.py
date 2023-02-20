@@ -213,6 +213,15 @@ class ExampleSet:
         for example in examples:
             self.remove_example(example)
 
+    def referenced_object_names(self):
+        # A list of names that are referenced in the example set. Obviously, this is not a very efficient way to do this
+        object_names = set()
+        for example in self.examples.keys():
+            for name in example.state.referenced_objects:
+                object_names.add(name.split("-")[-1])
+
+        return object_names
+
     def copy(self):
         ret = ExampleSet()
         ret.examples = {example.copy(): count for example, count in self.examples.items()}

@@ -63,6 +63,7 @@ def get_object_permutation_rule_complexities(mappings_to_choose_from, old_rulese
     permutations = itertools.product(*mappings_to_choose_from)
     store_permutations = []
     complexities = []
+    rulesets = []
 
     # Initial complexity of the ruleset
     initial_complexity = sum([len(rule.context.nodes) for rule in old_ruleset.rules])
@@ -77,6 +78,7 @@ def get_object_permutation_rule_complexities(mappings_to_choose_from, old_rulese
         if remaped_examples is None:
             complexities.append(1000)
             store_permutations.append(permutation)
+            rulesets.append(None)
             continue
 
         print(mapping)
@@ -91,8 +93,9 @@ def get_object_permutation_rule_complexities(mappings_to_choose_from, old_rulese
 
         complexities.append(complexity)
         store_permutations.append(permutation)
+        rulesets.append(new_ruleset)
 
-    return complexities, store_permutations
+    return complexities, store_permutations, rulesets
 
 
 def main():
