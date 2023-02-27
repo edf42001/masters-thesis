@@ -120,7 +120,7 @@ class SymbolicPolicy(Policy):
                     experiences = self.model.experience_helper.experiences[0]  # Level 1 experience
                     for experience in self.model.experience_helper.extract_experiences(literals, n=1):
                         if experience not in experiences or action not in experiences[experience]:
-                            print(f"Found an experience: {experience}, {action}")
+                            # print(f"Found an experience: {experience}, {action}")
                             new_experiences[action] = True
 
                             # This action is a new experience, we don't need to process the others.
@@ -132,7 +132,7 @@ class SymbolicPolicy(Policy):
                     experiences = self.model.experience_helper.experiences[1]  # Level 2 experience
                     for experience in self.model.experience_helper.extract_experiences(literals, n=2):
                         if experience not in experiences or action not in experiences[experience]:
-                            print(f"Found an experience 2: {experience}, {action}")
+                            # print(f"Found an experience 2: {experience}, {action}")
                             new_experiences_2[action] = True
 
                             # This action is a new experience, we don't need to process the others.

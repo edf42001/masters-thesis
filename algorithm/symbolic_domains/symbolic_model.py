@@ -48,11 +48,11 @@ class SymbolicModel:
         learner = RulesetLearner()
         self.ruleset = learner.learn_ruleset(self.examples)
         end_time = time.perf_counter()
-        print(f"Ruleset learning took {end_time - start_time:.3f} (# of examples {len(self.examples.examples)})")
+        # print(f"Ruleset learning took {end_time - start_time:.3f} (# of examples {len(self.examples.examples)})")
 
-        print("New model:")
-        self.print_model()
-        print()
+        # print("New model:")
+        # self.print_model()
+        # print()
 
     def compute_possible_transitions(self, state: int, action: int, literals=None, instance_name_map=None) -> List[Transition]:
         """
