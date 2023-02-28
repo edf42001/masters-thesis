@@ -24,11 +24,24 @@ class ObjectTransferModel:
         self.prior_object_names.append("wall")
         self.prior_object_names.remove("taxi")
 
-        current_object_names = self.env.get_object_names()
-        self.object_map = {unknown: self.prior_object_names.copy() for unknown in current_object_names if unknown != "taxi"}
+        self.possible_assignments = set()  # Possible objects that could be other objects or not
+
+        self.object_map = {}
+        self.init_object_map()  # Setup object map
+
         self.solved = False  # Whether the object_map is now one to one
 
-        self.possible_assignments = set()  # Possible objects that could be other objects or not
+    def init_object_map(self):
+        current_object_names = self.env.get_object_names()
+        self.object_map = {unknown: self.prior_object_names.copy() for unknown in current_object_names if unknown != "taxi"}
+
+        # If an object has the same name as in the previous env, then it is the same. Update the object map accordingly
+        for key, value in self.object_map.items():
+            if key in self.prior_object_names:
+                for value2 in self.object_map.values():
+                    if key in value2:
+                        value2.remove(key)
+                self.object_map[key] = [key]
 
     def add_experience(self, action: int, state: int, outcome: Outcome):
         """Records experience of state action transition"""

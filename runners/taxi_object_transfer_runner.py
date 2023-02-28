@@ -4,6 +4,8 @@ import logging
 import sys
 import pickle
 from datetime import datetime
+from multiprocessing import Pool
+from typing import Tuple, List
 
 from common.data_recorder import DataRecorder
 from runners.runner import Runner
@@ -14,7 +16,7 @@ from policy.object_transfer_policy import ObjectTransferPolicy
 
 
 class TaxiObjectTransferRunner(Runner):
-    def __init__(self, exp_num, start_time):
+    def __init__(self, exp_num, start_time, known_objects):
         super().__init__()
 
         self.name = 'taxi'
@@ -25,9 +27,9 @@ class TaxiObjectTransferRunner(Runner):
         self.max_steps = 50
         self.num_episodes = 1
         self.stochastic = False
-        self.visualize = True
+        self.visualize = False
 
-        self.env = SymbolicTaxi(stochastic=self.stochastic, shuffle_object_names=True)
+        self.env = SymbolicTaxi(stochastic=self.stochastic, shuffle_object_names=True, known_objects=known_objects)
 
         # Load previously learned model with different object names
         with open("data/symbolic_taxi_rules.pkl", 'rb') as f:
@@ -39,16 +41,32 @@ class TaxiObjectTransferRunner(Runner):
         self.data_recorder = DataRecorder(self, start_time)
 
 
-if __name__ == '__main__':
+def run_single_experiment(data: Tuple[int, str, List]):
+    # Also, reset the random seed, otherwise, they all have the same seed
+    np.random.seed(None)
+    random.seed()
+    experiment_num, start_time, known_objects = data
+    runner = TaxiObjectTransferRunner(experiment_num, start_time=start_time, known_objects=known_objects)
+    runner.run_experiment(save_training=True)
+
+
+def main(**kwargs):
     logging.basicConfig(level=logging.DEBUG, stream=sys.stdout)
 
-    random.seed(1)
-    np.random.seed(1)
-
-    num_experiments = 50
+    num_experiments = 100
 
     experiments_start_time = datetime.now()  # Used for putting all experiments in common folder
+    experiment_numbers = np.arange(num_experiments, dtype=int)
+    known_objects = kwargs["known_objects"] if "known_objects" in kwargs else None
 
-    for i in range(num_experiments):
-        runner = TaxiObjectTransferRunner(i, start_time=experiments_start_time)
-        runner.run_experiment(save_training=True)
+    data = [(num, experiments_start_time, known_objects) for num in experiment_numbers]  # Only way to pass both exp num and start time
+
+    with Pool(processes=6) as pool:
+        results = pool.imap_unordered(run_single_experiment, data, chunksize=5)
+
+        for _ in results:
+            pass
+
+
+if __name__ == '__main__':
+    main()

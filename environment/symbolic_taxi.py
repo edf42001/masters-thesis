@@ -75,7 +75,7 @@ class SymbolicTaxi(Environment):
              '| |   |   |',
              '| |   |   |']
 
-    def __init__(self, stochastic=True, shuffle_actions=False, shuffle_object_names=False):
+    def __init__(self, stochastic=True, shuffle_object_names=False, known_objects=None):
         self.stochastic: bool = stochastic
 
         # Add walls to the map
@@ -102,7 +102,11 @@ class SymbolicTaxi(Environment):
         if shuffle_object_names:
             self.object_name_map = {}
             for ob in self.OB_NAMES + ['wall']:
-                self.object_name_map[ob] = random_string_generator(5)
+                # Randomize names, unless the obejct is in the known object list and should be kept
+                if known_objects is not None and ob in known_objects:
+                    self.object_name_map[ob] = ob
+                else:
+                    self.object_name_map[ob] = random_string_generator(5)
             self.object_name_map['taxi'] = 'taxi'  # Except for taxi, taxi is base object
 
         # Restart to begin episode
