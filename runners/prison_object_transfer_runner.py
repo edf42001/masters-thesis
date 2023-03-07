@@ -38,10 +38,12 @@ class PrisonObjectTransferRunner(Runner):
         self.env = Prison(stochastic=self.stochastic, shuffle_object_names=True, known_objects=known_objects)
 
         # Load previously learned model with different object names
-        with open("data/symbolic_prison_rules.pkl", 'rb') as f:
-            symbolic_taxi_ruleset = pickle.load(f)
+        with open("data/prison_learned_data.pkl", 'rb') as f:
+            prison_ruleset, _, _ = pickle.load(f)
 
-        self.model = ObjectTransferModel(self.env, symbolic_taxi_ruleset)
+        print(self.env.object_name_map)
+
+        self.model = ObjectTransferModel(self.env, prison_ruleset)
         self.planner = ObjectTransferPolicy(self.env.get_num_actions(), self.model)
         self.learner = ObjectTransferLearner(self.env, self.model, self.planner, visualize=self.visualize, delay=10)
         self.data_recorder = DataRecorder(self, start_time)

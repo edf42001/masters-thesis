@@ -45,6 +45,11 @@ def run_single_experiment(data: Tuple[int, str]):
     runner = PrisonRunner(experiment_num, start_time=start_time)
     runner.run_experiment(save_training=True)
 
+    # import pickle
+    # with open("data/prison_learned_data.pkl", 'wb') as f:
+    #     data = (runner.model.ruleset, runner.model.examples, runner.model.experience_helper)
+    #     pickle.dump(data, f)
+
 
 def main():
     logging.basicConfig(level=logging.DEBUG, stream=sys.stdout)
