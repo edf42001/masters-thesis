@@ -42,14 +42,14 @@ def remap_examples(examples: ExampleSet, mapping: dict, previous_examples: Examp
         # TODO: What to do when there is a contradiction? Set to 0 probability?
         # Check if there is a contradiction: We have experienced this exact set before but had a different outcome
         for ex in previous_examples.examples:
-            if action == ex.action and new_literals == ex.state and new_outcome != ex.outcome:
+            if action == ex.action and new_outcome != ex.outcome and (new_literals.base_object.string_no_numbers() == ex.state.base_object.string_no_numbers()):
                 print("Whoops, that's a contradiction!", new_literals, ex.state, new_outcome, ex.outcome)
                 print(mapping)
                 return None
 
         # Also need to check new examples as we begin remapping!
         for ex in new_example_list:
-            if action == ex.action and new_literals == ex.state and new_outcome != ex.outcome:
+            if action == ex.action and new_outcome != ex.outcome and (new_literals.base_object.string_no_numbers() == ex.state.base_object.string_no_numbers()):
                 print("Whoops, that's a contradiction!", new_literals, ex.state, new_outcome, ex.outcome)
                 print(mapping)
                 return None

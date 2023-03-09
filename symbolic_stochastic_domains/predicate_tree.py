@@ -250,6 +250,35 @@ class Node:
 
         return ret
 
+    def string_no_numbers(self):
+        ret = ""
+
+        # Sort so that when we print the order is always the same
+        for edge in sorted(self.edges, key=lambda x: str(x)):
+            ret += f"{self.object_name}-{edge.str_no_numbers()}"
+            ret += "," if len(edge.to_node.edges) == 0 else ""  # Indicate the ends of chains of objects
+            # Add in negative edges here. There is no recursion, because they represent not interacting with an object
+            if len(self.negative_edges) > 0:
+                # Extra dot on end for same reason, otherwise it gets chopped
+                ret += ", ".join(f"~{self.object_name}-{edge.str_no_numbers()}" for edge in sorted(self.negative_edges)) + ","
+
+            # Add properties in here
+            if len(self.properties) > 0:
+                ret += ", ".join(f"{key.name}-{value}" for key, value in self.properties) + ", "
+
+            ret += " " + edge.to_node.str_helper()
+
+        # We needed to put negative edges in the for loop so they'd appear in the right place, but that doesn't
+        # work if there are no edges, so include them here in that case
+        if len(self.negative_edges) > 0 and len(self.edges) == 0:
+            # Have to add two dots at the end because we chop two off because of trailing commas. May need to rethink
+            ret += ", ".join([f"~{self.object_name}-{edge.str_no_numbers()}" for edge in self.negative_edges]) + ".."
+
+        if len(self.properties) > 0 and len(self.edges) == 0:
+            ret += ", ".join(f"{self.object_name}-{key.name}-{value}" for key, value in self.properties.items()) + ", "
+
+        return ret
+
     def __str__(self):
         return "[" + self.str_helper()[:-2] + "]"  # There's a trailing space and comma on str_helper we want to remove
 
@@ -264,8 +293,11 @@ class Edge:
         self.to_node = None  # Pointer to the node this edge is connected to
         self.from_node = None  # Where this edge came from. Used for traveling backwards up the chain
 
+    def str_no_numbers(self):
+        return f"{self.type.name}-{self.to_node.object_name}"
+
     def __str__(self):
-        return f"{self.type.name}-{self.to_node.full_name()}"  # Remove the PredicateType. prefix from the enum
+        return f"{self.type.name}-{self.to_node.full_name()}"
 
     def __repr__(self):
         return self.__str__()

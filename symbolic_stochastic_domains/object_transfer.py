@@ -409,7 +409,14 @@ def determine_transition_given_action_2(action: int, object_map, prev_ruleset: R
             if applicable and outcome is None:
                 outcome = rule.outcomes.outcomes[0]
             elif applicable:
-                assert False, "Can't have more than two rules apply"
+                print(literals)
+                print(mapping)
+                print(applicable_rules)
+                print(new_literals)
+                print(rule.context)
+                # assert False, "Can't have more than two rules apply"
+                print("ERROR: Can't have more than two rules apply! ignoring for now")
+                return None
 
         if outcome is None:
             outcomes.append(Outcome([], [], no_effect=True))

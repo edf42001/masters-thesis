@@ -63,6 +63,8 @@ class Prison(Environment):
     # Gem is held (0) or not held (1)
     # Passenger is on pickup location (1), in taxi (0), or successful dropped off (2)
     # There is only one destination
+    # I think the plus two for pass might be so that the dropoff number is correct since taxi had for locations
+    # really should split that variable into a location / pickup var
     STATE_ARITIES = [SIZE_X, SIZE_Y] + [3] * 5 + [2] * 4 + [2] + [NUM_LOCATIONS + 2, 2]
 
     # Rewards

@@ -108,7 +108,7 @@ class SimplestExplanationPolicy(Policy):
             visited.add(curr_state)
             literals, instance_name_map = self.model.env.get_literals(curr_state)
 
-            # print(f"Popped state {curr_state}: {self.model.env.get_factored_state(curr_state)}")
+            # print(f"Popped state {curr_state}, parent {parents[curr_state]}: {self.model.env.get_factored_state(curr_state)}")
 
             # Generate all next states
             # I choose to do multiple small for loops rather than one big one, because I like how it organizes
