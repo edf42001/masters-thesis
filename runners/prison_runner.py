@@ -24,7 +24,7 @@ class PrisonRunner(Runner):
         self.exp_num = exp_num
 
         # Experiment parameters
-        self.max_steps = 250
+        self.max_steps = 300
         self.num_episodes = 1
         self.stochastic = False
         self.visualize = False
@@ -54,7 +54,7 @@ def run_single_experiment(data: Tuple[int, str]):
 def main():
     logging.basicConfig(level=logging.DEBUG, stream=sys.stdout)
 
-    num_experiments = 10
+    num_experiments = 300
 
     experiments_start_time = datetime.now()  # Used for putting all experiments in common folder
 

@@ -79,6 +79,13 @@ class SymbolicHeist(Environment):
         # PredicateType.OPEN: [[OB_LOCK]]
     }
 
+    # PREDICATE_MAPPINGS = {
+    #     PredicateType.TOUCH_DOWN: [[OB_TAXI], [OB_LOCK]],
+    #     PredicateType.ON: [[OB_TAXI], [OB_KEY, OB_GEM]],
+    #     PredicateType.IN: [[OB_TAXI], [OB_KEY, OB_GEM]],
+    #     # PredicateType.OPEN: [[OB_LOCK]]
+    # }
+
     def __init__(self, stochastic=True, shuffle_object_names=False, known_objects=None):
         self.stochastic = stochastic
 
@@ -141,12 +148,17 @@ class SymbolicHeist(Environment):
         if init_state:
             self.curr_state = init_state
         else:
-            # Agent starts at (2, 1)
             # Randomly choose 3 of 5 possible key locations (1 if exists, 2 if not exists)
             # All locks (3) begin locked (1)
             # Gem begins not held (1)
             key_idx = np.random.choice(5, size=3, replace=False)
-            self.curr_state = [2, 1] + [1 if i in key_idx else 2 for i in range(5)] + [1, 1, 1, 1]
+
+            # Keep going until the random position is not on one of key, gem, or lock locations
+            agent_pos = (np.random.randint(0, self.SIZE_X-1), np.random.randint(0, self.SIZE_Y-1))
+            while agent_pos in (self.keys + self.locks + [self.gem]):
+                agent_pos = (np.random.randint(0, self.SIZE_X-1), np.random.randint(0, self.SIZE_Y-1))
+
+            self.curr_state = [agent_pos[0], agent_pos[1]] + [1 if i in key_idx else 2 for i in range(5)] + [1, 1, 1, 1]
 
     def get_object_list(self, state: int):
         state = self.get_factored_state(state)

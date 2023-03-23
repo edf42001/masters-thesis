@@ -5,7 +5,6 @@ Plots and compares data recorded from experiments. Cumulative reward, time to co
 """
 
 import glob
-import os
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -13,19 +12,15 @@ import numpy as np
 HOME_FOLDER = "/home/edf42001/Documents/College/Thesis/masters-thesis"
 TRAIN_FOLDER = "training"
 
-experiment_type = "object_transfer"
-experiment_names = ["prison_2023_03_02_10_41_39", "prison_2023_03_02_10_41_48", "prison_2023_03_02_10_42_00",
-                    "prison_2023_03_02_10_42_12", "prison_2023_03_02_10_42_17", "prison_2023_03_02_10_42_27", "prison_2023_03_02_10_42_33"]
+experiment_type = "symbolic_learning"
+experiment_names = ["taxi_runner_300_trials", "taxI_300_only_necessary_relations"]
+title = "Taxi"
 
 
 def load_data(experiment_name: str):
     episode_lengths = []
 
     path = f"{HOME_FOLDER}/{TRAIN_FOLDER}/{experiment_type}/{experiment_name}"
-
-    if not os.path.exists(path):
-        exit(f"Path {path} not found")
-
     for filename in glob.glob(f"{path}/exp_*"):
         with open(filename, "rt") as f:
             try:
@@ -39,20 +34,19 @@ def load_data(experiment_name: str):
     return episode_lengths
 
 
-def main():
-    # Load all the data
-    data = []
+if __name__ == "__main__":
+    # Load example data to get length
+    episode_lengths = load_data(experiment_names[0])
+    n = max(100, int((1 + (max(episode_lengths) // 100)) * 100))
 
     for name in experiment_names:
         episode_lengths = load_data(name)
-        data.append(episode_lengths)
-        print(f"Read {len(episode_lengths)} experiments successfully from {name}")
-        print(f"Mean length: {np.mean(episode_lengths)}")
+        plt.hist(episode_lengths, range=[0, n], bins=n, density=True)
 
-    # Box plot the data
-    plt.boxplot(data)
+        print(f"Read {len(episode_lengths)} experiments successfully")
+        print(f"Mean: {np.mean(episode_lengths):.2f}, Std: {np.std(episode_lengths):.2f}")
+
+    plt.xlabel("Single Episode Duration")
+    plt.ylabel("Frequency")
+    plt.title(title)
     plt.show()
-
-
-if __name__ == "__main__":
-    main()

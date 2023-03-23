@@ -98,6 +98,13 @@ class Prison(Environment):
         # PredicateType.OPEN: [[OB_LOCK]]
     }
 
+    # PREDICATE_MAPPINGS = {
+    #     PredicateType.TOUCH_DOWN: [[OB_TAXI], [OB_LOCK]],
+    #     PredicateType.ON: [[OB_TAXI], [OB_KEY, OB_GEM, OB_PASS, OB_DEST]],
+    #     PredicateType.IN: [[OB_TAXI], [OB_KEY, OB_GEM, OB_PASS]],
+    #     # PredicateType.OPEN: [[OB_LOCK]]
+    # }
+
     def __init__(self, stochastic=True, shuffle_object_names=False, known_objects=None):
         self.stochastic = stochastic
 
@@ -163,7 +170,6 @@ class Prison(Environment):
         if init_state:
             self.curr_state = init_state
         else:
-            # Agent starts at (2, 1)
             # Randomly choose 3 of 5 possible key locations
             # All locks begin locked
             # Gem begins not held
@@ -172,8 +178,13 @@ class Prison(Environment):
             passenger = 1  # Passenger needs a -1, but destination is normal. So here, pass, dest is actually loc 0, 1
             destination = 1
 
+            # Keep going until the position is not on the key, gem, or lock locations (or that area that is blocked)
+            agent_pos = (np.random.randint(0, self.SIZE_X-1), np.random.randint(0, self.SIZE_Y-1))
+            while agent_pos in (self.keys + self.locks + [self.gem] + self.locations + [(5, 0), (5, 1), (5, 2)]):
+                agent_pos = (np.random.randint(0, self.SIZE_X-1), np.random.randint(0, self.SIZE_Y-1))
+
             # Taxi, 5 keys, 4 locks, gem, pass, dest
-            self.curr_state = [2, 1] + [1 if i in key_idx else 2 for i in range(5)] + [1] * 4 + [1, passenger, destination]
+            self.curr_state = [agent_pos[0], agent_pos[1]] + [1 if i in key_idx else 2 for i in range(5)] + [1] * 4 + [1, passenger, destination]
 
     def get_object_list(self, state: int):
         state = self.get_factored_state(state)

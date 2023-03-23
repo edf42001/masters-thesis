@@ -5,6 +5,9 @@ Simplest explanation runner on prison world. Currently, I give it the ruleset fr
 """
 
 import random
+from multiprocessing import Pool
+from typing import Tuple, List
+
 import numpy as np
 import logging
 import sys
@@ -30,7 +33,7 @@ class PrisonSimplestExplanationRunner(Runner):
         # Experiment parameters
         self.max_steps = 150
         self.num_episodes = 2
-        self.visualize = True
+        self.visualize = False
 
         self.env = Prison(False, shuffle_object_names=True)
 
@@ -51,26 +54,41 @@ class PrisonSimplestExplanationRunner(Runner):
         self.data_recorder = DataRecorder(self, start_time)
 
 
-if __name__ == '__main__':
+def run_single_experiment(data: Tuple[int, str]):
+    # Also, reset the random seed, otherwise, they all have the same seed
+    np.random.seed(None)
+    random.seed()
+    experiment_num, start_time = data
+    # import cProfile
+    # import pstats
+    #
+    # profiler = cProfile.Profile()
+    # profiler.enable()
+
+    runner = PrisonSimplestExplanationRunner(experiment_num, start_time=start_time)
+    runner.run_experiment(save_training=True)
+
+    # profiler.disable()
+    # stats = pstats.Stats(profiler)
+    # stats.dump_stats("simplest_explanation_runner_1.prof")
+
+
+def main():
     logging.basicConfig(level=logging.DEBUG, stream=sys.stdout)
 
-    random.seed(1)
-    np.random.seed(1)
-
-    num_experiments = 1
+    num_experiments = 10
 
     experiments_start_time = datetime.now()  # Used for putting all experiments in common folder
+    experiment_numbers = np.arange(num_experiments, dtype=int)
 
-    for i in range(num_experiments):
-        import cProfile
-        import pstats
+    data = [(num, experiments_start_time) for num in experiment_numbers]  # Only way to pass both exp num and start time
 
-        # profiler = cProfile.Profile()
-        # profiler.enable()
+    with Pool(processes=6) as pool:
+        results = pool.imap_unordered(run_single_experiment, data, chunksize=5)
 
-        runner = PrisonSimplestExplanationRunner(i, start_time=experiments_start_time)
-        runner.run_experiment(save_training=False)
+        for _ in results:
+            pass
 
-        # profiler.disable()
-        # stats = pstats.Stats(profiler)
-        # stats.dump_stats("simplest_explanation_runner_1.prof")
+
+if __name__ == "__main__":
+    main()

@@ -65,8 +65,12 @@ class SymbolicTaxi(Environment):
         PredicateType.TOUCH_DOWN: [[OB_TAXI], [OB_PASS, OB_DEST]],
         PredicateType.ON: [[OB_TAXI], [OB_PASS, OB_DEST]],
         PredicateType.IN: [[OB_TAXI], [OB_PASS, OB_DEST]],
-        # PredicateType.OPEN: [[OB_LOCK]]
     }
+
+    # PREDICATE_MAPPINGS = {
+    #     PredicateType.ON: [[OB_TAXI], [OB_PASS, OB_DEST]],
+    #     PredicateType.IN: [[OB_TAXI], [OB_PASS]],
+    # }
 
     # For visualization
     lines = ['|   |     |',
@@ -122,13 +126,18 @@ class SymbolicTaxi(Environment):
         if init_state:
             self.curr_state = [0, 1, init_state[0], init_state[1]]
         else:
-            # Taxi starts at (0, 1)
             # Randomly choose passenger and destination locations
             # Update so set to 0 indicates pickup
             # Passenger has 0 = pickup, but destination is normal (starts at 0)
             passenger, destination = random.sample([1, 2, 3, 4], 2)
             destination = destination - 1
-            self.curr_state = [0, 1, passenger, destination]
+
+            # Keep going until the random position is not on one of the locations
+            taxi_pos = (random.randint(0, self.SIZE_X-1), random.randint(0, self.SIZE_Y-1))
+            while taxi_pos in self.locations:
+                taxi_pos = (random.randint(0, self.SIZE_X-1), random.randint(0, self.SIZE_Y-1))
+
+            self.curr_state = [taxi_pos[0], taxi_pos[1], passenger, destination]
 
     def anonymize_name(self, ob_name):
         if self.object_name_map:
