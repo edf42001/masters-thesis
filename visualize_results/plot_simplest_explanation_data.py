@@ -13,10 +13,13 @@ import numpy as np
 HOME_FOLDER = "/home/edf42001/Documents/College/Thesis/masters-thesis"
 TRAIN_FOLDER = "training"
 
-experiment_type = "object_transfer"
-experiment_names = ["taxi_2023_03_23_16_59_18", "taxi_2023_03_23_16_59_21", "taxi_2023_03_23_16_59_24",
-                    "taxi_2023_03_23_16_59_27"]
+experiment_type = ""
 
+experiment_names = ["simplest_explanation/taxi_2023_03_24_13_57_43", "simplest_explanation/heist_2023_03_24_13_58_14", "simplest_explanation/prison_2023_03_24_14_00_52",
+                    "object_transfer/taxi_2023_03_23_16_59_18", "object_transfer/heist_2023_03_23_16_59_29", "object_transfer/prison_2023_03_07_14_05_26"]
+
+
+# TODO: Why is prison broken?
 
 def load_data(experiment_name: str):
     episode_lengths = []
@@ -50,10 +53,17 @@ def main():
         print(f"Mean: {np.mean(episode_lengths):.2f}, Std: {np.std(episode_lengths):.2f}")
 
     # Box plot the data
-    plt.boxplot(data, labels=["None", "Wall", "Pass", "Dest"])
+    plt.boxplot(data, labels=["Taxi", "Heist", "Prison"])
     plt.title("Taxi")
     plt.show()
 
 
 if __name__ == "__main__":
     main()
+
+
+
+# reward = [float(value) for value in f.readline()[:-1].split(",")]  # Reward on first line, remove \n
+# length = [float(value) for value in f.readline()[:-1].split(",")]  # Read episode length
+# elapsed_time = [float(value) for value in f.readline()[:-1].split(",")]  # Read time
+# episode_lengths.append(length)
