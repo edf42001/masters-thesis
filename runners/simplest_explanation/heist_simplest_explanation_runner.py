@@ -5,6 +5,9 @@ Runs simplest explanation rule object transfer learning on Heist
 """
 
 import random
+from multiprocessing import Pool
+from typing import Tuple
+
 import numpy as np
 import logging
 import sys
@@ -28,40 +31,54 @@ class HeistSimplestExplanationRunner(Runner):
         self.exp_num = exp_num
 
         # Experiment parameters
-        self.max_steps = 100
+        self.max_steps = 250
         self.num_episodes = 1
-        self.visualize = True
+        self.visualize = False
 
         self.env = SymbolicHeist(False, shuffle_object_names=True)
 
-        with open("data/heist_rules.pkl", 'rb') as f:
-            heist_rules = pickle.load(f)
-
-        with open("data/heist_examples.pkl", 'rb') as f:
-            heist_examples = pickle.load(f)
+        # Load heist rules to see if it can discover the new objects
+        with open("data/heist_learned_data.pkl", 'rb') as f:
+            rules, examples, experience_helper = pickle.load(f)
 
         # Copy so hashes are updated (python gets a new hash seed every run)
-        heist_rules = heist_rules.copy()
-        heist_examples = heist_examples.copy()
+        rules = rules.copy()
+        examples = examples.copy()
+        experience_helper = experience_helper.copy()
 
         print(self.env.object_name_map)
 
-        self.model = SimplestExplanationModel(self.env, heist_rules, heist_examples)
+        self.model = SimplestExplanationModel(self.env, rules, examples, experience_helper)
         self.planner = SimplestExplanationPolicy(self.env.get_num_actions(), self.model)
         self.learner = SimplestExplanationLearner(self.env, self.model, self.planner, visualize=self.visualize, delay=10)
         self.data_recorder = DataRecorder(self, start_time)
 
 
-if __name__ == '__main__':
+def run_single_experiment(data: Tuple[int, str]):
+    # Also, reset the random seed, otherwise, they all have the same seed
+    np.random.seed(None)
+    random.seed()
+    experiment_num, start_time = data
+    runner = HeistSimplestExplanationRunner(experiment_num, start_time=start_time)
+    runner.run_experiment(save_training=True)
+
+
+def main():
     logging.basicConfig(level=logging.DEBUG, stream=sys.stdout)
 
-    random.seed(1)
-    np.random.seed(1)
-
-    num_experiments = 1
+    num_experiments = 300
 
     experiments_start_time = datetime.now()  # Used for putting all experiments in common folder
+    experiment_numbers = np.arange(num_experiments, dtype=int)
 
-    for i in range(num_experiments):
-        runner = HeistSimplestExplanationRunner(i, start_time=experiments_start_time)
-        runner.run_experiment(save_training=False)
+    data = [(num, experiments_start_time) for num in experiment_numbers]  # Only way to pass both exp num and start time
+
+    with Pool(processes=6) as pool:
+        results = pool.imap_unordered(run_single_experiment, data, chunksize=5)
+
+        for _ in results:
+            pass
+
+
+if __name__ == "__main__":
+    main()

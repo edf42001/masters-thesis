@@ -38,12 +38,7 @@ class SimplestExplanationModel:
         self.best_rulesets = {(): (self.previous_ruleset, [])}
 
         # List of known object names without taxi and with wall (wall is static so is not in the list normally)
-        # TODO: need to figure out how to organize this properly
-        self.prior_object_names = env.OB_NAMES.copy()
-        self.prior_object_names.append("wall")
-        self.prior_object_names.remove("taxi")
-        self.prior_object_names.remove("pass")
-        self.prior_object_names.remove("dest")
+        self.prior_object_names = self.previous_examples.referenced_object_names()
 
         # Could also get this from examples?
         current_object_names = self.env.get_object_names()

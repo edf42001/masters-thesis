@@ -38,17 +38,17 @@ class PrisonSimplestExplanationRunner(Runner):
         self.env = Prison(False, shuffle_object_names=True)
 
         # Load heist rules to see if it can discover the new objects
-        with open("data/heist_learned_data.pkl", 'rb') as f:
+        with open("data/prison_learned_data.pkl", 'rb') as f:
             rules, examples, experience_helper = pickle.load(f)
 
         # Copy so hashes are updated (python gets a new hash seed every run)
-        heist_rules = rules.copy()
-        heist_examples = examples.copy()
-        heist_experiences = experience_helper.copy()
+        rules = rules.copy()
+        examples = examples.copy()
+        experiences = experience_helper.copy()
 
         print(self.env.object_name_map)
 
-        self.model = SimplestExplanationModel(self.env, heist_rules, heist_examples, heist_experiences)
+        self.model = SimplestExplanationModel(self.env, rules, examples, experiences)
         self.planner = SimplestExplanationPolicy(self.env.get_num_actions(), self.model)
         self.learner = SimplestExplanationLearner(self.env, self.model, self.planner, visualize=self.visualize, delay=10)
         self.data_recorder = DataRecorder(self, start_time)
@@ -59,18 +59,9 @@ def run_single_experiment(data: Tuple[int, str]):
     np.random.seed(None)
     random.seed()
     experiment_num, start_time = data
-    # import cProfile
-    # import pstats
-    #
-    # profiler = cProfile.Profile()
-    # profiler.enable()
 
     runner = PrisonSimplestExplanationRunner(experiment_num, start_time=start_time)
     runner.run_experiment(save_training=True)
-
-    # profiler.disable()
-    # stats = pstats.Stats(profiler)
-    # stats.dump_stats("simplest_explanation_runner_1.prof")
 
 
 def main():
