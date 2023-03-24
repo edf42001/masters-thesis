@@ -177,7 +177,7 @@ class SimplestExplanationPolicy(Policy):
                     experiences = self.model.new_experience_helper.experiences[0]  # Level 1 experience
                     for experience in ExperienceHelper.extract_experiences(literals, n=1):
                         if experience not in experiences or action not in experiences[experience]:
-                            print(f"Found an experience: {experience}, {action}")
+                            # print(f"Found an experience: {experience}, {action}")
                             # TODO: currently it is taking the first it sees in the state
                             path = self.get_path(curr_state, parents)
                             path.insert(0, action)
@@ -191,7 +191,7 @@ class SimplestExplanationPolicy(Policy):
                     experiences = self.model.new_experience_helper.experiences[1]  # Level 2 experience
                     for experience in ExperienceHelper.extract_experiences(literals, n=2):
                         if experience not in experiences or action not in experiences[experience]:
-                            print(f"Found an experience 2: {experience}, {action}")
+                            # print(f"Found an experience 2: {experience}, {action}")
                             path = self.get_path(curr_state, parents)
                             path.insert(0, action)
                             self.path_to_experience_2 = path

@@ -23,7 +23,7 @@ from policy.simplest_explanation_policy import SimplestExplanationPolicy
 
 
 class PrisonSimplestExplanationRunner(Runner):
-    def __init__(self, exp_num, start_time):
+    def __init__(self, exp_num, start_time, data_file=""):
         super().__init__()
 
         self.name = 'prison'
@@ -33,12 +33,12 @@ class PrisonSimplestExplanationRunner(Runner):
         # Experiment parameters
         self.max_steps = 150
         self.num_episodes = 2
-        self.visualize = False
+        self.visualize = True
 
         self.env = Prison(False, shuffle_object_names=True)
 
         # Load heist rules to see if it can discover the new objects
-        with open("data/heist_learned_data.pkl", 'rb') as f:
+        with open(f"data/{data_file}.pkl", 'rb') as f:
             rules, examples, experience_helper = pickle.load(f)
 
         # Copy so hashes are updated (python gets a new hash seed every run)
@@ -54,18 +54,18 @@ class PrisonSimplestExplanationRunner(Runner):
         self.data_recorder = DataRecorder(self, start_time)
 
 
-def run_single_experiment(data: Tuple[int, str]):
+def run_single_experiment(data: Tuple[int, str, str]):
     # Also, reset the random seed, otherwise, they all have the same seed
-    np.random.seed(None)
-    random.seed()
-    experiment_num, start_time = data
+    np.random.seed(0)
+    random.seed(0)
+    experiment_num, start_time, data_file = data
     # import cProfile
     # import pstats
     #
     # profiler = cProfile.Profile()
     # profiler.enable()
 
-    runner = PrisonSimplestExplanationRunner(experiment_num, start_time=start_time)
+    runner = PrisonSimplestExplanationRunner(experiment_num, start_time=start_time, data_file=data_file)
     runner.run_experiment(save_training=False)
 
     # profiler.disable()
@@ -73,15 +73,16 @@ def run_single_experiment(data: Tuple[int, str]):
     # stats.dump_stats("simplest_explanation_runner_1.prof")
 
 
-def main():
+def main(**kwargs):
     logging.basicConfig(level=logging.DEBUG, stream=sys.stdout)
 
-    num_experiments = 10
+    num_experiments = 1
 
     experiments_start_time = datetime.now()  # Used for putting all experiments in common folder
     experiment_numbers = np.arange(num_experiments, dtype=int)
+    data_file = kwargs["data_file"] if "data_file" in kwargs else None
 
-    data = [(num, experiments_start_time) for num in experiment_numbers]  # Only way to pass both exp num and start time
+    data = [(num, experiments_start_time, data_file) for num in experiment_numbers]  # Only way to pass both exp num and start time
 
     with Pool(processes=6) as pool:
         results = pool.imap_unordered(run_single_experiment, data, chunksize=5)
@@ -91,4 +92,4 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    main(data_file="taxi_learned_data_remapped")
