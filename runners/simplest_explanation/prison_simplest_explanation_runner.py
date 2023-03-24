@@ -32,7 +32,7 @@ class PrisonSimplestExplanationRunner(Runner):
 
         # Experiment parameters
         self.max_steps = 150
-        self.num_episodes = 2
+        self.num_episodes = 1
         self.visualize = False
 
         self.env = Prison(False, shuffle_object_names=True)
@@ -67,7 +67,7 @@ def run_single_experiment(data: Tuple[int, str]):
 def main():
     logging.basicConfig(level=logging.DEBUG, stream=sys.stdout)
 
-    num_experiments = 10
+    num_experiments = 300
 
     experiments_start_time = datetime.now()  # Used for putting all experiments in common folder
     experiment_numbers = np.arange(num_experiments, dtype=int)

@@ -245,7 +245,7 @@ def information_gain_of_action(env, state: int, action: int, object_map, prev_ru
     for permutation in permutations:
         # Remove ones where there is a duplicate assignment. Two objects can not be mapped to the same
         # Technically there should be no reason why not but it breaks literals.copy_replace_names
-        if len(set(permutation)) != len(permutation):
+        if remove_duplicates and len(set(permutation)) != len(permutation):
             continue
 
         num_permutations += 1
