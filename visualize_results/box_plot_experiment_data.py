@@ -14,9 +14,13 @@ HOME_FOLDER = "/home/edf42001/Documents/College/Thesis/masters-thesis"
 TRAIN_FOLDER = "training"
 
 experiment_type = "object_transfer"
-experiment_names = ["taxi_2023_03_23_16_59_18", "taxi_2023_03_23_16_59_21", "taxi_2023_03_23_16_59_24",
-                    "taxi_2023_03_23_16_59_27"]
-
+# experiment_names = ["taxi_2023_03_23_16_59_18", "taxi_2023_03_23_16_59_21", "taxi_2023_03_23_16_59_24",
+#                     "taxi_2023_03_23_16_59_27", "taxi_2023_03_24_18_03_37"]
+# experiment_names = ["heist_2023_03_23_16_59_29", "heist_2023_03_23_16_59_42", "heist_2023_03_23_16_59_55",
+#                     "heist_2023_03_23_17_00_13", "heist_2023_03_23_17_00_19", "heist_2023_03_24_18_03_41"]
+experiment_names = ["prison_2023_03_23_17_00_34", "prison_2023_03_23_17_01_28",
+                    "prison_2023_03_23_17_02_23", "prison_2023_03_23_17_03_53",
+                    "prison_2023_03_23_17_04_43", "prison_2023_03_23_17_05_12", "prison_2023_03_24_18_03_52"]
 
 def load_data(experiment_name: str):
     episode_lengths = []
@@ -50,8 +54,11 @@ def main():
         print(f"Mean: {np.mean(episode_lengths):.2f}, Std: {np.std(episode_lengths):.2f}")
 
     # Box plot the data
-    plt.boxplot(data, labels=["None", "Wall", "Pass", "Dest"])
-    plt.title("Taxi")
+    # plt.boxplot(data, labels=["None", "Wall", "Key", "Gem", "Lock", "All"])
+    # plt.boxplot(data, labels=["None", "Wall", "Pass", "Dest", "All"])
+    plt.boxplot(data, labels=["None", "Wall", "Key", "Lock", "Pass", "Dest", "All"])
+    plt.ylim([51, 82])  # For prison scaling until I can fix the 300 errors
+    plt.title("Prison")
     plt.show()
 
 

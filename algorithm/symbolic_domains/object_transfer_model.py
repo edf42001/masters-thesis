@@ -26,10 +26,10 @@ class ObjectTransferModel:
 
         self.possible_assignments = set()  # Possible objects that could be other objects or not
 
+        self.solved = False  # Whether the object_map is now one to one
+
         self.object_map = {}
         self.init_object_map()  # Setup object map
-
-        self.solved = False  # Whether the object_map is now one to one
 
     def init_object_map(self):
         current_object_names = self.env.get_object_names()
@@ -42,6 +42,9 @@ class ObjectTransferModel:
                     if key in value2:
                         value2.remove(key)
                 self.object_map[key] = [key]
+
+        # If I pass in for known_objects every object, then the environment is solved from the start
+        self.solved = sum(len(possibilities) for possibilities in self.object_map.values()) == len(self.prior_object_names)
 
     def add_experience(self, action: int, state: int, outcome: Outcome):
         """Records experience of state action transition"""

@@ -31,8 +31,8 @@ class PrisonSimplestExplanationRunner(Runner):
         self.exp_num = exp_num
 
         # Experiment parameters
-        self.max_steps = 150
-        self.num_episodes = 2
+        self.max_steps = 250
+        self.num_episodes = 1
         self.visualize = False
 
         self.env = Prison(False, shuffle_object_names=True)
@@ -66,7 +66,7 @@ def run_single_experiment(data: Tuple[int, str]):
     # profiler.enable()
 
     runner = PrisonSimplestExplanationRunner(experiment_num, start_time=start_time)
-    runner.run_experiment(save_training=False)
+    runner.run_experiment(save_training=True)
 
     # profiler.disable()
     # stats = pstats.Stats(profiler)
@@ -76,7 +76,7 @@ def run_single_experiment(data: Tuple[int, str]):
 def main():
     logging.basicConfig(level=logging.DEBUG, stream=sys.stdout)
 
-    num_experiments = 10
+    num_experiments = 150
 
     experiments_start_time = datetime.now()  # Used for putting all experiments in common folder
     experiment_numbers = np.arange(num_experiments, dtype=int)
