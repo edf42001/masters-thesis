@@ -10,38 +10,47 @@ part was necessary.
 """
 
 import pickle
-from symbolic_stochastic_domains.symbolic_classes import RuleSet, Rule, Outcome, DeicticReference
+from symbolic_stochastic_domains.symbolic_classes import Rule, Outcome, DeicticReference, Example, ExampleSet
 from symbolic_stochastic_domains.predicates_and_objects import PredicateType
 from effects.effect import SetToNumber
 
 
 if __name__ == "__main__":
-    with open("runners/symbolic_taxi_rules.pkl", 'rb') as f:
-        symbolic_taxi_ruleset = pickle.load(f)
+    with open("runners/data/taxi_learned_data.pkl", 'rb') as f:
+        taxi_ruleset, taxi_examples, taxi_experience = pickle.load(f)
 
-    with open("runners/symbolic_heist_rules.pkl", 'rb') as f:
-        symbolic_heist_ruleset = pickle.load(f)
+    print(taxi_ruleset)
 
-    dropoff_passenger_rule: Rule = symbolic_taxi_ruleset.rules[5]
-    dropoff_passenger_rule.action = 6  # More actions in prison world, need to increase action number
-
-    prison_world_ruleset = RuleSet([])
-    for rule in symbolic_heist_ruleset.rules:
-        prison_world_ruleset.add_rule(rule)
-
-    # Copy extra rules from taxi (only passenger stuff)
-    prison_world_ruleset.add_rule(symbolic_taxi_ruleset.rules[4])
-    prison_world_ruleset.add_rule(symbolic_taxi_ruleset.rules[5])
-
+    dropoff_passenger_rule: Rule = taxi_ruleset.rules[5]
+    dropoff_passenger_rule.action = 6  # More actions in prison world, need to increase action number (5 is unlock)
     # Prison world only has 2 destinations, update accordingly.
-    dropoff_passenger_rule: Rule = prison_world_ruleset.rules[9]
     dropoff_passenger_rule.outcomes.outcomes[0] = Outcome([DeicticReference("taxi", PredicateType.IN, "pass", "state")], [SetToNumber(2, 2)])
 
-    with open("runners/symbolic_prison_rules.pkl", 'wb') as f:
-        pickle.dump(prison_world_ruleset, f)
+    print()
+    print(taxi_ruleset)
 
-    print(symbolic_taxi_ruleset)
+    # Remap dropoff examples
+    print(taxi_examples)
+    for e in taxi_examples.examples:
+        if e.action == 5:  # Same as above, need to update dropoff actions
+            e.action = 6
+
+            if not e.outcome.is_no_effect():
+                e.outcome = Outcome([DeicticReference("taxi", PredicateType.IN, "pass", "state")], [SetToNumber(2, 2)])
+
     print()
-    print(symbolic_heist_ruleset)
-    print()
-    print(prison_world_ruleset)
+    print(taxi_examples)
+
+    # Remap experiences as well
+    for experience in taxi_experience.experiences[0]:
+        if 5 in taxi_experience.experiences[0][experience]:
+            taxi_experience.experiences[0][experience][6] = taxi_experience.experiences[0][experience][5]
+            del taxi_experience.experiences[0][experience][5]
+
+    for experience in taxi_experience.experiences[1]:
+        if 5 in taxi_experience.experiences[1][experience]:
+            taxi_experience.experiences[1][experience][6] = taxi_experience.experiences[1][experience][5]
+            del taxi_experience.experiences[1][experience][5]
+
+    with open("runners/data/taxi_learned_data_remapped.pkl", 'wb') as f:
+        pickle.dump((taxi_ruleset, taxi_examples, taxi_experience), f)

@@ -31,9 +31,10 @@ class PrisonSimplestExplanationRunner(Runner):
         self.exp_num = exp_num
 
         # Experiment parameters
-        self.max_steps = 150
-        self.num_episodes = 2
-        self.visualize = True
+
+        self.max_steps = 250
+        self.num_episodes = 1
+        self.visualize = False
 
         self.env = Prison(False, shuffle_object_names=True)
 
