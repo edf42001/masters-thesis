@@ -86,8 +86,10 @@ class SymbolicHeist(Environment):
     #     # PredicateType.OPEN: [[OB_LOCK]]
     # }
 
+
     def __init__(self, stochastic=True, shuffle_object_names=False, known_objects=None):
         self.stochastic = stochastic
+        self.steps = 0
 
         # Add walls to the map
         # For each direction, stores which positions, (x, y), have a wall in that direction
@@ -482,8 +484,13 @@ class SymbolicHeist(Environment):
                 cv2.circle(img, (int((taxi_x + 0.5) * GRID_SIZE), int((HEIGHT - (taxi_y + 0.5)) * GRID_SIZE)), int(GRID_SIZE * 0.2),
                            thickness=-1, color=[0, 0.7, 0.7])
 
+        img = (np.clip(img, 0, 1) * 255).astype(np.uint8)
         cv2.imshow("Heist World", img)
         cv2.waitKey(delay)
+
+        cv2.imwrite(f"/home/edf42001/Documents/College/Thesis/experimental_results/runs_visualized/heist_logic_based/{self.steps:03d}.png", img)
+
+        self.steps += 1
 
     def get_object_names(self):
         return [self.anonymize_name(ob_name) for ob_name in self.OB_NAMES + ["wall"]]

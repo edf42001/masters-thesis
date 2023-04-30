@@ -34,7 +34,7 @@ class PrisonSimplestExplanationRunner(Runner):
 
         self.max_steps = 250
         self.num_episodes = 1
-        self.visualize = False
+        self.visualize = True
 
         self.env = Prison(False, shuffle_object_names=True)
 
@@ -93,4 +93,4 @@ def main(**kwargs):
 
 
 if __name__ == "__main__":
-    main(data_file="taxi_learned_data_remapped")
+    main(data_file="heist_learned_data")

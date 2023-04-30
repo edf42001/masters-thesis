@@ -274,7 +274,13 @@ class RulesetLearner:
         # Learn the rules for each outcome
         rules = []
         for outcome in unique_outcomes:
-            new_rules = self.learn_minimal_ruleset_for_outcome(examples, outcome)
+            try:
+                new_rules = self.learn_minimal_ruleset_for_outcome(examples, outcome)
+            except Exception as e:
+                import pickle
+                with open("~/failing_data.pkl", 'wb') as f:
+                    pickle.dump((examples, self), f)
+                exit(1)
             rules.extend(new_rules)
 
         # print()

@@ -27,7 +27,7 @@ class HeistRunner(Runner):
         self.max_steps = 250
         self.num_episodes = 1
         self.stochastic = False
-        self.visualize = False
+        self.visualize = True
 
         self.env = SymbolicHeist(stochastic=self.stochastic)
 
@@ -43,7 +43,7 @@ def run_single_experiment(data: Tuple[int, str]):
     random.seed()
     experiment_num, start_time = data
     runner = HeistRunner(experiment_num, start_time=start_time)
-    runner.run_experiment(save_training=True)
+    runner.run_experiment(save_training=False)
 
     # import pickle
     # with open("data/heist_learned_data.pkl", 'wb') as f:
@@ -54,7 +54,7 @@ def run_single_experiment(data: Tuple[int, str]):
 def main():
     logging.basicConfig(level=logging.DEBUG, stream=sys.stdout)
 
-    num_experiments = 300
+    num_experiments = 1
 
     experiments_start_time = datetime.now()  # Used for putting all experiments in common folder
 

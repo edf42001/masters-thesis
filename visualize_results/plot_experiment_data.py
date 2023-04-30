@@ -64,10 +64,10 @@ def make_plot(experiment_type, experiment_names, title, max_steps=-1):
 if __name__ == "__main__":
     experiment_type = "symbolic_learning"
 
-    make_plot(experiment_type, ["taxi_runner_300_trials"], "Taxi (all relations)", max_steps=200)
-    make_plot(experiment_type, ["heist_runner_300_trials"], "Heist (all relations)", max_steps=250)
-    make_plot(experiment_type, ["prison_runner_300_trials"], "Prison (all relations)", max_steps=300)
+    make_plot(experiment_type, ["taxi_runner_300_trials"], "Taxi (all terms)", max_steps=200)
+    # make_plot(experiment_type, ["heist_runner_300_trials"], "Heist (all relations)", max_steps=250)
+    # make_plot(experiment_type, ["prison_runner_300_trials"], "Prison (all relations)", max_steps=300)
 
-    make_plot(experiment_type, ["taxI_300_only_necessary_relations"], "Taxi (reduced relations)", max_steps=200)
-    make_plot(experiment_type, ["heist_300_only_necessary_relations"], "Heist (reduced relations)", max_steps=250)
-    make_plot(experiment_type, ["prison_300_only_necessary_relations"], "Prison (reduced relations)", max_steps=300)
+    make_plot(experiment_type, ["taxI_300_only_necessary_relations"], "Taxi (reduced terms)", max_steps=200)
+    # make_plot(experiment_type, ["heist_300_only_necessary_relations"], "Heist (reduced relations)", max_steps=250)
+    # make_plot(experiment_type, ["prison_300_only_necessary_relations"], "Prison (reduced relations)", max_steps=300)

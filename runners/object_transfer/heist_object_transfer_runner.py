@@ -27,7 +27,7 @@ class HeistObjectTransferRunner(Runner):
         self.max_steps = 250
         self.num_episodes = 1
         self.stochastic = False
-        self.visualize = False
+        self.visualize = True
 
         self.env = SymbolicHeist(stochastic=self.stochastic, shuffle_object_names=True, known_objects=known_objects)
 
@@ -39,23 +39,23 @@ class HeistObjectTransferRunner(Runner):
 
         self.model = ObjectTransferModel(self.env, symbolic_heist_rules)
         self.planner = ObjectTransferPolicy(self.env.get_num_actions(), self.model)
-        self.learner = ObjectTransferLearner(self.env, self.model, self.planner, visualize=self.visualize, delay=10)
+        self.learner = ObjectTransferLearner(self.env, self.model, self.planner, visualize=self.visualize, delay=50)
         self.data_recorder = DataRecorder(self, start_time)
 
 
 def run_single_experiment(data: Tuple[int, str, List]):
     # Also, reset the random seed, otherwise, they all have the same seed
-    np.random.seed(None)
-    random.seed()
+    np.random.seed(3)
+    random.seed(0)
     experiment_num, start_time, known_objects = data
     runner = HeistObjectTransferRunner(experiment_num, start_time=start_time, known_objects=known_objects)
-    runner.run_experiment(save_training=True)
+    runner.run_experiment(save_training=False)
 
 
 def main(**kwargs):
     logging.basicConfig(level=logging.DEBUG, stream=sys.stdout)
 
-    num_experiments = 300
+    num_experiments = 1
 
     experiments_start_time = datetime.now()  # Used for putting all experiments in common folder
     experiment_numbers = np.arange(num_experiments, dtype=int)
