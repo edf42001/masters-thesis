@@ -57,7 +57,7 @@ def main():
     # plt.boxplot(data, labels=["None", "Wall", "Key", "Gem", "Lock", "All"])
     # plt.boxplot(data, labels=["None", "Wall", "Pass", "Dest", "All"])
     plt.boxplot(data, labels=["None", "Wall", "Key", "Lock", "Pass", "Dest", "All"])
-    plt.ylim([51, 82])  # For prison scaling until I can fix the 300 errors
+    # plt.ylim([51, 82])  # For prison, scaling until I can fix the 300 errors
     plt.title("Prison")
     plt.show()
 
