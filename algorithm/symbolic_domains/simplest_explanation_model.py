@@ -74,6 +74,17 @@ class SimplestExplanationModel:
         print("Experienced Example:")
         print(example)
 
+        # Try with all objects to see what happens
+        if self.ruleset_had_to_change:
+            for i, unknown in enumerate(self.seen_objects):
+                # if unknown not in self.object_map[unknown]:
+                # TODO: Before, I had it only hadd the important objects as new objects,
+                # now, I'll let it try all objects?
+                # if unknown in ["oixzh", "tyyaw"] and unknown not in self.object_map[unknown]:
+                #     self.object_map[unknown].append(unknown)
+                if unknown not in self.object_map[unknown]:
+                    self.object_map[unknown].append(unknown)
+
         # Notice this maps ones that aren't in the current state?
         # mappings_to_choose_from = (self.prior_object_names for _ in self.seen_objects)
         # Options are only what we think it is
@@ -103,10 +114,13 @@ class SimplestExplanationModel:
             print("Ruleset changed! Trying again with new object map")
 
             # Try adding unknown object to each and seeing the difference:
-            # TODO: a cheat for testing purposes
-            for i, unknown in enumerate(state_objects):
+            for i, unknown in enumerate(self.seen_objects):
                 # if unknown not in self.object_map[unknown]:
-                if unknown in ["oixzh", "tyyaw"] and unknown not in self.object_map[unknown]:
+                # TODO: Before, I had it only hadd the important objects as new objects,
+                # now, I'll let it try all objects?
+                # if unknown in ["oixzh", "tyyaw"] and unknown not in self.object_map[unknown]:
+                #     self.object_map[unknown].append(unknown)
+                if unknown not in self.object_map[unknown]:
                     self.object_map[unknown].append(unknown)
 
             # Weird hacks going on here need to be figured out
@@ -130,6 +144,10 @@ class SimplestExplanationModel:
                              zip(rulesets, complexities, permutations) if complexity == min_complexity}
 
             print(f"Number of best rulesets: {len(self.best_rulesets)}")
+            for perm, (ruleset, obs) in self.best_rulesets.items():
+                print(perm, obs)
+                print(ruleset)
+                print()
 
         # Update object map based on complexity values
         # The least complex ones get to be kept
@@ -217,6 +235,14 @@ class SimplestExplanationModel:
 
                 # Do some weird indices hacks to figure out which attribute index is being referred to
                 # so the env can directly modify the imagined state.
+
+                # TODO: Walls are static. The agent tries to imagine unlocking a wall, but the state represenation
+                # is currently literally unable to support that. Would need to make each wall object unique or something.
+                # For now, just return that it is unable to do that.
+                if known_class_name == "wall":
+                    print("Whoops! Walls are static so this literally doesn't work")
+                    return []
+
                 class_idx = self.env.OB_NAMES.index(known_class_name)
 
                 att_idx = self.env.ATT_NAMES[class_idx].index(att_name)

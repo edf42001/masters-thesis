@@ -80,6 +80,7 @@ class SymbolicTaxi(Environment):
              '| |   |   |']
 
     def __init__(self, stochastic=True, shuffle_object_names=False, known_objects=None):
+        self.steps = 0
         self.stochastic: bool = stochastic
 
         # Add walls to the map
@@ -436,8 +437,14 @@ class SymbolicTaxi(Environment):
                 cv2.line(img, (x * GRID_SIZE, (HEIGHT - y) * GRID_SIZE), (x * GRID_SIZE, (HEIGHT - y-1) * GRID_SIZE),
                          thickness=3, color=[0, 0, 0])
 
+        img = (np.clip(img, 0, 1) * 255).astype(np.uint8)
         cv2.imshow("Taxi World", img)
         cv2.waitKey(delay)
+        # print(img.dtype)
+
+        cv2.imwrite(f"/home/edf42001/Documents/College/Thesis/experimental_results/runs_visualized/taxi_logic_based/{self.steps:03d}.png", img)
+
+        self.steps += 1
 
     def get_rmax(self) -> float:
         """The maximum reward available in the environment"""

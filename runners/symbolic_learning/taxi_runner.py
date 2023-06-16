@@ -26,23 +26,23 @@ class TaxiRunner(Runner):
         self.max_steps = 200
         self.num_episodes = 1
         self.stochastic = False
-        self.visualize = False
+        self.visualize = True
 
         self.env = SymbolicTaxi(stochastic=self.stochastic)
 
         self.model = SymbolicModel(self.env)
         self.planner = SymbolicPolicy(self.env.get_num_actions(), self.model)
-        self.learner = SymbolicLearner(self.env, self.model, self.planner, visualize=self.visualize, delay=10)
+        self.learner = SymbolicLearner(self.env, self.model, self.planner, visualize=self.visualize, delay=100)
         self.data_recorder = DataRecorder(self, start_time)
 
 
 def run_single_experiment(data: Tuple[int, str]):
     # Also, reset the random seed, otherwise, they all have the same seed
-    np.random.seed(None)
-    random.seed()
+    np.random.seed(0)
+    random.seed(0)
     experiment_num, start_time = data
     runner = TaxiRunner(experiment_num, start_time=start_time)
-    runner.run_experiment(save_training=True)
+    runner.run_experiment(save_training=False)
 
     # import pickle
     # with open("data/taxi_learned_data.pkl", 'wb') as f:
@@ -53,7 +53,7 @@ def run_single_experiment(data: Tuple[int, str]):
 def main():
     logging.basicConfig(level=logging.DEBUG, stream=sys.stdout)
 
-    num_experiments = 300
+    num_experiments = 1
 
     experiments_start_time = datetime.now()  # Used for putting all experiments in common folder
 

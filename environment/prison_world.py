@@ -107,6 +107,7 @@ class Prison(Environment):
 
     def __init__(self, stochastic=True, shuffle_object_names=False, known_objects=None):
         self.stochastic = stochastic
+        self.steps = 0
 
         # Add walls to the map
         # For each direction, stores which positions, (x, y), have a wall in that direction
@@ -496,7 +497,7 @@ class Prison(Environment):
                          thickness=3, color=[0, 0, 0])
 
         # Draw locks (need to be before taxi so taxi is shown on top)
-        lock_values = state[self.S_LOCK_1:self.S_LOCK_4+1]
+        lock_values = state[self.S_LOCK_1:self.S_LOCK_3+1]
         for lock, value in zip(self.locks, lock_values):
             inset = 0.05
             bottom_left_x = lock[0] * GRID_SIZE + int(inset * GRID_SIZE)
@@ -524,10 +525,10 @@ class Prison(Environment):
                    thickness=-1, color=[0, 0, 0])
 
         # Draw gem
-        gem_x, gem_y = self.gem if state[self.S_GEM] == 1 else (taxi_x, taxi_y)
-        scale = 0.25 if state[self.S_GEM] == 1 else 0.2
-        cv2.circle(img, (int((gem_x + 0.5) * GRID_SIZE), int((HEIGHT - (gem_y + 0.5)) * GRID_SIZE)), int(GRID_SIZE * scale),
-                   thickness=-1, color=[0.8, 0, 0])
+        # gem_x, gem_y = self.gem if state[self.S_GEM] == 1 else (taxi_x, taxi_y)
+        # scale = 0.25 if state[self.S_GEM] == 1 else 0.2
+        # cv2.circle(img, (int((gem_x + 0.5) * GRID_SIZE), int((HEIGHT - (gem_y + 0.5)) * GRID_SIZE)), int(GRID_SIZE * scale),
+        #            thickness=-1, color=[0.8, 0, 0])
 
         # Draw passenger
         passenger = state[self.S_PASS]
@@ -563,8 +564,13 @@ class Prison(Environment):
                 cv2.circle(img, (int((taxi_x + 0.5) * GRID_SIZE), int((HEIGHT - (taxi_y + 0.5)) * GRID_SIZE)), int(GRID_SIZE * 0.2),
                            thickness=-1, color=[0, 0.7, 0.7])
 
+        img = (np.clip(img, 0, 1) * 255).astype(np.uint8)
         cv2.imshow("Prison World", img)
         cv2.waitKey(delay)
+
+        cv2.imwrite(f"/home/edf42001/Documents/College/Thesis/experimental_results/runs_visualized/prison_simplest_explanation/{self.steps:03d}.png", img)
+
+        self.steps += 1
 
     def get_object_names(self):
         return [self.anonymize_name(ob_name) for ob_name in self.OB_NAMES + ["wall"]]
