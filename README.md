@@ -3,6 +3,9 @@
 Hello! This repository stores the code for my master's thesis, titled Object Discovery in Novel Environments for Efficient Deterministic Planning.
 The full thesis can be viewed [here](Masters%20Thesis.pdf).
 
+If you are a future student and want detailed information on the structure of this repository and ideas
+for further research work, please see [here](documentation.md).
+
 
 ## Visualizations
 
