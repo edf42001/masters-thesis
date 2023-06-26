@@ -70,3 +70,42 @@ ffmpeg -i %03d.png -i palette.png -filter_complex "[0:v][1:v] paletteuse" -frame
 ```
 
 Replace `[xxx]` with a image number that contains all the colors of the gif, to be added to the palette.
+
+## Known Problems and Future Work
+
+Current open github issues include:
+* [Searching for experiences with new object names](https://github.com/edf42001/masters-thesis/issues/24): When the agent
+  is searching for new experiences (that is, new objects to interact with in new ways), it does not try to map unknown objects
+  to known objects. For example, if in the previous environment the agent executed PICKUP on PASSENGER, and in the current
+  environment the agent knows that OBJECT1 is PASSENGER, it will still think that PICKUP OBJECT1 is a new experience. Most
+  likely to resolve this, one will need to generate all permutations based on the obejct map, then take the "expected value" of the experience
+  being a new experience. See the functions around line 173 in `simplest_explanation_policy.py`.
+* [State doesn't split based on object identity](https://github.com/edf42001/masters-thesis/issues/14): This relates to the
+  main issue with my algorithm and of storing only relavent object attributes in the state array. If the agent picks up
+  an unknown object that could be a PASSENGER or KEY, it should produce two daughter states, one where it is holding a passenger
+  and one a key. But due to the way the environment handles transitions, only the real identity of the object it is on controls the next state.
+  See also [weirdness in how state attributes are handled](https://github.com/edf42001/masters-thesis/issues/23). See also the TODO
+  `figure this out assert len(transitions) < 2, "Only 1 transition per state` in `object_transfer_policy.py`.
+* [Strings instead of variables](https://github.com/edf42001/masters-thesis/issues/13): I originally had all data stored in strings
+  and was doing string split operations to fix it. I fixed the majority of this with the `DeicticReference` class, but there
+  still may be some string operations that could be replaced.
+  
+Other major TODOs include:
+* See line 106 of `simplest_explanation_model.py`: `TODO: a cheat for testing purposes`. The agent tests if, an unknown
+  object is a brand-new object, that would lead to a simpler explanation. I hardcoded doing this for only the relevant objects,
+  otherwise the computational complexity would have slowed down the program. The problem is even if it discovers that a new object
+  leads to an equally simple explanation, it keeps that possibility in the object map. This leads to more permutations. Perhaps it should
+  prune new objects that don't lead to any difference, assuming that they are old objects until proven otherwise.
+
+The main issue, and the reason simplest explanation learning doesn't work on Taxi world, is the way the state is stored.
+Currently, each object has different variables. For example, the state will be \[TAXI_X, TAXI_Y, KEY1_STATE, KEY2_STATE, ...\].
+In addition, walls are not stored in this state array at all, because in all previous OO-MDP formulations, walls have been static.
+So if the agent imagines a world in which it picks up a lock, in the agent's mind (virtual state) it will set the lock's state to held (0).
+But for locks, a (0) means unlocked, so the environment is now not at all in sync with what the agent is trying to do.
+The way to fix this, is I think by giving every object the exact same state variables, (including walls). So every object
+would have a boolean held, unlocked, exists, variable. That way, if the agent *wants* to try unlocking a wall, it can,
+and I won't have to use [this](https://github.com/edf42001/masters-thesis/blob/8105ca15c4159cabe8ac41860fe9145766df1c8b/algorithm/symbolic_domains/simplest_explanation_model.py#L239-L244) hack anymore.
+
+This makes the implementation a lot more like the hit video game Baba Is You, and will of course make the state array much bigger
+(especially if every wall needs its own variable, even if 90% of the time their variables never change). There might be a way to store
+the state hierarchically, or with objects, to prevent this, but those would be harder to hash and compare. 
