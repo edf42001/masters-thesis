@@ -11,28 +11,6 @@ class SymbolicObject:
         return f"{type(self).__name__}({self.name})"
 
 
-class Door(SymbolicObject):
-    def __init__(self, name="", x=0, open=False):
-        super().__init__(name)
-
-        self.x = x
-        self.open = open
-
-
-class Switch(SymbolicObject):
-    def __init__(self, name="", x=0):
-        super().__init__(name)
-
-        self.x = x
-
-
-class Goal(SymbolicObject):
-    def __init__(self, name="", x=0):
-        super().__init__(name)
-
-        self.x = x
-
-
 class Gem(SymbolicObject):
     def __init__(self, name, location, state):
         super().__init__(name)
